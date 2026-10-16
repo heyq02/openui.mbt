@@ -439,11 +439,12 @@ test "remaining expression, schema, and materialize branches" {
           ("f", Boolean(false)),
           ("n", Num(1.0, "1")),
           ("z", Null),
-          ("child", Element("Slot", "slot", [], false)),
+          ("child", Element("Slot", "slot", [], false, false)),
         ]),
       ),
     ],
     false,
+    true,
   )
   element.write(buf, 0, false)
   Val::Arr([Val::Null, Val::Boolean(false)]).write(buf, 0, true)

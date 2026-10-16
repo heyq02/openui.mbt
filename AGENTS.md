@@ -44,7 +44,7 @@ pnpm run format
 
 `pnpm run compare` checks a patched `@openuidev/lang-core@1.0.1` against the official package. It needs `web/node_modules`. The README benchmark is the published timing and size result.
 
-`pnpm run benchmark` compares that patched package with the official package: dist size, parse time, demo bundle size, and time until the demo paints. The method, the limits, and the latest numbers are in the README. `--skip-demo` stops after the Node measurements.
+`pnpm run benchmark` compares that patched package with the official package: dist size, one-shot parse, line-by-line streaming, demo bundle size, and time until the demo paints. The stream page feeds signup line by line. The method, the limits, and the latest numbers are in the README. `--skip-demo` stops after the Node measurements.
 
 `compatibility.yml` shallow-clones `thesysdev/openui`, installs it, links this npm package, and runs `node scripts/patch-source.mjs`. It rebuilds lang-core from that source, then tests `packages/lang-core/src/parser/__tests__`, the lang-core package, and the workspace. The job summary lists each stage as passed/total. On `main` it writes `compatibility.json` from the cloned lang-core version and the workspace total. The README badge reads that file.
 

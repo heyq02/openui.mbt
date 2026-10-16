@@ -325,6 +325,25 @@ fn write_expr_json(buf : StringBuilder, expr : Expr) -> Unit {
       write_json_string(buf, name)
       buf.write_string(",\"args\":")
       write_expr_list(buf, args)
+      match mapped_param_names(name) {
+        Some(params) => {
+          buf.write_string(",\"mappedProps\":{")
+          let mut index = 0
+          let mut wrote = false
+          while index < params.length() && index < args.length() {
+            if wrote {
+              buf.write_char(',')
+            }
+            wrote = true
+            write_json_string(buf, params[index])
+            buf.write_char(':')
+            write_expr_json(buf, args[index])
+            index = index + 1
+          }
+          buf.write_char('}')
+        }
+        None => ()
+      }
       if is_function {
         buf.write_string(",\"fn\":true")
       }

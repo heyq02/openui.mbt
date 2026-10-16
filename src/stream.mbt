@@ -18,6 +18,7 @@ priv struct Flat {
   complete : Ref[Bool]
   dirty : Ref[Bool]
   bad_leaves : Ref[Int32]
+  dynamic : Ref[Bool]
   catalog : Ref[SchemaCatalog]
   seen : Ref[Int32]
   defined : Ref[Map[String, Bool]]
@@ -244,6 +245,7 @@ fn new_flat() -> Flat {
     complete: Ref(true),
     dirty: Ref(false),
     bad_leaves: Ref(0),
+    dynamic: Ref(false),
     catalog: Ref({ components: [], calls: [], errors: [], }),
     seen: Ref(0),
     defined: Ref(Map([])),
@@ -270,6 +272,7 @@ fn reset_flat(flat : Flat) -> Unit {
   flat.complete.val = true
   flat.dirty.val = false
   flat.bad_leaves.val = 0
+  flat.dynamic.val = false
   flat.catalog.val = { components: [], calls: [], errors: [], }
   flat.seen.val = 0
   flat.defined.val = Map([])
@@ -377,7 +380,10 @@ fn enable_flat(session : Session, stmt : Statement) -> Bool {
           }
           let (value, issues) = materialize_statement(shell, session.schema)
           match value {
-            Element(actual, _, _, _) => if actual != type_name { return false }
+            Element(actual, _, _, _, _) =>
+              if actual != type_name {
+                return false
+              }
             _ => return false
           }
           let refset : Map[String, Bool] = Map([])
@@ -505,6 +511,9 @@ fn store_leaf(session : Session, stmt : Statement) -> Unit {
       session.flat.catalog.val,
     )
     session.flat.json.val[stmt.id] = json
+    if fragment_dynamic(json) {
+      session.flat.dynamic.val = true
+    }
     session.flat.issues.val[stmt.id] = issues
     if issues.length() > 0 {
       session.flat.bad_leaves.val = session.flat.bad_leaves.val + 1
@@ -606,6 +615,11 @@ fn lookup_child(
         None
       }
   }
+}
+
+///|
+fn fragment_dynamic(json : String) -> Bool {
+  json.contains("\"hasDynamicProps\":true")
 }
 
 ///|
@@ -750,10 +764,19 @@ fn encode_flat(
   write_json_string(buf, session.flat.type_name.val)
   buf.write_string(",\"props\":{\"children\":[")
   write_children(buf, session, extra)
-  buf.write_string("]}")
-  if partial {
-    buf.write_string(",\"partial\":true")
+  let mut dynamic = session.flat.dynamic.val
+  if !dynamic && extra.length() != 0 {
+    for name in session.flat.refs.val {
+      match extra.get(name) {
+        Some(json) => if fragment_dynamic(json) { dynamic = true }
+        None => ()
+      }
+    }
   }
+  buf.write_string("]},\"partial\":")
+  write_json_bool(buf, partial)
+  buf.write_string(",\"hasDynamicProps\":")
+  write_json_bool(buf, dynamic)
   buf.write_string(",\"statementId\":")
   write_json_string(buf, session.flat.root_id.val)
   buf.write_char('}')

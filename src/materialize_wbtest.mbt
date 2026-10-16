@@ -199,6 +199,54 @@ test "a named root is used when there is no root statement" {
 }
 
 ///|
+test "runtime calls publish official mapped props" {
+  let names = [
+    "Count", "First", "Last", "Sum", "Avg", "Min", "Max", "Sort", "Filter", "Round",
+    "Abs", "Floor", "Ceil", "ToAssistant", "OpenUrl",
+  ]
+  for name in names {
+    inspect(mapped_param_names(name) is Some(_), content="true")
+  }
+  inspect(mapped_param_names("Each") is None, content="true")
+  inspect(mapped_param_names("Set") is None, content="true")
+  let buf = StringBuilder()
+  write_expr_json(buf, Comp("ToAssistant", false, [Str("Hi"), Obj([])]))
+  inspect(
+    buf.to_string().contains("\"message\":{\"k\":\"Str\",\"v\":\"Hi\"}"),
+    content="true",
+  )
+  inspect(buf.to_string().contains("\"context\""), content="true")
+  buf.reset()
+  write_expr_json(buf, Comp("Each", false, [Arr([]), Str("item"), Str("item")]))
+  inspect(buf.to_string().contains("mappedProps"), content="false")
+  cached_catalog.val = {
+    components: [],
+    calls: [
+      {
+        name: "Save",
+        kind: Action,
+        params: [{ name: "id", required: true, shape: Str, }],
+      },
+    ],
+    errors: [],
+  }
+  buf.reset()
+  write_expr_json(buf, Comp("Save", false, [Str("1")]))
+  inspect(
+    buf.to_string().contains("\"id\":{\"k\":\"Str\",\"v\":\"1\"}"),
+    content="true",
+  )
+  inspect(val_has_dynamic(Obj([("steps", Arr([]))])), content="true")
+  inspect(val_has_dynamic(Obj([("k", Str("a"))])), content="false")
+  inspect(val_has_dynamic(Arr([Runtime(Str("x"))])), content="true")
+  inspect(
+    val_has_dynamic(Element("T", "", [("a", Num(1.0, "1"))], false, false)),
+    content="false",
+  )
+  inspect(props_have_dynamic([("a", Runtime(Ref("title")))]), content="true")
+}
+
+///|
 test "unclosed input is incomplete" {
   inspect(source_incomplete("root = Stack([title]"), content="true")
   inspect(source_incomplete("root = Stack([title])\n"), content="false")

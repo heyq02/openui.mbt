@@ -7,7 +7,7 @@ priv enum Val {
   Str(String)
   Arr(Array[Val])
   Obj(Array[(String, Val)])
-  Element(String, String, Array[(String, Val)], Bool)
+  Element(String, String, Array[(String, Val)], Bool, Bool)
   Runtime(Expr)
 }
 
@@ -536,7 +536,7 @@ fn materialize_call(
       if drop_component {
         Null
       } else {
-        Element(name, statement_id, props, false)
+        Element(name, statement_id, props, false, props_have_dynamic(props))
       }
     }
   }
@@ -633,15 +633,15 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
             Comp(name, is_function, args) =>
               match
                 materialize_call(self, name, is_function, args, id, stmt.line) {
-                Element(type_name, _, props, _) =>
-                  Some(Element(type_name, id, props, incomplete))
+                Element(type_name, _, props, _, dynamic) =>
+                  Some(Element(type_name, id, props, incomplete, dynamic))
                 Null => None
                 other => Some(other)
               }
             other =>
               match materialize_expr(self, other, stmt.line) {
-                Element(type_name, _, props, _) =>
-                  Some(Element(type_name, id, props, incomplete))
+                Element(type_name, _, props, _, dynamic) =>
+                  Some(Element(type_name, id, props, incomplete, dynamic))
                 Null => None
                 value => Some(value)
               }
@@ -669,8 +669,8 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       }
       self.reached = orphan_ids(self.program, id, self.visited)
       match root {
-        Some(Element(type_name, statement_id, props, partial)) =>
-          Some(Element(type_name, statement_id, props, partial))
+        Some(Element(type_name, statement_id, props, partial, dynamic)) =>
+          Some(Element(type_name, statement_id, props, partial, dynamic))
         _ => None
       }
     }
@@ -712,7 +712,7 @@ fn Val::write(
     Num(_, repr) => buf.write_string(repr)
     Str(text) => buf.write_string(json_quote(text))
     Runtime(expr) => buf.write_string(expr.dump())
-    Element(type_name, _, props, _) => {
+    Element(type_name, _, props, _, _) => {
       buf.write_string(type_name)
       for prop in props {
         let (key, value) = prop
@@ -855,7 +855,7 @@ fn val_json(value : Val) -> Json {
       }
       json_object(encoded)
     }
-    Element(type_name, statement_id, props, partial) => {
+    Element(type_name, statement_id, props, partial, dynamic) => {
       let prop_fields : Array[(String, Json)] = []
       for prop in props {
         let (key, item) = prop
@@ -866,6 +866,7 @@ fn val_json(value : Val) -> Json {
         ("typeName", Json::string(type_name)),
         ("props", json_object(prop_fields)),
         ("partial", Json::boolean(partial)),
+        ("hasDynamicProps", Json::boolean(dynamic)),
       ]
       if statement_id != "" {
         fields.push(("statementId", Json::string(statement_id)))
@@ -1089,6 +1090,7 @@ fn literal_component(
   name : String,
   args : Array[Expr],
   line : Int32,
+  statement_id : String,
 ) -> (String, Array[Issue])? {
   if is_builtin(name) || name == "Query" || name == "Mutation" {
     return None
@@ -1206,7 +1208,12 @@ fn literal_component(
           }
         }
       }
-      buf.write_string("}}")
+      buf.write_string("},\"partial\":false,\"hasDynamicProps\":false")
+      if statement_id != "" {
+        buf.write_string(",\"statementId\":")
+        write_json_string(buf, statement_id)
+      }
+      buf.write_char('}')
       if drop_component {
         Some(("", issues))
       } else {
@@ -1224,7 +1231,7 @@ fn leaf_payload(
 ) -> (String, Array[Issue]) {
   match stmt.expr {
     Comp(name, false, args) =>
-      match literal_component(catalog, name, args, stmt.line) {
+      match literal_component(catalog, name, args, stmt.line, stmt.id) {
         Some(payload) => payload
         None => {
           let (value, issues) = materialize_statement(stmt, schema)
@@ -1282,6 +1289,50 @@ pub fn materialize_json(
 }
 
 ///|
+fn val_has_dynamic(value : Val) -> Bool {
+  match value {
+    Null | Boolean(_) | Num(_) | Str(_) => false
+    Runtime(_) => true
+    Arr(items) => {
+      for item in items {
+        if val_has_dynamic(item) {
+          return true
+        }
+      }
+      false
+    }
+    Obj(fields) => {
+      for field in fields {
+        let (key, item) = field
+        if key == "steps" {
+          match item {
+            Arr(_) => return true
+            _ => ()
+          }
+        }
+        if val_has_dynamic(item) {
+          return true
+        }
+      }
+      false
+    }
+    Element(_, _, _, _, dynamic) => dynamic
+  }
+}
+
+///|
+fn props_have_dynamic(props : Array[(String, Val)]) -> Bool {
+  for prop in props {
+    let (_, value) = prop
+    match value {
+      Null | Boolean(_) | Num(_) | Str(_) => ()
+      _ => if val_has_dynamic(value) { return true }
+    }
+  }
+  false
+}
+
+///|
 fn write_json_bool(buf : StringBuilder, value : Bool) -> Unit {
   if value {
     buf.write_string("true")
@@ -1329,7 +1380,7 @@ fn write_val(buf : StringBuilder, value : Val, with_id : Bool) -> Unit {
       buf.write_char(']')
     }
     Obj(fields) => write_val_fields(buf, fields)
-    Element(type_name, statement_id, props, partial) => {
+    Element(type_name, statement_id, props, partial, dynamic) => {
       if !with_id && statement_id != "" && encoded_elements.val.length() > 0 {
         match encoded_elements.val.get(statement_id) {
           Some(json) => {
@@ -1343,10 +1394,11 @@ fn write_val(buf : StringBuilder, value : Val, with_id : Bool) -> Unit {
       write_json_string(buf, type_name)
       buf.write_string(",\"props\":")
       write_val_fields(buf, props)
-      if partial {
-        buf.write_string(",\"partial\":true")
-      }
-      if with_id && statement_id != "" {
+      buf.write_string(",\"partial\":")
+      write_json_bool(buf, partial)
+      buf.write_string(",\"hasDynamicProps\":")
+      write_json_bool(buf, dynamic)
+      if statement_id != "" {
         buf.write_string(",\"statementId\":")
         write_json_string(buf, statement_id)
       }
