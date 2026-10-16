@@ -1,0 +1,14 @@
+README.md
+  h_a57efa94f24ca5 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d066a715b72c114d6c1d9fa0e3abf5f96c314f0a",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
