@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: compatibility-${{ github.event.pull_request.number || github.ref }}
@@ -62,13 +62,43 @@ jobs:
         run: pnpm run build
 
       - name: Test parser
+        continue-on-error: true
         working-directory: upstream/packages/lang-core
-        run: pnpm exec vitest run src/parser/__tests__
+        run: |
+          set -o pipefail
+          pnpm exec vitest run src/parser/__tests__ 2>&1 | tee "$GITHUB_WORKSPACE/compatibility-parser.log"
 
       - name: Test lang-core
+        continue-on-error: true
         working-directory: upstream/packages/lang-core
-        run: pnpm test
+        run: |
+          set -o pipefail
+          pnpm test 2>&1 | tee "$GITHUB_WORKSPACE/compatibility-lang-core.log"
 
       - name: Test workspace
+        continue-on-error: true
         working-directory: upstream
-        run: pnpm test
+        run: |
+          set -o pipefail
+          pnpm test 2>&1 | tee "$GITHUB_WORKSPACE/compatibility-workspace.log"
+
+      - name: Write compatibility result
+        id: report
+        if: always()
+        run: |
+          node scripts/compatibility-report.mjs \
+            --package upstream/packages/lang-core/package.json \
+            --out docs/compatibility.json \
+            --stage parser=compatibility-parser.log \
+            --stage lang-core=compatibility-lang-core.log \
+            --stage workspace=compatibility-workspace.log
+
+      - name: Publish compatibility badge
+        if: always() && steps.report.outcome == 'success' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/compatibility-report.mjs --publish docs/compatibility.json
+
+      - name: Check compatibility
+        if: always() && steps.report.outcome == 'success'
+        run: node scripts/compatibility-report.mjs --check docs/compatibility.json

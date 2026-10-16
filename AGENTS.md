@@ -43,7 +43,7 @@ pnpm run format
 
 `pnpm run compare` checks a patched `@openuidev/lang-core@1.0.1` against the official package. It needs `web/node_modules`. The report is described in `docs/parity.md`.
 
-`compatibility.yml` shallow-clones `thesysdev/openui`, installs it, links this npm package, and runs `oui.mbt patch-source`. It rebuilds lang-core from that source, then tests `packages/lang-core/src/parser/__tests__`, the lang-core package, and the workspace.
+`compatibility.yml` shallow-clones `thesysdev/openui`, installs it, links this npm package, and runs `oui.mbt patch-source`. It rebuilds lang-core from that source, then tests `packages/lang-core/src/parser/__tests__`, the lang-core package, and the workspace. The job summary lists each stage as passed/total. On `main` it writes `docs/compatibility.json` from the cloned lang-core version and the workspace total. The README badge reads that file.
 
 `pnpm run build:rsdoctor` bundles `@heyq02/openui.mbt` with `rs lib`. With `RSDOCTOR=true` and `CI` set, the report is `dist/.rsdoctor/rsdoctor-data.json`. The demo in `web/` is not part of that report.
 
