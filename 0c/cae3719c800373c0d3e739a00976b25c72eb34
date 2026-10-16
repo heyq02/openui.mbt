@@ -1,0 +1,31 @@
+.github/workflows/release-parser.yml
+  s_21c94720b5edeb::t_46a6952487394e 1-44
+.gitignore
+  s_21c94720b5edeb::t_c4e09797f1b927 7-8
+js/README.md
+  s_21c94720b5edeb::t_461805610bf926 1-13
+js/build.mjs
+  s_21c94720b5edeb::t_565aac4a5731bf 1-13
+js/index.d.ts
+  s_21c94720b5edeb::t_05a910cffe1d35 1-31
+js/index.js
+  s_21c94720b5edeb::t_ecd12480a848c5 1-27
+js/package.json
+  s_21c94720b5edeb::t_9ac9c57a74d737 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0ccae3719c800373c0d3e739a00976b25c72eb34",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
