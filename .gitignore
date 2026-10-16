@@ -13,6 +13,7 @@ node_modules/
 !.env.example
 
 web/node_modules/
+upstream/
 dist/
 .rsdoctor/
 web/dist/

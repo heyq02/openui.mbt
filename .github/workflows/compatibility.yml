@@ -1,0 +1,74 @@
+name: Compatibility
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compatibility-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compatibility:
+    name: Official OpenUI
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup MoonBit
+        uses: cogna-dev/moonbit-actions/setup@v0
+        with:
+          version: latest
+
+      - name: Build Wasm package
+        run: |
+          moon build --target wasm-gc --release
+          node npm/build.mjs
+
+      - name: Clone OpenUI
+        run: git clone --depth 1 https://github.com/thesysdev/openui.git upstream
+
+      - name: Install OpenUI
+        working-directory: upstream
+        run: pnpm install --frozen-lockfile
+
+      - name: Add MoonBit parser
+        working-directory: upstream
+        run: pnpm --filter @openuidev/lang-core add "@heyq02/openui.mbt@file:${GITHUB_WORKSPACE}/npm"
+
+      - name: Patch parser source
+        run: node npm/cli.js patch-source upstream
+
+      - name: Rebuild lang-core
+        working-directory: upstream/packages/lang-core
+        run: pnpm run build
+
+      - name: Test parser
+        working-directory: upstream/packages/lang-core
+        run: pnpm exec vitest run src/parser/__tests__
+
+      - name: Test lang-core
+        working-directory: upstream/packages/lang-core
+        run: pnpm test
+
+      - name: Test workspace
+        working-directory: upstream
+        run: pnpm test

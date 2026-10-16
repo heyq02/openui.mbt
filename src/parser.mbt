@@ -3,6 +3,7 @@ priv struct Parser {
   tokens : Array[Token]
   mut pos : Int32
   mut depth : Int32
+  mut ternary_depth : Int32
   errors : Array[ParseError]
 }
 
@@ -51,11 +52,20 @@ fn Parser::error(self : Parser, message : String) -> Unit {
 
 ///|
 fn Parser::skip_nested_newlines(self : Parser) -> Unit {
-  if self.depth <= 0 {
+  if self.depth > 0 || self.ternary_depth > 0 {
+    while self.current().kind is Newline {
+      self.advance()
+    }
     return
   }
-  while self.current().kind is Newline {
-    self.advance()
+  // A `?` on the next line continues the statement. A `:` only continues
+  // while a ternary is already open, which the branch above covers.
+  let mut peek = self.pos
+  while peek < self.tokens.length() && self.tokens[peek].kind is Newline {
+    peek += 1
+  }
+  if peek < self.tokens.length() && self.tokens[peek].kind is Question {
+    self.pos = peek
   }
 }
 
@@ -322,11 +332,19 @@ fn Parser::parse_infix(self : Parser, left : Expr, prec : Int32) -> Expr {
       BinOp("||", left, self.parse_expr(prec))
     }
     Question => {
+      if self.depth == 0 {
+        self.ternary_depth += 1
+      }
       self.advance()
       let then_branch = self.parse_expr(0)
       self.skip_nested_newlines()
       if self.current().kind is Colon {
+        if self.depth == 0 && self.ternary_depth > 0 {
+          self.ternary_depth -= 1
+        }
         self.advance()
+      } else if self.depth == 0 && self.ternary_depth > 0 {
+        self.ternary_depth -= 1
       }
       let else_branch = self.parse_expr(0)
       Ternary(left, then_branch, else_branch)
@@ -412,7 +430,13 @@ fn Parser::parse_statement(self : Parser) -> Statement? {
 /// Parse assignment statements. A bad line is reported and skipped.
 pub fn parse(src : String) -> Program {
   let tokens = tokenize(src)
-  let parser = Parser::{ tokens, pos: 0, depth: 0, errors: [], }
+  let parser = Parser::{
+    tokens,
+    pos: 0,
+    depth: 0,
+    ternary_depth: 0,
+    errors: [],
+  }
   let statements : Array[Statement] = []
   while !(parser.current().kind is EOF) {
     while parser.current().kind is Newline {

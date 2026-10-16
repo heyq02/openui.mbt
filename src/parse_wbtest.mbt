@@ -96,3 +96,26 @@ test "string escapes and single quotes" {
     ),
   )
 }
+
+///|
+test "a ternary can continue on the following lines" {
+  let src =
+    #|$dark = false
+    #|root = $dark
+    #|  ? darkPage
+    #|  : lightPage
+    #|darkPage = Card("Dark")
+    #|lightPage = Card("Light")
+    #|
+  inspect(
+    summarize(src),
+    content=(
+      #|statements: 4
+      #|errors: 0
+      #|1 $dark = Bool(false)
+      #|2 root = Ternary(StateRef($dark), Ref(darkPage), Ref(lightPage))
+      #|5 darkPage = Comp(Card, [Str("Dark")])
+      #|6 lightPage = Comp(Card, [Str("Light")])
+    ),
+  )
+}
