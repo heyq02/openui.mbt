@@ -17,6 +17,7 @@ upstream/
 dist/
 .rsdoctor/
 web/dist/
+.bench/
 web/public/parser.wasm
 web/public/signup.openui
 npm/parser.wasm.js
