@@ -3,7 +3,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const wasmPath = resolve(here, '../_build/wasm-gc/release/build/wasm/wasm.wasm');
+const wasmPath = resolve(
+  here,
+  '../_build/wasm-gc/release/build/wasm/wasm.wasm',
+);
 const bytes = readFileSync(wasmPath);
 const wasmBase64 = bytes.toString('base64');
 
