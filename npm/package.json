@@ -13,23 +13,13 @@
   "bugs": {
     "url": "https://github.com/heyq02/openui.mbt/issues"
   },
-  "license": "MIT",
-  "author": "Ari <mail@heyq02.cn>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/heyq02/openui.mbt.git",
     "directory": "npm"
   },
-  "bin": {
-    "oui.mbt": "./cli.js"
-  },
-  "files": [
-    "index.js",
-    "index.d.ts",
-    "cli.js",
-    "parser.wasm.js",
-    "README.md"
-  ],
+  "license": "MIT",
+  "author": "Ari <mail@heyq02.cn>",
   "type": "module",
   "exports": {
     ".": {
@@ -41,15 +31,25 @@
       "default": "./index.js"
     }
   },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
+  "bin": {
+    "oui.mbt": "./cli.js"
   },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "cli.js",
+    "parser.wasm.js",
+    "README.md"
+  ],
   "scripts": {
     "build": "node build.mjs",
     "prepublishOnly": "node build.mjs"
   },
   "engines": {
     "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

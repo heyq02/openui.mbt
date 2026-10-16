@@ -1,7 +1,7 @@
-import { resolveRsdoctorPlugin } from "@heyq02/rstack-config/rslib";
-import { rstack } from "@heyq02/rstack-config/rstack";
+import { resolveRsdoctorPlugin } from '@heyq02/rstack-config/rslib';
+import { rstack } from '@heyq02/rstack-config/rstack';
 // Configuration guide: https://rstack.rs/config
-import { define } from "rstack";
+import { define } from 'rstack';
 
 // MoonBit stays on `moon`. This preset only covers repo hygiene.
 define.extends([
@@ -13,16 +13,16 @@ define.extends([
       singleQuote: true,
       sortPackageJson: true,
       ignorePatterns: [
-        ".github/**",
-        ".cursor/**",
-        "web/**",
-        "src/**",
-        "**/*.md",
-        "**/*.mbt",
-        "pnpm-lock.yaml",
-        "_build/**",
-        ".mooncakes/**",
-        "npm/parser.wasm.js",
+        '.github/**',
+        '.cursor/**',
+        'web/**',
+        'src/**',
+        '**/*.md',
+        '**/*.mbt',
+        'pnpm-lock.yaml',
+        '_build/**',
+        '.mooncakes/**',
+        'npm/parser.wasm.js',
       ],
     },
     staged: {
@@ -36,15 +36,15 @@ define.extends([
 const rsdoctorPlugin = resolveRsdoctorPlugin(true);
 
 define.lib({
-  lib: [{ format: "esm", bundle: true, dts: false }],
+  lib: [{ format: 'esm', bundle: true, dts: false }],
   source: {
     entry: {
-      index: "./npm/index.js",
-      cli: "./npm/cli.js",
+      index: './npm/index.js',
+      cli: './npm/cli.js',
     },
   },
   output: {
-    target: "node",
+    target: 'node',
   },
   ...(rsdoctorPlugin
     ? {

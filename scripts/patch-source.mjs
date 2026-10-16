@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
-const MARKER = "/* oui.mbt-parser */";
+const MARKER = '/* oui.mbt-parser */';
 
 const SOURCE_IMPORT = `${MARKER}
 import { parseProgram as __ouiParseProgram } from '@heyq02/openui.mbt/parser';
@@ -35,24 +35,24 @@ function replaceOnce(source, from, to, label) {
 }
 
 function patchParserSource(source, path) {
-  if (source.includes(MARKER)) return { status: "patched", next: source };
+  if (source.includes(MARKER)) return { status: 'patched', next: source };
   let next = source;
   next = replaceOnce(
     next,
-    "split(tokenize(text))",
-    "parseMoonbitStatements(text)",
+    'split(tokenize(text))',
+    'parseMoonbitStatements(text)',
     `${path} split(tokenize(text))`,
   );
   next = replaceOnce(
     next,
-    "split(tokenize(closed))",
-    "parseMoonbitStatements(closed)",
+    'split(tokenize(closed))',
+    'parseMoonbitStatements(closed)',
     `${path} split(tokenize(closed))`,
   );
   next = replaceOnce(
     next,
-    "split(tokenize(t))",
-    "parseMoonbitStatements(t)",
+    'split(tokenize(t))',
+    'parseMoonbitStatements(t)',
     `${path} split(tokenize(t))`,
   );
   const pair =
@@ -63,43 +63,45 @@ function patchParserSource(source, path) {
     return `${indent}const stmt = classifyStatement(s, s.expr);`;
   });
   if (pairCount !== 3) {
-    throw new Error(`${path} has ${pairCount} parseExpression(s.tokens) sites, expected 3`);
+    throw new Error(
+      `${path} has ${pairCount} parseExpression(s.tokens) sites, expected 3`,
+    );
   }
-  next = next.replace('import { parseExpression } from "./expressions";\n', "");
-  next = next.replace('import { tokenize } from "./lexer";\n', "");
+  next = next.replace('import { parseExpression } from "./expressions";\n', '');
+  next = next.replace('import { tokenize } from "./lexer";\n', '');
   next = next.replace(
     'import { autoClose, split, type RawStmt } from "./statements";',
     'import { autoClose, type RawStmt } from "./statements";',
   );
-  return { status: "updated", next: SOURCE_IMPORT + next + SOURCE_FN };
+  return { status: 'updated', next: SOURCE_IMPORT + next + SOURCE_FN };
 }
 
 function patchMergeSource(source, path) {
-  if (source.includes(MARKER)) return { status: "patched", next: source };
+  if (source.includes(MARKER)) return { status: 'patched', next: source };
   let next = source;
   next = replaceOnce(
     next,
-    "split(tokenize(raw))[0]",
-    "parseMoonbitStatements(raw)[0]",
+    'split(tokenize(raw))[0]',
+    'parseMoonbitStatements(raw)[0]',
     `${path} split(tokenize(raw))`,
   );
   next = replaceOnce(
     next,
-    "ast: parseExpression(stmt.tokens),",
-    "ast: stmt.expr,",
+    'ast: parseExpression(stmt.tokens),',
+    'ast: stmt.expr,',
     `${path} parseExpression(stmt.tokens)`,
   );
-  next = next.replace('import { parseExpression } from "./expressions";\n', "");
-  next = next.replace('import { tokenize } from "./lexer";\n', "");
-  next = next.replace('import { split } from "./statements";\n', "");
-  return { status: "updated", next: SOURCE_IMPORT + next + SOURCE_FN };
+  next = next.replace('import { parseExpression } from "./expressions";\n', '');
+  next = next.replace('import { tokenize } from "./lexer";\n', '');
+  next = next.replace('import { split } from "./statements";\n', '');
+  return { status: 'updated', next: SOURCE_IMPORT + next + SOURCE_FN };
 }
 
 function patchSource(checkout) {
-  const parserDir = join(checkout, "packages/lang-core/src/parser");
+  const parserDir = join(checkout, 'packages/lang-core/src/parser');
   const files = [
-    ["parser.ts", patchParserSource],
-    ["merge.ts", patchMergeSource],
+    ['parser.ts', patchParserSource],
+    ['merge.ts', patchMergeSource],
   ];
   const prepared = [];
   for (const [file, transformSource] of files) {
@@ -108,11 +110,11 @@ function patchSource(checkout) {
     prepared.push({
       path,
       file,
-      ...transformSource(readFileSync(path, "utf8"), path),
+      ...transformSource(readFileSync(path, 'utf8'), path),
     });
   }
   for (const item of prepared) {
-    if (item.status === "updated") writeFileSync(item.path, item.next);
+    if (item.status === 'updated') writeFileSync(item.path, item.next);
   }
   console.log(`Patched OpenUI source at ${parserDir}`);
   for (const item of prepared) console.log(`${item.file}: ${item.status}`);
@@ -122,7 +124,7 @@ const checkout = process.argv[2];
 
 try {
   if (!checkout) {
-    console.log("Usage: node scripts/patch-source.mjs <openui-checkout>");
+    console.log('Usage: node scripts/patch-source.mjs <openui-checkout>');
     process.exit(1);
   }
   patchSource(resolve(checkout));

@@ -1,8 +1,8 @@
-import { wasmBase64 } from "./parser.wasm.js";
+import { wasmBase64 } from './parser.wasm.js';
 
 const compileOptions = {
-  builtins: ["js-string"],
-  importedStringConstants: "_",
+  builtins: ['js-string'],
+  importedStringConstants: '_',
 };
 
 function wasmBytes(base64) {
@@ -12,13 +12,16 @@ function wasmBytes(base64) {
   return bytes;
 }
 
-const wasmModule = new WebAssembly.Module(wasmBytes(wasmBase64), compileOptions);
+const wasmModule = new WebAssembly.Module(
+  wasmBytes(wasmBase64),
+  compileOptions,
+);
 
 // Node 22 keeps imported string constants as Wasm globals. Node 26 links
 // them while compiling, so the import list is empty.
 const stringConstants = {};
 for (const item of WebAssembly.Module.imports(wasmModule)) {
-  if (item.module === "_") stringConstants[item.name] = item.name;
+  if (item.module === '_') stringConstants[item.name] = item.name;
 }
 const instance = new WebAssembly.Instance(
   wasmModule,
@@ -38,25 +41,29 @@ const {
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
 export function parseProgram(source) {
-  return JSON.parse(parseOpenui(source ?? ""));
+  return JSON.parse(parseOpenui(source ?? ''));
 }
 
 /** Tokenize OpenUI Lang source. */
 export function tokenize(source) {
-  return JSON.parse(tokenizeOpenui(source ?? ""));
+  return JSON.parse(tokenizeOpenui(source ?? ''));
 }
 
 /**
  * Materialize source against a library JSON Schema.
  * Returns the element tree plus errors, unresolved, orphaned, and incomplete.
  */
-export function materializeProgram(source, schema, rootName = "") {
-  return JSON.parse(materializeOpenui(source ?? "", schema ?? "{}", rootName ?? ""));
+export function materializeProgram(source, schema, rootName = '') {
+  return JSON.parse(
+    materializeOpenui(source ?? '', schema ?? '{}', rootName ?? ''),
+  );
 }
 
 /** Parse and materialize in one Wasm call. The result uses the official ParseResult shape. */
-export function parseResult(source, schema, rootName = "") {
-  return JSON.parse(parseResultOpenui(source ?? "", schema ?? "{}", rootName ?? ""));
+export function parseResult(source, schema, rootName = '') {
+  return JSON.parse(
+    parseResultOpenui(source ?? '', schema ?? '{}', rootName ?? ''),
+  );
 }
 
 function readResult(json) {
@@ -68,14 +75,14 @@ function readResult(json) {
  * Before finish, an unfinished line is held back.
  * finish checks the whole buffer. dispose drops the Wasm session.
  */
-export function createStream(schema, rootName = "") {
-  const id = streamOpen(schema ?? "{}", rootName ?? "");
+export function createStream(schema, rootName = '') {
+  const id = streamOpen(schema ?? '{}', rootName ?? '');
   return {
     push(chunk) {
-      return readResult(streamPush(id, chunk ?? ""));
+      return readResult(streamPush(id, chunk ?? ''));
     },
     set(text) {
-      return readResult(streamSet(id, text ?? ""));
+      return readResult(streamSet(id, text ?? ''));
     },
     finish() {
       return readResult(streamFinish(id));

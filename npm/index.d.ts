@@ -28,7 +28,7 @@ export interface MoonbitToken {
 }
 
 export interface MaterializedElement {
-  type: "element";
+  type: 'element';
   typeName: string;
   statementId?: string;
   partial: boolean;
