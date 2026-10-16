@@ -59,3 +59,12 @@ export function materializeProgram(
   schema: string,
   rootName?: string,
 ): MaterializeResult;
+
+export interface OpenUiStream {
+  push(chunk: string): MaterializeResult;
+  set(text: string): MaterializeResult;
+  finish(): MaterializeResult;
+  dispose(): void;
+}
+
+export function createStream(schema: string, rootName?: string): OpenUiStream;

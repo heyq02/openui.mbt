@@ -12,6 +12,8 @@ const program = parseProgram('root = TextContent("Hello", "large")');
 
 `materializeProgram(source, schema, rootName)` returns the element tree plus `errors`, `unresolved`, `orphaned`, and `incomplete`.
 
+`createStream(schema, rootName)` keeps a buffer in Wasm. `push` appends, `set` replaces, and each call returns the latest materialize result. An unfinished line is held back until `finish`, which checks the whole buffer. `dispose` drops that session.
+
 ```bash
 npm install @heyq02/openui.mbt @openuidev/lang-core
 npx oui.mbt patch

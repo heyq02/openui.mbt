@@ -14,8 +14,8 @@ CI installs latest `moon`. Dated CDN pins return 403.
 
 | Path | Role |
 |------|------|
-| `src/` | Lexer, parser, schema, materialize. Tests stay beside sources. |
-| `src/wasm/` | Wasm-GC exports. `supported_targets = "wasm-gc"`. |
+| `src/` | Lexer, parser, schema, materialize, streaming. Tests stay beside sources. |
+| `src/wasm/` | Wasm-GC exports, including the streaming session. `supported_targets = "wasm-gc"`. |
 | `npm/` | npm package. Embeds the release Wasm as base64. |
 | `web/` | Rsbuild demo. Its own npm install. |
 | `docs/schema.md` | JSON Schema contract. |

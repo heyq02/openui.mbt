@@ -140,15 +140,16 @@ fn remove_name(items : Array[String], name : String) -> Unit {
 }
 
 ///|
-/// Unclosed strings or brackets mean the trailing construct is still incomplete.
-pub fn source_incomplete(src : String) -> Bool {
+/// Index of the outermost construct that is still unclosed, or -1.
+fn unclosed_at(src : String) -> Int32 {
   let mut index = 0
   let mut depth = 0
   let mut quote = 0
   let mut escape = false
+  let mut open_at = -1
   while index < src.length() {
     let current = src.at(index).to_int()
-    index += 1
+    index = index + 1
     if escape {
       escape = false
       continue
@@ -158,24 +159,46 @@ pub fn source_incomplete(src : String) -> Bool {
         escape = true
       } else if current == quote {
         quote = 0
+        if depth == 0 {
+          open_at = -1
+        }
       }
       continue
     }
     if current == code('"') || current == code('\'') {
       quote = current
+      if depth == 0 {
+        open_at = index - 1
+      }
     } else if current == code('(') ||
       current == code('[') ||
       current == code('{') {
-      depth += 1
+      if depth == 0 {
+        open_at = index - 1
+      }
+      depth = depth + 1
     } else if current == code(')') ||
       current == code(']') ||
       current == code('}') {
       if depth > 0 {
-        depth -= 1
+        depth = depth - 1
+      }
+      if depth == 0 {
+        open_at = -1
       }
     }
   }
-  quote != 0 || depth > 0
+  if quote != 0 || depth > 0 {
+    open_at
+  } else {
+    -1
+  }
+}
+
+///|
+/// Unclosed strings or brackets mean the trailing construct is still incomplete.
+pub fn source_incomplete(src : String) -> Bool {
+  unclosed_at(src) >= 0
 }
 
 ///|

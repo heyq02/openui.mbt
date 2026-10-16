@@ -21,6 +21,11 @@ const {
   parse_openui: parseOpenui,
   tokenize_openui: tokenizeOpenui,
   materialize_openui: materializeOpenui,
+  stream_open: streamOpen,
+  stream_push: streamPush,
+  stream_set: streamSet,
+  stream_finish: streamFinish,
+  stream_close: streamClose,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -41,4 +46,31 @@ export function materializeProgram(source, schema, rootName = '') {
   return JSON.parse(
     materializeOpenui(source ?? '', schema ?? '{}', rootName ?? ''),
   );
+}
+
+function readResult(json) {
+  return JSON.parse(json);
+}
+
+/**
+ * Streaming parser. Each push or set reparses the buffer.
+ * Before finish, an unfinished line is held back.
+ * finish checks the whole buffer. dispose drops the Wasm session.
+ */
+export function createStream(schema, rootName = '') {
+  const id = streamOpen(schema ?? '{}', rootName ?? '');
+  return {
+    push(chunk) {
+      return readResult(streamPush(id, chunk ?? ''));
+    },
+    set(text) {
+      return readResult(streamSet(id, text ?? ''));
+    },
+    finish() {
+      return readResult(streamFinish(id));
+    },
+    dispose() {
+      streamClose(id);
+    },
+  };
 }

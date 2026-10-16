@@ -16,7 +16,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/heyq02/openui.mbt.git",
-    "directory": "js"
+    "directory": "npm"
   },
   "license": "MIT",
   "author": "Ari <mail@heyq02.cn>",
