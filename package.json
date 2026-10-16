@@ -17,8 +17,7 @@
     "build:rsdoctor": "moon build --target wasm-gc --release && node npm/build.mjs && rs lib",
     "commitlint": "commitlint",
     "compare": "node npm/compare.mjs",
-    "format": "automd && rs fmt",
-    "format:check": "rs fmt --check",
+    "format": "automd && rs fmt && oxfmt",
     "prepare": "rs hooks",
     "release": "bumpp",
     "test": "moon test --target native --deny-warn"
