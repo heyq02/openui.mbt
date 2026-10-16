@@ -74,6 +74,8 @@ demo 生产包含 html、js、css，不计 source map。
 
 Headless Chrome 从导航计到注册表单画出后的下一帧。热加载后 6 次都在 165–188 ms。
 
+## 贡献者
+
 <!-- automd:contributors license=MIT author="heyq02" github="heyq02/openui.mbt" -->
 
 Published under the [MIT](https://github.com/heyq02/openui.mbt/blob/main/LICENSE) license.
