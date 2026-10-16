@@ -1,0 +1,28 @@
+.github/workflows/coverage.yml
+  h_a57efa94f24ca5 44,52
+AGENTS.md
+  h_a57efa94f24ca5 17-18,41,55
+README.md
+  h_a57efa94f24ca5 17
+js/build.mjs
+  h_a57efa94f24ca5 6
+moon.mod
+  h_a57efa94f24ca5 5-6
+rstack.config.ts
+  h_a57efa94f24ca5 20
+src/wasm/export.mbt
+  h_a57efa94f24ca5 5,12,24
+src/wasm/moon.pkg
+  h_a57efa94f24ca5 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f8ab052d49a87581b5a5674aee28c14e99d00a79",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
