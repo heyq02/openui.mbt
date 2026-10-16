@@ -30,8 +30,9 @@ const {
   materialize_openui: materializeOpenui,
   parse_result: parseResultOpenui,
   stream_open: streamOpen,
-  stream_push: streamPush,
-  stream_set: streamSet,
+  stream_append: streamAppend,
+  stream_replace: streamReplace,
+  stream_view: streamView,
   stream_finish: streamFinish,
   stream_close: streamClose,
 } = instance.exports;
@@ -64,18 +65,22 @@ function readResult(json) {
 }
 
 /**
- * Streaming parser. Each push or set reparses the buffer.
+ * Streaming parser. Closed lines stay parsed in Wasm.
  * Before finish, an unfinished line is held back.
- * finish checks the whole buffer. dispose drops the Wasm session.
+ * `complete` checks the whole buffer in that call. dispose drops the session.
+ * The result uses the official ParseResult shape.
  */
 export function createStream(schema, rootName = "") {
   const id = streamOpen(schema ?? "{}", rootName ?? "");
   return {
-    push(chunk) {
-      return readResult(streamPush(id, chunk ?? ""));
+    push(chunk, complete = false) {
+      return readResult(streamAppend(id, chunk ?? "", complete ? 1 : 0));
     },
-    set(text) {
-      return readResult(streamSet(id, text ?? ""));
+    set(text, complete = false) {
+      return readResult(streamReplace(id, text ?? "", complete ? 1 : 0));
+    },
+    result(complete = false) {
+      return readResult(streamView(id, complete ? 1 : 0));
     },
     finish() {
       return readResult(streamFinish(id));

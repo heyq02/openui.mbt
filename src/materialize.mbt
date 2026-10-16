@@ -31,10 +31,17 @@ priv struct Mat {
   visited : Map[String, Bool]
   mut visiting : Array[String]
   errors : Array[Issue]
+  use_cache : Bool
+  cache : Ref[Map[String, Val]]
+  cache_limit : Int32
 }
 
 ///|
 let cached_schema : Ref[String] = Ref("")
+
+///|
+/// JSON for stream leaves. Empty while a one-shot parse is encoding.
+let encoded_elements : Ref[Map[String, String]] = Ref(Map([]))
 
 ///|
 let cached_catalog : Ref[SchemaCatalog] = Ref({
@@ -308,7 +315,56 @@ fn materialize_expr(mat : Mat, expr : Expr, line : Int32) -> Val {
 }
 
 ///|
+fn expr_has_ref(expr : Expr) -> Bool {
+  match expr {
+    Ref(_) => true
+    Arr(items) => {
+      for item in items {
+        if expr_has_ref(item) {
+          return true
+        }
+      }
+      false
+    }
+    Obj(entries) => {
+      for entry in entries {
+        let (_, value) = entry
+        if expr_has_ref(value) {
+          return true
+        }
+      }
+      false
+    }
+    Comp(_, _, args) => {
+      for arg in args {
+        if expr_has_ref(arg) {
+          return true
+        }
+      }
+      false
+    }
+    UnaryOp(_, value) => expr_has_ref(value)
+    BinOp(_, left, right) => expr_has_ref(left) || expr_has_ref(right)
+    Ternary(cond, yes, no) =>
+      expr_has_ref(cond) || expr_has_ref(yes) || expr_has_ref(no)
+    Member(value, _) => expr_has_ref(value)
+    Index(value, index) => expr_has_ref(value) || expr_has_ref(index)
+    Assign(_, value) => expr_has_ref(value)
+    _ => false
+  }
+}
+
+///|
 fn materialize_ref(mat : Mat, name : String, line : Int32) -> Val {
+  if mat.use_cache {
+    match mat.cache.val.get(name) {
+      Some(value) => {
+        mat.visited[name] = true
+        return value
+      }
+      None => ()
+    }
+  }
   if list_has(mat.visiting, name) {
     push_unique(mat.unresolved, name)
     return Null
@@ -333,6 +389,14 @@ fn materialize_ref(mat : Mat, name : String, line : Int32) -> Val {
         }
       }
       mat.visiting = next
+      if mat.use_cache &&
+        mat.defs[name] < mat.cache_limit &&
+        !expr_has_ref(stmt.expr) {
+        mat.cache.val[name] = value
+        let buf = StringBuilder()
+        write_val(buf, value, false)
+        encoded_elements.val[name] = buf.to_string()
+      }
       let _line = line
       value
     }
@@ -883,9 +947,311 @@ fn materialize_with(
     visited: Map([]),
     visiting: [],
     errors: [],
+    use_cache: false,
+    cache: Ref(Map([])),
+    cache_limit: 0,
   }
   let root = mat.run(root_name, incomplete)
   (root, incomplete, mat.unresolved, mat.reached, mat.errors, count)
+}
+
+///|
+fn materialize_program(
+  program : Program,
+  schema : String,
+  root_name : String,
+  incomplete : Bool,
+  cache : Ref[Map[String, Val]],
+  cache_limit : Int32,
+) -> (Val?, Bool, Array[String], Array[String], Array[Issue], Int32) {
+  let count = program.statements.length()
+  let catalog = catalog_for(schema)
+  let defs = index_statements(program)
+  let mat = Mat::{
+    program,
+    catalog,
+    defs,
+    unresolved: [],
+    reached: [],
+    visited: Map([]),
+    visiting: [],
+    errors: [],
+    use_cache: true,
+    cache,
+    cache_limit,
+  }
+  let root = mat.run(root_name, incomplete)
+  (root, incomplete, mat.unresolved, mat.reached, mat.errors, count)
+}
+
+///|
+/// Materialize one statement. Callers use this for a closed leaf during streaming.
+fn materialize_statement(
+  stmt : Statement,
+  schema : String,
+) -> (Val, Array[Issue]) {
+  let program : Program = { statements: [stmt], errors: [], }
+  let catalog = catalog_for(schema)
+  let defs : Map[String, Int32] = Map([])
+  defs[stmt.id] = 0
+  let saved = encoded_elements.val
+  encoded_elements.val = Map([])
+  let mat = Mat::{
+    program,
+    catalog,
+    defs,
+    unresolved: [],
+    reached: [],
+    visited: Map([]),
+    visiting: [],
+    errors: [],
+    use_cache: false,
+    cache: Ref(Map([])),
+    cache_limit: 0,
+  }
+  let value = match stmt.expr {
+    Comp(name, is_function, args) =>
+      materialize_call(mat, name, is_function, args, stmt.id, stmt.line)
+    other => materialize_expr(mat, other, stmt.line)
+  }
+  encoded_elements.val = saved
+  (value, mat.errors)
+}
+
+///|
+fn scalar_json(expr : Expr) -> String? {
+  match expr {
+    Null => Some("null")
+    Bool(true) => Some("true")
+    Bool(false) => Some("false")
+    Num(_, repr) => Some(repr)
+    Str(text) => {
+      let buf = StringBuilder()
+      write_json_string(buf, text)
+      Some(buf.to_string())
+    }
+    _ => None
+  }
+}
+
+///|
+fn scalar_display(expr : Expr) -> String? {
+  match expr {
+    Null => Some("null")
+    Bool(true) => Some("true")
+    Bool(false) => Some("false")
+    Num(_, repr) => Some(repr)
+    Str(text) => Some(json_quote(text))
+    _ => None
+  }
+}
+
+///|
+fn scalar_matches(shape : SchemaShape, expr : Expr) -> Bool {
+  match shape {
+    Any | Ref(_) | Unknown(_) => true
+    Str =>
+      match expr {
+        Str(_) => true
+        _ => false
+      }
+    Num =>
+      match expr {
+        Num(_) => true
+        _ => false
+      }
+    Boolean =>
+      match expr {
+        Bool(_) => true
+        _ => false
+      }
+    Null =>
+      match expr {
+        Null => true
+        _ => false
+      }
+    Obj | Arr | Enum(_) => false
+    Union(items) => {
+      for item in items {
+        if scalar_matches(item, expr) {
+          return true
+        }
+      }
+      false
+    }
+  }
+}
+
+///|
+/// Literal component calls skip the value tree. Anything else uses `materialize_statement`.
+fn literal_component(
+  catalog : SchemaCatalog,
+  name : String,
+  args : Array[Expr],
+  line : Int32,
+) -> (String, Array[Issue])? {
+  if is_builtin(name) || name == "Query" || name == "Mutation" {
+    return None
+  }
+  let mut index = 0
+  while index < args.length() {
+    if scalar_json(args[index]) is None {
+      return None
+    }
+    index = index + 1
+  }
+  let issues : Array[Issue] = []
+  match component_params(catalog, name) {
+    None => {
+      issues.push({
+        code: "unknown-component",
+        component: name,
+        path: "",
+        message: "Unknown component \"" + name + "\"",
+        line,
+        column: 0,
+      })
+      Some(("", issues))
+    }
+    Some(params) => {
+      let buf = StringBuilder()
+      buf.write_string("{\"type\":\"element\",\"typeName\":")
+      write_json_string(buf, name)
+      buf.write_string(",\"props\":{")
+      let mismatched : Array[String] = []
+      let mut drop_component = false
+      let mut wrote = false
+      let mut arg_index = 0
+      while arg_index < params.length() && arg_index < args.length() {
+        let param = params[arg_index]
+        let arg = args[arg_index]
+        if scalar_matches(param.shape, arg) {
+          if wrote {
+            buf.write_char(',')
+          }
+          wrote = true
+          write_json_string(buf, param.name)
+          buf.write_char(':')
+          match scalar_json(arg) {
+            Some(json) => buf.write_string(json)
+            None => ()
+          }
+        } else {
+          let actual = match scalar_display(arg) {
+            Some(text) => text
+            None => "value"
+          }
+          issues.push({
+            code: "type-mismatch",
+            component: name,
+            path: "/" + param.name,
+            message: "field \"/" +
+            param.name +
+            "\" expects " +
+            shape_label(param.shape) +
+            " but got " +
+            actual,
+            line,
+            column: 0,
+          })
+          if param.required {
+            drop_component = true
+            mismatched.push(param.name)
+          }
+        }
+        arg_index = arg_index + 1
+      }
+      if args.length() > params.length() {
+        let extra = args.length() - params.length()
+        issues.push({
+          code: "excess-args",
+          component: name,
+          path: "",
+          message: name +
+          " takes " +
+          params.length().to_string() +
+          " arg(s), got " +
+          args.length().to_string() +
+          " (" +
+          extra.to_string() +
+          " excess dropped)",
+          line,
+          column: 0,
+        })
+      }
+      for param in params {
+        if param.required && !list_has(mismatched, param.name) {
+          let mut present = false
+          let mut slot = 0
+          while slot < params.length() && slot < args.length() {
+            if params[slot].name == param.name &&
+              scalar_matches(param.shape, args[slot]) {
+              match args[slot] {
+                Null => ()
+                _ => present = true
+              }
+            }
+            slot = slot + 1
+          }
+          if !present {
+            drop_component = true
+            issues.push({
+              code: "missing-required",
+              component: name,
+              path: "/" + param.name,
+              message: "missing required field \"/" + param.name + "\"",
+              line,
+              column: 0,
+            })
+          }
+        }
+      }
+      buf.write_string("}}")
+      if drop_component {
+        Some(("", issues))
+      } else {
+        Some((buf.to_string(), issues))
+      }
+    }
+  }
+}
+
+///|
+fn leaf_payload(
+  stmt : Statement,
+  schema : String,
+  catalog : SchemaCatalog,
+) -> (String, Array[Issue]) {
+  match stmt.expr {
+    Comp(name, false, args) =>
+      match literal_component(catalog, name, args, stmt.line) {
+        Some(payload) => payload
+        None => {
+          let (value, issues) = materialize_statement(stmt, schema)
+          (child_json(value), issues)
+        }
+      }
+    _ => {
+      let (value, issues) = materialize_statement(stmt, schema)
+      (child_json(value), issues)
+    }
+  }
+}
+
+///|
+/// Child JSON for an array slot. `Null` is omitted, matching ref materialize.
+fn child_json(value : Val) -> String {
+  match value {
+    Null => ""
+    other => {
+      let saved = encoded_elements.val
+      encoded_elements.val = Map([])
+      let buf = StringBuilder()
+      write_val(buf, other, false)
+      encoded_elements.val = saved
+      buf.to_string()
+    }
+  }
 }
 
 ///|
@@ -964,6 +1330,15 @@ fn write_val(buf : StringBuilder, value : Val, with_id : Bool) -> Unit {
     }
     Obj(fields) => write_val_fields(buf, fields)
     Element(type_name, statement_id, props, partial) => {
+      if !with_id && statement_id != "" && encoded_elements.val.length() > 0 {
+        match encoded_elements.val.get(statement_id) {
+          Some(json) => {
+            buf.write_string(json)
+            return
+          }
+          None => ()
+        }
+      }
       buf.write_string("{\"type\":\"element\",\"typeName\":")
       write_json_string(buf, type_name)
       buf.write_string(",\"props\":")
@@ -1038,9 +1413,41 @@ pub fn materialize_result(
   schema : String,
   root_name : String,
 ) -> String {
+  encoded_elements.val = Map([])
   let (root, incomplete, unresolved, orphaned, errors, count) = materialize_with(
     src, schema, root_name,
   )
+  let buf = StringBuilder()
+  buf.write_string("{\"root\":")
+  match root {
+    Some(value) => write_val(buf, value, true)
+    None => buf.write_string("null")
+  }
+  buf.write_string(",\"meta\":{\"incomplete\":")
+  write_json_bool(buf, incomplete)
+  buf.write_string(",\"unresolved\":")
+  write_string_list(buf, unresolved)
+  buf.write_string(",\"orphaned\":")
+  write_string_list(buf, orphaned)
+  buf.write_string(",\"statementCount\":")
+  buf.write_string(count.to_string())
+  buf.write_string(",\"errors\":")
+  write_issues(buf, errors)
+  buf.write_string(
+    "},\"stateDeclarations\":{},\"queryStatements\":[],\"mutationStatements\":[]}",
+  )
+  buf.to_string()
+}
+
+///|
+fn encode_parse_result(
+  root : Val?,
+  incomplete : Bool,
+  unresolved : Array[String],
+  orphaned : Array[String],
+  errors : Array[Issue],
+  count : Int32,
+) -> String {
   let buf = StringBuilder()
   buf.write_string("{\"root\":")
   match root {
