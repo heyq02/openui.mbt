@@ -1,0 +1,23 @@
+AGENTS.md
+  s_21c94720b5edeb::t_da3c1a99f4e648 3,45
+README.md
+  s_21c94720b5edeb::t_907b334cc3b4af 5,22,26,40
+js/README.md
+  s_21c94720b5edeb::t_0d0964e63eded0 1,8,16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "46b85d282f404406d6475f884801ee9b8e0553ed",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
