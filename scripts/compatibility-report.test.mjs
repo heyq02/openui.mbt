@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildBadge, parseVitestLog, summary } from './compatibility-report.mjs';
+import {
+  buildBadge,
+  parseVitestLog,
+  summary,
+} from './compatibility-report.mjs';
 
 test('sums vitest summaries and ignores file counts', () => {
   const parsed = parseVitestLog(`
@@ -15,7 +19,9 @@ test('sums vitest summaries and ignores file counts', () => {
 });
 
 test('strips color and counts a fully failed run as zero passed', () => {
-  const parsed = parseVitestLog('\u001b[31m      Tests  3 failed (3)\u001b[0m\n');
+  const parsed = parseVitestLog(
+    '\u001b[31m      Tests  3 failed (3)\u001b[0m\n',
+  );
   assert.deepEqual(parsed, { passed: 0, total: 3, reports: 1 });
 });
 
