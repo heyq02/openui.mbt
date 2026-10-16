@@ -984,14 +984,14 @@ fn write_val_fields(buf : StringBuilder, fields : Array[(String, Val)]) -> Unit 
     let (key, value) = field
     write_json_string(buf, key)
     buf.write_char(':')
-    write_val(buf, value)
+    write_val(buf, value, false)
     index += 1
   }
   buf.write_char('}')
 }
 
 ///|
-fn write_val(buf : StringBuilder, value : Val) -> Unit {
+fn write_val(buf : StringBuilder, value : Val, with_id : Bool) -> Unit {
   match value {
     Null => buf.write_string("null")
     Boolean(true) => buf.write_string("true")
@@ -1006,7 +1006,7 @@ fn write_val(buf : StringBuilder, value : Val) -> Unit {
         if index > 0 {
           buf.write_char(',')
         }
-        write_val(buf, item)
+        write_val(buf, item, false)
         index += 1
       }
       buf.write_char(']')
@@ -1017,10 +1017,10 @@ fn write_val(buf : StringBuilder, value : Val) -> Unit {
       write_json_string(buf, type_name)
       buf.write_string(",\"props\":")
       write_val_fields(buf, props)
-      buf.write_string(",\"partial\":")
-      write_json_bool(buf, partial)
-      buf.write_string(",\"hasDynamicProps\":false")
-      if statement_id != "" {
+      if partial {
+        buf.write_string(",\"partial\":true")
+      }
+      if with_id && statement_id != "" {
         buf.write_string(",\"statementId\":")
         write_json_string(buf, statement_id)
       }
@@ -1093,7 +1093,7 @@ pub fn materialize_result(
   let buf = StringBuilder()
   buf.write_string("{\"root\":")
   match root {
-    Some(value) => write_val(buf, value)
+    Some(value) => write_val(buf, value, true)
     None => buf.write_string("null")
   }
   buf.write_string(",\"meta\":{\"incomplete\":")

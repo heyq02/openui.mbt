@@ -258,6 +258,11 @@ test "materialize covers shapes, runtime clones, and json" {
   use_text(materialize_json(src, schema, "Box"))
   use_text(materialize_result(src, schema, "Box"))
   use_text(materialize_result("root = Box(\n", schema, "Box"))
+  use_text(materialize_result("root = Box(\"ok\", 1, false)\n", schema, "Box"))
+  let escaped = StringBuilder()
+  write_json_string(escaped, "\"\\\b\u{000C}\n\r\t\u{0001}")
+  use_text(escaped.to_string())
+  let _counted = materialize_count(src, schema, "Box")
   use_text(materialize_dump("t = Slot(\"x\")\n", schema, "Box"))
   use_text(materialize_json("", schema, ""))
   use_text(materialize_dump("root = Slot()\npage = Slot(\"x\")\n", schema, ""))
@@ -285,6 +290,7 @@ test "remaining expression, schema, and materialize branches" {
     Assign("$count", Num(1.0, "1")),
   ]
   for node in nodes {
+    use_text(clone_expr(node).dump())
     use_text(node.dump())
     use_text(node.to_json().stringify())
     use_text(
