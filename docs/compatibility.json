@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "label": "OpenUI 1.0.1",
-  "message": "62/62",
-  "color": "e05d44",
+  "message": "1226/1226",
+  "color": "EDED91",
   "labelColor": "564341",
-  "isError": true,
+  "isError": false,
   "style": "flat-square",
   "cacheSeconds": 300
 }
