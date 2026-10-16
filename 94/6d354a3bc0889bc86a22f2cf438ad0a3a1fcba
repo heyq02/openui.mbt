@@ -1,0 +1,31 @@
+.github/workflows/compatibility.yml
+  s_21c94720b5edeb::t_23843f9c261ccc 11,65,67-69,72,74-76,79,81-104
+.moonignore
+  s_21c94720b5edeb::t_f183767b75c9c6 12-13
+AGENTS.md
+  s_21c94720b5edeb::t_8ad96697cd7880 46
+README.md
+  s_21c94720b5edeb::t_52682f3204f4c3 7
+docs/compatibility.json
+  s_21c94720b5edeb::t_a1fd3e6eba5c5d 1-9
+scripts/compatibility-report.mjs
+  s_21c94720b5edeb::t_d0a69a1cac9c8c 1-178
+scripts/compatibility-report.test.mjs
+  s_21c94720b5edeb::t_1013a954316e00 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "946d354a3bc0889bc86a22f2cf438ad0a3a1fcba",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
