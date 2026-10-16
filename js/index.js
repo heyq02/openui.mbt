@@ -14,7 +14,11 @@ function wasmBytes(base64) {
 
 const wasmModule = new WebAssembly.Module(wasmBytes(wasmBase64), compileOptions);
 const instance = new WebAssembly.Instance(wasmModule);
-const { parse_openui: parseOpenui, tokenize_openui: tokenizeOpenui } = instance.exports;
+const {
+  parse_openui: parseOpenui,
+  tokenize_openui: tokenizeOpenui,
+  materialize_openui: materializeOpenui,
+} = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
 export function parseProgram(source) {
@@ -24,4 +28,12 @@ export function parseProgram(source) {
 /** Tokenize OpenUI Lang source. */
 export function tokenize(source) {
   return JSON.parse(tokenizeOpenui(source ?? ""));
+}
+
+/**
+ * Materialize source against a library JSON Schema.
+ * Returns the element tree plus errors, unresolved, orphaned, and incomplete.
+ */
+export function materializeProgram(source, schema, rootName = "") {
+  return JSON.parse(materializeOpenui(source ?? "", schema ?? "{}", rootName ?? ""));
 }
