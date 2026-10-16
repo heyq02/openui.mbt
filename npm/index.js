@@ -31,6 +31,7 @@ const {
   parse_openui: parseOpenui,
   tokenize_openui: tokenizeOpenui,
   materialize_openui: materializeOpenui,
+  parse_result: parseResultOpenui,
   stream_open: streamOpen,
   stream_push: streamPush,
   stream_set: streamSet,
@@ -55,6 +56,13 @@ export function tokenize(source) {
 export function materializeProgram(source, schema, rootName = '') {
   return JSON.parse(
     materializeOpenui(source ?? '', schema ?? '{}', rootName ?? ''),
+  );
+}
+
+/** Parse and materialize in one Wasm call. The result uses the official ParseResult shape. */
+export function parseResult(source, schema, rootName = '') {
+  return JSON.parse(
+    parseResultOpenui(source ?? '', schema ?? '{}', rootName ?? ''),
   );
 }
 

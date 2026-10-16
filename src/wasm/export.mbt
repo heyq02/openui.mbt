@@ -7,10 +7,46 @@ pub fn parse_openui(src : String) -> String {
 }
 
 ///|
+/// Statement count only, so a benchmark can separate parsing from JSON encoding.
+#export_name("parse_count")
+pub fn parse_count(src : String) -> Int32 {
+  @openui.parse(src).statements.length()
+}
+
+///|
+/// Token count only, so a benchmark can separate lexing from parsing.
+#export_name("token_count")
+pub fn token_count(src : String) -> Int32 {
+  @openui.tokenize(src).length()
+}
+
+///|
 /// Tokenize OpenUI Lang source and return a JSON array.
 #export_name("tokenize_openui")
 pub fn tokenize_openui(src : String) -> String {
   @openui.tokens_json(src)
+}
+
+///|
+/// Materialize without encoding, so a benchmark can separate the walk from JSON.
+#export_name("materialize_count")
+pub fn materialize_count(
+  src : String,
+  schema : String,
+  root_name : String,
+) -> Int32 {
+  @openui.materialize_count(src, schema, root_name)
+}
+
+///|
+/// Materialize source and return the official ParseResult JSON.
+#export_name("parse_result")
+pub fn parse_result(
+  src : String,
+  schema : String,
+  root_name : String,
+) -> String {
+  @openui.materialize_result(src, schema, root_name)
 }
 
 ///|

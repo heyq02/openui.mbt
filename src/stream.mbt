@@ -103,7 +103,7 @@ fn render(
   finished : Bool,
 ) -> (String, String) {
   let (text, held) = view_source(src, finished)
-  let (root, nested, unresolved, orphaned, errors) = materialize_with(
+  let (root, nested, unresolved, orphaned, errors, _count) = materialize_with(
     text, schema, root_name,
   )
   let incomplete = if finished { nested } else { held || nested }

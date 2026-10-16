@@ -94,6 +94,8 @@ test "lexer covers numbers, escapes, and operators" {
   use_text(parse_number("-12.25e+3").to_string())
   let lexer = Lexer::{ src: "", index: 0, line: 1, column: 1, }
   lexer.advance()
+  let _ended = lexer.peek()
+  let _ended_at = lexer.peek_at(0)
 }
 
 ///|
@@ -254,6 +256,8 @@ test "materialize covers shapes, runtime clones, and json" {
     #|
   use_text(materialize_dump(src, schema, "Box"))
   use_text(materialize_json(src, schema, "Box"))
+  use_text(materialize_result(src, schema, "Box"))
+  use_text(materialize_result("root = Box(\n", schema, "Box"))
   use_text(materialize_dump("t = Slot(\"x\")\n", schema, "Box"))
   use_text(materialize_json("", schema, ""))
   use_text(materialize_dump("root = Slot()\npage = Slot(\"x\")\n", schema, ""))
@@ -291,9 +295,9 @@ test "remaining expression, schema, and materialize branches" {
     )
   }
   let snippets = [
-    "-", "1\n-", "$", "@", "\"\\", "'\\'\\\\n\\t\\q'", "\"\\uAB\"", "   ", "root = -1\n",
-    "root = -\n", "root = @Foo\n", "root = )\n", "root = [,]\n", "root = item.name\n",
-    "root = $count = 1\n", "root = a ? b\n",
+    "-", "1\n-", "$", "@", "\"\\", "'\\'\\\\n\\t\\q'", "\"\\uAB\"", "\"hello\nworld\"",
+    "   ", "root = -1\n", "root = -\n", "root = @Foo\n", "root = )\n", "root = [,]\n",
+    "root = item.name\n", "root = $count = 1\n", "root = a ? b\n",
   ]
   for snippet in snippets {
     for tok in tokenize(snippet) {

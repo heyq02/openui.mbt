@@ -25,10 +25,34 @@ priv struct Issue {
 priv struct Mat {
   program : Program
   catalog : SchemaCatalog
+  defs : Map[String, Int32]
   unresolved : Array[String]
   mut reached : Array[String]
+  visited : Map[String, Bool]
   mut visiting : Array[String]
   errors : Array[Issue]
+}
+
+///|
+let cached_schema : Ref[String] = Ref("")
+
+///|
+let cached_catalog : Ref[SchemaCatalog] = Ref({
+  components: [],
+  calls: [],
+  errors: [],
+})
+
+///|
+fn catalog_for(schema : String) -> SchemaCatalog {
+  if schema == cached_schema.val {
+    cached_catalog.val
+  } else {
+    let catalog = compile_schema(schema)
+    cached_schema.val = schema
+    cached_catalog.val = catalog
+    catalog
+  }
 }
 
 ///|
@@ -77,35 +101,6 @@ fn clone_expr(expr : Expr) -> Expr {
 }
 
 ///|
-fn clone_shape(shape : SchemaShape) -> SchemaShape {
-  match shape {
-    Any => Any
-    Str => Str
-    Num => Num
-    Boolean => Boolean
-    Obj => Obj
-    Arr => Arr
-    Null => Null
-    Ref(name) => Ref(name)
-    Unknown(name) => Unknown(name)
-    Enum(items) => {
-      let copied : Array[String] = []
-      for item in items {
-        copied.push(item)
-      }
-      Enum(copied)
-    }
-    Union(items) => {
-      let copied : Array[SchemaShape] = []
-      for item in items {
-        copied.push(clone_shape(item))
-      }
-      Union(copied)
-    }
-  }
-}
-
-///|
 fn starts_with_dollar(name : String) -> Bool {
   name.length() > 0 && name.at(0).to_int() == code('$')
 }
@@ -124,18 +119,6 @@ fn list_has(items : Array[String], name : String) -> Bool {
 fn push_unique(items : Array[String], name : String) -> Unit {
   if !list_has(items, name) {
     items.push(name)
-  }
-}
-
-///|
-fn remove_name(items : Array[String], name : String) -> Unit {
-  let mut index = 0
-  while index < items.length() {
-    if items[index] == name {
-      let _removed = items.remove(index)
-    } else {
-      index += 1
-    }
   }
 }
 
@@ -202,18 +185,26 @@ pub fn source_incomplete(src : String) -> Bool {
 }
 
 ///|
-fn last_statement(program : Program, id : String) -> Statement? {
-  let mut found : Statement? = None
+fn index_statements(program : Program) -> Map[String, Int32] {
+  let defs : Map[String, Int32] = Map([], capacity=program.statements.length())
+  let mut index = 0
   for stmt in program.statements {
-    if stmt.id == id {
-      found = Some({
-        id: stmt.id,
-        expr: clone_expr(stmt.expr),
-        line: stmt.line,
-      })
-    }
+    defs[stmt.id] = index
+    index += 1
   }
-  found
+  defs
+}
+
+///|
+fn last_statement(
+  program : Program,
+  defs : Map[String, Int32],
+  id : String,
+) -> Statement? {
+  match defs.get(id) {
+    Some(index) => Some(program.statements[index])
+    None => None
+  }
 }
 
 ///|
@@ -231,21 +222,12 @@ fn is_runtime_name(catalog : SchemaCatalog, name : String) -> Bool {
 
 ///|
 fn component_params(catalog : SchemaCatalog, name : String) -> Array[ParamDef]? {
-  let mut params : Array[ParamDef]? = None
   for component in catalog.components {
     if component.name == name {
-      let copied : Array[ParamDef] = []
-      for param in component.params {
-        copied.push({
-          name: param.name,
-          required: param.required,
-          shape: clone_shape(param.shape),
-        })
-      }
-      params = Some(copied)
+      return Some(component.params)
     }
   }
-  params
+  None
 }
 
 ///|
@@ -380,13 +362,13 @@ fn materialize_ref(mat : Mat, name : String, line : Int32) -> Val {
     push_unique(mat.unresolved, name)
     return Null
   }
-  match last_statement(mat.program, name) {
+  match last_statement(mat.program, mat.defs, name) {
     None => {
       push_unique(mat.unresolved, name)
       Null
     }
     Some(stmt) => {
-      remove_name(mat.reached, name)
+      mat.visited[name] = true
       mat.visiting.push(name)
       let value = match stmt.expr {
         Comp(comp_name, is_function, args) =>
@@ -546,8 +528,12 @@ fn materialize_call(
 }
 
 ///|
-fn pick_root(program : Program, root_name : String) -> (String, Bool)? {
-  match last_statement(program, "root") {
+fn pick_root(
+  program : Program,
+  defs : Map[String, Int32],
+  root_name : String,
+) -> (String, Bool)? {
+  match last_statement(program, defs, "root") {
     Some(_) => Some(("root", false))
     None =>
       if root_name == "" {
@@ -577,12 +563,19 @@ fn pick_root(program : Program, root_name : String) -> (String, Bool)? {
 }
 
 ///|
-fn value_ids(program : Program, root_id : String) -> Array[String] {
+fn orphan_ids(
+  program : Program,
+  root_id : String,
+  visited : Map[String, Bool],
+) -> Array[String] {
   let ids : Array[String] = []
+  let seen : Map[String, Bool] = Map([])
   for stmt in program.statements {
     if stmt.id != root_id &&
       !starts_with_dollar(stmt.id) &&
-      !list_has(ids, stmt.id) {
+      !visited.contains(stmt.id) &&
+      !seen.contains(stmt.id) {
+      seen[stmt.id] = true
       ids.push(stmt.id)
     }
   }
@@ -611,15 +604,14 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       column: 0,
     })
   }
-  match pick_root(self.program, root_name) {
+  match pick_root(self.program, self.defs, root_name) {
     None => {
       let component = if root_name == "" { "" } else { root_name }
       push_issue(self, "no-root", component, "", "No root statement", 0)
       None
     }
     Some((id, fallback)) => {
-      self.reached = value_ids(self.program, id)
-      let root = match last_statement(self.program, id) {
+      let root = match last_statement(self.program, self.defs, id) {
         None => None
         Some(stmt) =>
           match stmt.expr {
@@ -660,6 +652,7 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
           )
         None => ()
       }
+      self.reached = orphan_ids(self.program, id, self.visited)
       match root {
         Some(Element(type_name, statement_id, props, partial)) =>
           Some(Element(type_name, statement_id, props, partial))
@@ -924,20 +917,24 @@ fn materialize_with(
   src : String,
   schema : String,
   root_name : String,
-) -> (Val?, Bool, Array[String], Array[String], Array[Issue]) {
+) -> (Val?, Bool, Array[String], Array[String], Array[Issue], Int32) {
   let program = parse(src)
-  let catalog = compile_schema(schema)
+  let count = program.statements.length()
+  let catalog = catalog_for(schema)
+  let defs = index_statements(program)
   let incomplete = source_incomplete(src)
   let mat = Mat::{
     program,
     catalog,
+    defs,
     unresolved: [],
     reached: [],
+    visited: Map([]),
     visiting: [],
     errors: [],
   }
   let root = mat.run(root_name, incomplete)
-  (root, incomplete, mat.unresolved, mat.reached, mat.errors)
+  (root, incomplete, mat.unresolved, mat.reached, mat.errors, count)
 }
 
 ///|
@@ -948,7 +945,7 @@ pub fn materialize_dump(
   schema : String,
   root_name : String,
 ) -> String {
-  let (root, incomplete, unresolved, orphaned, errors) = materialize_with(
+  let (root, incomplete, unresolved, orphaned, errors, _count) = materialize_with(
     src, schema, root_name,
   )
   result_dump(root, incomplete, unresolved, orphaned, errors)
@@ -961,8 +958,156 @@ pub fn materialize_json(
   schema : String,
   root_name : String,
 ) -> String {
-  let (root, incomplete, unresolved, orphaned, errors) = materialize_with(
+  let (root, incomplete, unresolved, orphaned, errors, _count) = materialize_with(
     src, schema, root_name,
   )
   result_json(root, incomplete, unresolved, orphaned, errors)
+}
+
+///|
+fn write_json_bool(buf : StringBuilder, value : Bool) -> Unit {
+  if value {
+    buf.write_string("true")
+  } else {
+    buf.write_string("false")
+  }
+}
+
+///|
+fn write_val_fields(buf : StringBuilder, fields : Array[(String, Val)]) -> Unit {
+  buf.write_char('{')
+  let mut index = 0
+  for field in fields {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    let (key, value) = field
+    write_json_string(buf, key)
+    buf.write_char(':')
+    write_val(buf, value)
+    index += 1
+  }
+  buf.write_char('}')
+}
+
+///|
+fn write_val(buf : StringBuilder, value : Val) -> Unit {
+  match value {
+    Null => buf.write_string("null")
+    Boolean(true) => buf.write_string("true")
+    Boolean(false) => buf.write_string("false")
+    Num(_, repr) => buf.write_string(repr)
+    Str(text) => write_json_string(buf, text)
+    Runtime(expr) => write_expr_json(buf, expr)
+    Arr(items) => {
+      buf.write_char('[')
+      let mut index = 0
+      for item in items {
+        if index > 0 {
+          buf.write_char(',')
+        }
+        write_val(buf, item)
+        index += 1
+      }
+      buf.write_char(']')
+    }
+    Obj(fields) => write_val_fields(buf, fields)
+    Element(type_name, statement_id, props, partial) => {
+      buf.write_string("{\"type\":\"element\",\"typeName\":")
+      write_json_string(buf, type_name)
+      buf.write_string(",\"props\":")
+      write_val_fields(buf, props)
+      buf.write_string(",\"partial\":")
+      write_json_bool(buf, partial)
+      buf.write_string(",\"hasDynamicProps\":false")
+      if statement_id != "" {
+        buf.write_string(",\"statementId\":")
+        write_json_string(buf, statement_id)
+      }
+      buf.write_char('}')
+    }
+  }
+}
+
+///|
+fn write_string_list(buf : StringBuilder, items : Array[String]) -> Unit {
+  buf.write_char('[')
+  let mut index = 0
+  for item in items {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    write_json_string(buf, item)
+    index += 1
+  }
+  buf.write_char(']')
+}
+
+///|
+fn write_issues(buf : StringBuilder, errors : Array[Issue]) -> Unit {
+  buf.write_char('[')
+  let mut index = 0
+  for err in errors {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    buf.write_string("{\"code\":")
+    write_json_string(buf, err.code)
+    buf.write_string(",\"component\":")
+    write_json_string(buf, err.component)
+    buf.write_string(",\"path\":")
+    write_json_string(buf, err.path)
+    buf.write_string(",\"message\":")
+    write_json_string(buf, err.message)
+    buf.write_string(",\"line\":")
+    buf.write_string(err.line.to_string())
+    buf.write_string(",\"column\":")
+    buf.write_string(err.column.to_string())
+    buf.write_char('}')
+    index += 1
+  }
+  buf.write_char(']')
+}
+
+///|
+/// Statement count after materialize, without encoding the tree.
+pub fn materialize_count(
+  src : String,
+  schema : String,
+  root_name : String,
+) -> Int32 {
+  let (_, _, _, _, _, count) = materialize_with(src, schema, root_name)
+  count
+}
+
+///|
+/// Official `ParseResult` shape, written without building a `Json` map.
+pub fn materialize_result(
+  src : String,
+  schema : String,
+  root_name : String,
+) -> String {
+  let (root, incomplete, unresolved, orphaned, errors, count) = materialize_with(
+    src, schema, root_name,
+  )
+  let buf = StringBuilder()
+  buf.write_string("{\"root\":")
+  match root {
+    Some(value) => write_val(buf, value)
+    None => buf.write_string("null")
+  }
+  buf.write_string(",\"meta\":{\"incomplete\":")
+  write_json_bool(buf, incomplete)
+  buf.write_string(",\"unresolved\":")
+  write_string_list(buf, unresolved)
+  buf.write_string(",\"orphaned\":")
+  write_string_list(buf, orphaned)
+  buf.write_string(",\"statementCount\":")
+  buf.write_string(count.to_string())
+  buf.write_string(",\"errors\":")
+  write_issues(buf, errors)
+  buf.write_string(
+    "},\"stateDeclarations\":{},\"queryStatements\":[],\"mutationStatements\":[]}",
+  )
+  buf.to_string()
 }
