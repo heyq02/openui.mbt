@@ -1,5 +1,5 @@
 {
-  "name": "@heyq02/openui.mbt",
+  "name": "openui.mbt",
   "version": "0.1.0",
   "private": true,
   "description": "MoonBit parser for OpenUI Lang",
