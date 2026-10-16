@@ -44,7 +44,7 @@ pnpm run format
 
 `pnpm run benchmark` compares that patched package with the official package: dist size, parse time, demo bundle size, and time until the demo paints. The method, the limits, and the latest numbers are in the README. `--skip-demo` stops after the Node measurements.
 
-`compatibility.yml` shallow-clones `thesysdev/openui`, installs it, links this npm package, and runs `oui.mbt patch-source`. It rebuilds lang-core from that source, then tests `packages/lang-core/src/parser/__tests__`, the lang-core package, and the workspace. The job summary lists each stage as passed/total. On `main` it writes `compatibility.json` from the cloned lang-core version and the workspace total. The README badge reads that file.
+`compatibility.yml` shallow-clones `thesysdev/openui`, installs it, links this npm package, and runs `node scripts/patch-source.mjs`. It rebuilds lang-core from that source, then tests `packages/lang-core/src/parser/__tests__`, the lang-core package, and the workspace. The job summary lists each stage as passed/total. On `main` it writes `compatibility.json` from the cloned lang-core version and the workspace total. The README badge reads that file.
 
 `pnpm run build:rsdoctor` bundles `@heyq02/openui.mbt` with `rs lib`. With `RSDOCTOR=true` and `CI` set, the report is `dist/.rsdoctor/rsdoctor-data.json`. The demo in `web/` is not part of that report.
 
@@ -52,7 +52,7 @@ pnpm run format
 
 `release.yaml` runs on a `v*` tag. The tag must match `moon.mod`, the root `package.json`, and `npm/package.json`. It publishes the MoonBit module to mooncakes.io, then `@heyq02/openui.mbt` to npm with provenance.
 
-`release-commit.yml` uses `sxzz/workflows` `release-commit.yml` on every push and pull request. It builds the Wasm package and publishes `./npm` with `pkg-pr-new`. That preview is not an npm release. The parser API is `@heyq02/openui.mbt/parser`. `oui.mbt patch` rewrites installed `@openuidev/lang-core@1.0.1` `dist/index.mjs` and `dist/index.cjs`. That dist patch materializes `createParser().parse` in Wasm. Streaming and `patch-source` still return statements for the official classifier. `web/` depends on the official package and runs that command after install. Pages runs `node npm/build.mjs` before `npm ci`.
+`release-commit.yml` uses `sxzz/workflows` `release-commit.yml` on every push and pull request. It builds the Wasm package and publishes `./npm` with `pkg-pr-new`. That preview is not an npm release. The parser API is `@heyq02/openui.mbt/parser`. `oui.mbt patch` rewrites installed `@openuidev/lang-core@1.0.1` `dist/index.mjs` and `dist/index.cjs`. That dist patch materializes `createParser().parse` in Wasm. Streaming and `scripts/patch-source.mjs` still return statements for the official classifier. `patch-source` stays in this repo. The published `oui.mbt` command is `patch` only. `web/` depends on the official package and runs that command after install. Pages runs `node npm/build.mjs` before `npm ci`.
 
 `.moonignore` keeps `web/`, `npm/`, and the repo-hygiene files out of the mooncakes archive. The npm tarball is only the `npm/` `files` list, including the generated `parser.wasm.js`.
 

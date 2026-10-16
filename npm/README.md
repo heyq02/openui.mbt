@@ -20,5 +20,3 @@ npx oui.mbt patch
 ```
 
 `oui.mbt patch` rewrites the installed `@openuidev/lang-core`. `createParser().parse` materializes in Wasm and returns the official `ParseResult` shape. Streaming still returns statements for OpenUI classification and materialize. The Renderer stays in OpenUI. The patch matches lang-core 1.0.1. A different version, or a 1.0.1 bundle whose parser call sites have changed, makes the command exit before it writes either file.
-
-`oui.mbt patch-source <openui-checkout>` rewrites that checkout's `packages/lang-core/src/parser` the same way, so its tests call this package. The compatibility workflow does that after a shallow clone.

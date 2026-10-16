@@ -65,7 +65,7 @@ npm install @heyq02/openui.mbt @openuidev/lang-core
 npx oui.mbt patch
 ```
 
-包入口说明见 [`npm/README.md`](npm/README.md)。`createParser().parse` 在 Wasm 里一次完成解析和物化。流式解析仍把语句交给官方分类和物化。Renderer 仍是官方代码。`patch-source` 只替换语句解析，兼容性流水线走的是那条路径。
+包入口说明见 [`npm/README.md`](npm/README.md)。`createParser().parse` 在 Wasm 里一次完成解析和物化。流式解析仍把语句交给官方分类和物化。Renderer 仍是官方代码。兼容性流水线用 `scripts/patch-source.mjs` 改 OpenUI 源码，那条路径只替换语句解析。
 
 ## Benchmark
 

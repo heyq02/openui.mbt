@@ -61,7 +61,7 @@ jobs:
         run: pnpm --filter @openuidev/lang-core add "@heyq02/openui.mbt@file:${GITHUB_WORKSPACE}/npm"
 
       - name: Patch parser source
-        run: node npm/cli.js patch-source upstream
+        run: node scripts/patch-source.mjs upstream
 
       - name: Rebuild lang-core
         working-directory: upstream/packages/lang-core
