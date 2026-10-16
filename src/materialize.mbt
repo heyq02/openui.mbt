@@ -124,58 +124,9 @@ fn push_unique(items : Array[String], name : String) -> Unit {
 
 ///|
 /// Index of the outermost construct that is still unclosed, or -1.
+/// The scan itself is `lexscan` over the source.
 fn unclosed_at(src : String) -> Int32 {
-  let mut index = 0
-  let mut depth = 0
-  let mut quote = 0
-  let mut escape = false
-  let mut open_at = -1
-  while index < src.length() {
-    let current = src.at(index).to_int()
-    index = index + 1
-    if escape {
-      escape = false
-      continue
-    }
-    if quote != 0 {
-      if current == code('\\') {
-        escape = true
-      } else if current == quote {
-        quote = 0
-        if depth == 0 {
-          open_at = -1
-        }
-      }
-      continue
-    }
-    if current == code('"') || current == code('\'') {
-      quote = current
-      if depth == 0 {
-        open_at = index - 1
-      }
-    } else if current == code('(') ||
-      current == code('[') ||
-      current == code('{') {
-      if depth == 0 {
-        open_at = index - 1
-      }
-      depth = depth + 1
-    } else if current == code(')') ||
-      current == code(']') ||
-      current == code('}') {
-      if depth > 0 {
-        depth = depth - 1
-      }
-      if depth == 0 {
-        open_at = -1
-      }
-    }
-  }
-  if quote != 0 || depth > 0 {
-    open_at
-  } else {
-    -1
-  }
+  hold_from(src)
 }
 
 ///|
@@ -589,7 +540,7 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       code: "parse-failed",
       component: "",
       path: "",
-      message: err.message,
+      message: err.message(),
       line: err.line,
       column: err.column,
     })
@@ -599,7 +550,7 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       code: "schema",
       component: "",
       path: err.path,
-      message: err.message,
+      message: err.message(),
       line: 0,
       column: 0,
     })

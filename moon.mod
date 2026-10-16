@@ -16,3 +16,7 @@ options(
   desc: "MoonBit parser for OpenUI Lang",
   langs: "all",
 )
+
+import {
+  "moonbitlang/async@0.22.5",
+}

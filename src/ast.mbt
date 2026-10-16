@@ -30,7 +30,12 @@ pub struct Statement {
 pub struct ParseError {
   line : Int32
   column : Int32
-  message : String
+  kind : SyntaxKind
+}
+
+///|
+pub fn ParseError::message(self : ParseError) -> String {
+  self.kind.message()
 }
 
 ///|
@@ -217,7 +222,7 @@ pub fn Program::to_json(self : Program) -> Json {
       object_of([
         ("line", Json::number(Double::from_int(err.line))),
         ("column", Json::number(Double::from_int(err.column))),
-        ("message", Json::string(err.message)),
+        ("message", Json::string(err.message())),
       ]),
     )
   }
@@ -426,7 +431,7 @@ pub fn Program::compact_json(self : Program) -> String {
     buf.write_string(",\"column\":")
     buf.write_string(err.column.to_string())
     buf.write_string(",\"message\":")
-    write_json_string(buf, err.message)
+    write_json_string(buf, err.message())
     buf.write_char('}')
     index += 1
   }

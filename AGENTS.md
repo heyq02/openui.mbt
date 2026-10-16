@@ -15,6 +15,7 @@ CI installs latest `moon`. Dated CDN pins return 403.
 | Path                 | Role                                                                                                                                                      |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/`               | Lexer, parser, schema, materialize, streaming. Tests stay beside sources.                                                                                 |
+| `src/check/`         | Native checker. `supported_targets = "+native"`. Reads a file with `AsyncLexbuf` and prints `SyntaxKind`.                                                 |
 | `src/wasm/`          | Wasm-GC exports, including the streaming session. `supported_targets = "wasm-gc"`.                                                                        |
 | `npm/`               | npm package. Embeds the release Wasm as base64.                                                                                                           |
 | `web/`               | Rsbuild demo. Its own npm install.                                                                                                                        |
@@ -32,6 +33,7 @@ moon test --deny-warn --target native
 moon test --deny-warn --target wasm
 moon test --deny-warn --target wasm-gc
 moon test --deny-warn --target js
+moon run --target native src/check -- <file.openui>
 pnpm run build:parser
 pnpm test
 pnpm run compare

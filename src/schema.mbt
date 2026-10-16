@@ -54,7 +54,12 @@ pub struct CallDef {
 ///|
 pub struct SchemaError {
   path : String
-  message : String
+  kind : SchemaKind
+}
+
+///|
+pub fn SchemaError::message(self : SchemaError) -> String {
+  self.kind.message()
 }
 
 ///|
@@ -70,7 +75,7 @@ priv struct SchemaReader {
   src : String
   mut index : Int32
   mut failed : Bool
-  mut message : String
+  mut kind : SchemaKind
 }
 
 ///|
@@ -105,10 +110,10 @@ fn SchemaReader::advance(self : SchemaReader) -> Unit {
 }
 
 ///|
-fn SchemaReader::fail(self : SchemaReader, message : String) -> Unit {
+fn SchemaReader::fail(self : SchemaReader, kind : SchemaKind) -> Unit {
   if !self.failed {
     self.failed = true
-    self.message = message + " at " + self.index.to_string()
+    self.kind = kind
   }
 }
 
@@ -158,17 +163,17 @@ fn SchemaReader::parse_string(self : SchemaReader) -> String {
       self.advance()
       self.parse_escape(buf)
     } else if current < 0x20 {
-      self.fail("invalid JSON string")
+      self.fail(InvalidJsonString(self.index))
       return ""
     } else {
       match current.to_char() {
         Some(ch) => buf.write_char(ch)
-        None => self.fail("invalid JSON string")
+        None => self.fail(InvalidJsonString(self.index))
       }
       self.advance()
     }
   }
-  self.fail("invalid JSON string")
+  self.fail(InvalidJsonString(self.index))
   ""
 }
 
@@ -177,25 +182,21 @@ fn SchemaReader::parse_escape(self : SchemaReader, buf : StringBuilder) -> Unit 
   let current = self.peek()
   self.advance()
   match current.to_char() {
-    Some('"') => buf.write_char('"')
-    Some('\\') => buf.write_char('\\')
-    Some('/') => buf.write_char('/')
-    Some('b') => buf.write_char('\u{0008}')
-    Some('f') => buf.write_char('\u{000c}')
-    Some('n') => buf.write_char('\n')
-    Some('r') => buf.write_char('\r')
-    Some('t') => buf.write_char('\t')
     Some('u') =>
       match self.read_hex4() {
         Some(point) =>
           if point >= 0xD800 && point <= 0xDFFF {
-            self.fail("invalid JSON string")
+            self.fail(InvalidJsonString(self.index))
           } else {
             write_code_point(buf, point)
           }
-        None => self.fail("invalid JSON string")
+        None => self.fail(InvalidJsonString(self.index))
       }
-    _ => self.fail("invalid JSON string")
+    Some(ch) =>
+      if !write_schema_escape(buf, ch) {
+        self.fail(InvalidJsonString(self.index))
+      }
+    None => self.fail(InvalidJsonString(self.index))
   }
 }
 
@@ -230,13 +231,13 @@ fn SchemaReader::parse_number(self : SchemaReader) -> String {
       self.advance()
     }
   } else {
-    self.fail("invalid JSON number")
+    self.fail(InvalidJsonNumber(self.index))
     return "0"
   }
   if self.peek() == code('.') {
     self.advance()
     if !is_digit(self.peek()) {
-      self.fail("invalid JSON number")
+      self.fail(InvalidJsonNumber(self.index))
       return "0"
     }
     while is_digit(self.peek()) {
@@ -249,7 +250,7 @@ fn SchemaReader::parse_number(self : SchemaReader) -> String {
       self.advance()
     }
     if !is_digit(self.peek()) {
-      self.fail("invalid JSON number")
+      self.fail(InvalidJsonNumber(self.index))
       return "0"
     }
     while is_digit(self.peek()) {
@@ -270,21 +271,21 @@ fn SchemaReader::parse_value(self : SchemaReader) -> J {
       if self.consume("null") {
         Null
       } else {
-        self.fail("invalid JSON")
+        self.fail(InvalidJson(self.index))
         Null
       }
     Some('t') =>
       if self.consume("true") {
         Bool(true)
       } else {
-        self.fail("invalid JSON")
+        self.fail(InvalidJson(self.index))
         Null
       }
     Some('f') =>
       if self.consume("false") {
         Bool(false)
       } else {
-        self.fail("invalid JSON")
+        self.fail(InvalidJson(self.index))
         Null
       }
     Some('"') => Str(self.parse_string())
@@ -302,7 +303,7 @@ fn SchemaReader::parse_value(self : SchemaReader) -> J {
     | Some('8')
     | Some('9') => Num(self.parse_number())
     _ => {
-      self.fail("invalid JSON")
+      self.fail(InvalidJson(self.index))
       Null
     }
   }
@@ -328,7 +329,7 @@ fn SchemaReader::parse_array(self : SchemaReader) -> J {
       self.advance()
       continue
     }
-    self.fail("invalid JSON")
+    self.fail(InvalidJson(self.index))
     return Arr(items)
   }
   Arr(items)
@@ -346,13 +347,13 @@ fn SchemaReader::parse_object(self : SchemaReader) -> J {
   while !self.failed {
     self.skip_ws()
     if self.peek() != code('"') {
-      self.fail("invalid JSON")
+      self.fail(InvalidJson(self.index))
       return Obj(fields)
     }
     let key = self.parse_string()
     self.skip_ws()
     if self.peek() != code(':') {
-      self.fail("invalid JSON")
+      self.fail(InvalidJson(self.index))
       return Obj(fields)
     }
     self.advance()
@@ -366,21 +367,26 @@ fn SchemaReader::parse_object(self : SchemaReader) -> J {
       self.advance()
       continue
     }
-    self.fail("invalid JSON")
+    self.fail(InvalidJson(self.index))
     return Obj(fields)
   }
   Obj(fields)
 }
 
 ///|
-fn parse_ordered(src : String) -> Result[J, String] {
-  let reader = SchemaReader::{ src, index: 0, failed: false, message: "", }
+fn parse_ordered(src : String) -> Result[J, SchemaKind] {
+  let reader = SchemaReader::{
+    src,
+    index: 0,
+    failed: false,
+    kind: InvalidJson(0),
+  }
   let value = reader.parse_value()
   reader.skip_ws()
   if reader.failed {
-    Err(reader.message)
+    Err(reader.kind)
   } else if !reader.ended() {
-    Err("invalid JSON at " + reader.index.to_string())
+    Err(InvalidJson(reader.index))
   } else {
     Ok(value)
   }
@@ -521,7 +527,7 @@ fn push_error(
   path : String,
   message : String,
 ) -> Unit {
-  errors.push({ path, message, })
+  errors.push({ path, kind: Expected(message), })
 }
 
 ///|
@@ -928,7 +934,7 @@ pub fn SchemaCatalog::dump(self : SchemaCatalog) -> String {
   buf.write_string("errors: " + self.errors.length().to_string())
   for err in self.errors {
     buf.write_char('\n')
-    buf.write_string(err.path + ": " + err.message)
+    buf.write_string(err.path + ": " + err.message())
   }
   buf.to_string()
 }
@@ -938,8 +944,7 @@ pub fn SchemaCatalog::dump(self : SchemaCatalog) -> String {
 /// Property order is the positional order of OpenUI Lang arguments.
 pub fn compile_schema(src : String) -> SchemaCatalog {
   match parse_ordered(src) {
-    Err(message) =>
-      { components: [], calls: [], errors: [{ path: "$", message, }], }
+    Err(kind) => { components: [], calls: [], errors: [{ path: "$", kind, }], }
     Ok(Obj(root)) => {
       let errors : Array[SchemaError] = []
       let components = compile_components(root, errors)
@@ -955,7 +960,7 @@ pub fn compile_schema(src : String) -> SchemaCatalog {
       {
         components: [],
         calls: [],
-        errors: [{ path: "$", message: "expected an object", }],
+        errors: [{ path: "$", kind: Expected("expected an object"), }],
       }
   }
 }

@@ -47,7 +47,11 @@ fn Parser::peek_kind(self : Parser) -> TokenKind {
 ///|
 fn Parser::error(self : Parser, message : String) -> Unit {
   let tok = self.current()
-  self.errors.push({ line: tok.line, column: tok.column, message, })
+  self.errors.push({
+    line: tok.line,
+    column: tok.column,
+    kind: Expected(message),
+  })
 }
 
 ///|
@@ -489,7 +493,7 @@ pub fn summarize(src : String) -> String {
     buf.write_string(":")
     buf.write_string(err.column.to_string())
     buf.write_string(" ")
-    buf.write_string(err.message)
+    buf.write_string(err.message())
   }
   buf.to_string()
 }

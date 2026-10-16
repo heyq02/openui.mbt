@@ -202,11 +202,16 @@ test "schema compilation covers invalid documents and every shape" {
   for sample in broken_roots {
     use_text(compile_schema(sample).dump())
   }
-  let reader = SchemaReader::{ src: "", index: 0, failed: false, message: "", }
+  let reader = SchemaReader::{
+    src: "",
+    index: 0,
+    failed: false,
+    kind: InvalidJson(0),
+  }
   let _peek = reader.peek_at(3)
   reader.advance()
-  reader.fail("first")
-  reader.fail("second")
+  reader.fail(InvalidJson(0))
+  reader.fail(InvalidJson(1))
 }
 
 ///|
@@ -296,7 +301,7 @@ test "remaining expression, schema, and materialize branches" {
     use_text(
       {
         statements: [{ id: "root", expr: node, line: 1, }],
-        errors: [{ line: 1, column: 2, message: "a\"b\n", }],
+        errors: [{ line: 1, column: 2, kind: Expected("a\"b\n"), }],
       }.compact_json(),
     )
   }
@@ -333,7 +338,12 @@ test "remaining expression, schema, and materialize branches" {
     J::Obj([("a\"b", J::Null), ("c\n", J::Arr([J::Str("x")]))]).display(),
   )
   use_text(SchemaShape::Any.label())
-  let failed = SchemaReader::{ src: "1", index: 0, failed: true, message: "x", }
+  let failed = SchemaReader::{
+    src: "1",
+    index: 0,
+    failed: true,
+    kind: InvalidJson(0),
+  }
   let _stopped = failed.parse_value()
   let schemas = [
     "{\"$defs\":1,\"properties\":1,\"functions\":1,\"actions\":1}", "{\"$defs\":{\"Box\":{\"properties\":[],\"required\":{}}},\"functions\":{\"F\":{}},\"actions\":{\"A\":{\"params\":[]}}}",
