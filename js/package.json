@@ -1,6 +1,6 @@
 {
   "name": "@heyq02/openui.mbt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MoonBit Wasm-GC parser for OpenUI Lang",
   "keywords": [
     "moonbit",
