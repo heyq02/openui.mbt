@@ -1,0 +1,40 @@
+AGENTS.md
+  h_a57efa94f24ca5 18,36
+moon.mod
+  h_a57efa94f24ca5 19-22
+src/ast.mbt
+  h_a57efa94f24ca5 33-38,225,434
+src/check/main.mbt
+  h_a57efa94f24ca5 1-147
+src/check/moon.pkg
+  h_a57efa94f24ca5 1-11
+src/coverage_wbtest.mbt
+  h_a57efa94f24ca5 205-210,213-214,304,341-346
+src/diag.mbt
+  h_a57efa94f24ca5 1-41
+src/lex.mbt
+  h_a57efa94f24ca5 1-147
+src/materialize.mbt
+  h_a57efa94f24ca5 127,129,543,553
+src/moon.pkg
+  h_a57efa94f24ca5 1-4
+src/parser.mbt
+  h_a57efa94f24ca5 50-54,496
+src/prop.mbt
+  h_a57efa94f24ca5 1-37
+src/schema.mbt
+  h_a57efa94f24ca5 57-62,78,113,116,166,171,176,189,193,195-199,234,240,253,274,281,288,306,332,350,356,370,377-383,387,389,530,937,947,963
+src/stream.mbt
+  h_a57efa94f24ca5 5,67-71,73,101-109,112,117-119,125-134,158,177,191,205,218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "955feba86ca59ce55088cbaefac1e9e54de73eb6",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
