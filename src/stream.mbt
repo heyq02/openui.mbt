@@ -969,7 +969,7 @@ fn present(
 ) -> (Val?, Bool, Array[String], Array[String], Array[Issue], Int32) {
   let src = session.buffer.val
   let open_at = session_hold(session)
-  if finished && open_at >= 0 && !has_preprocess_marker(src) {
+  if open_at >= 0 && !has_preprocess_marker(src) {
     let (program, count) = unclosed_program(src, open_at)
     let (line, column) = position_at(src, open_at)
     ignore(UnclosedInput.message())
@@ -983,14 +983,14 @@ fn present(
       Ref(Map([])),
       0,
     )
-    let reported = without_provisional(errors, true)
+    let reported = without_provisional(errors, finished)
     let (_, tail_issues) = side_tail(program, session.schema)
     for issue in tail_issues {
       reported.push(issue)
     }
     return (root, true, unresolved, orphaned, reported, count)
   }
-  if has_preprocess_marker(src) || (finished && open_at >= 0) {
+  if has_preprocess_marker(src) {
     if open_at >= 0 {
       let (line, column) = position_at(src, open_at)
       ignore(UnclosedInput.message())
@@ -1038,7 +1038,7 @@ fn present(
 fn render_json(session : Session, finished : Bool) -> String {
   let src = session.buffer.val
   let open_at = session_hold(session)
-  if finished && open_at >= 0 && !has_preprocess_marker(src) {
+  if open_at >= 0 && !has_preprocess_marker(src) {
     let (program, count) = unclosed_program(src, open_at)
     let (root, _, unresolved, orphaned, errors, _) = materialize_program(
       program,
@@ -1048,15 +1048,16 @@ fn render_json(session : Session, finished : Bool) -> String {
       Ref(Map([])),
       0,
     )
+    let reported = without_provisional(errors, finished)
     let (tail, extra) = side_tail(program, session.schema)
     for issue in extra {
-      errors.push(issue)
+      reported.push(issue)
     }
     return encode_parse_result(
-      root, true, unresolved, orphaned, errors, count, tail,
+      root, true, unresolved, orphaned, reported, count, tail,
     )
   }
-  if has_preprocess_marker(src) || (finished && open_at >= 0) {
+  if has_preprocess_marker(src) {
     return materialize_result(src, session.schema, session.root_name)
   }
   let (text, held) = view_source(src, open_at, finished)

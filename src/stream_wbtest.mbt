@@ -15,6 +15,28 @@ let stream_schema : String =
   #|}
 
 ///|
+test "an unclosed line is auto-closed before finish" {
+  let id = stream_open(stream_schema, "")
+  let _ = stream_push(id, "root = TextContent(\"")
+  inspect(
+    stream_dump(id),
+    content=(
+      #|incomplete: true
+      #|unresolved:
+      #|orphaned:
+      #|errors: 0
+      #|TextContent
+      #|  text: ""
+    ),
+  )
+  inspect(stream_view(id, 0).contains("\"text\":\"\""), content="true")
+  let _ = stream_push(id, "Hi\")\n")
+  inspect(stream_dump(id).contains("text: \"Hi\""), content="true")
+  inspect(stream_dump(id).contains("incomplete: false"), content="true")
+  let _closed = stream_close(id)
+}
+
+///|
 test "an unfinished line is held back until finish" {
   let id = stream_open(stream_schema, "")
   let _ = stream_push(id, "root = TextContent(\"Hi\")\nroot = TextContent(\"")

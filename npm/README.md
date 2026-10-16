@@ -12,7 +12,7 @@ const program = parseProgram('root = TextContent("Hello", "large")');
 
 `materializeProgram(source, schema, rootName)` returns the element tree plus `errors`, `unresolved`, `orphaned`, and `incomplete`.
 
-`createStream(schema, rootName)` keeps a buffer in Wasm. Closed lines stay parsed. `push` and `set` take an optional `complete` flag and return the official `ParseResult`. An unfinished line is held back until `finish` or `complete`. `dispose` drops that session.
+`createStream(schema, rootName)` keeps a buffer in Wasm. Closed lines stay parsed. `push` and `set` take an optional `complete` flag and return the official `ParseResult`. An unfinished line is auto-closed for that result and is not committed until it closes. `dispose` drops that session.
 
 ```bash
 npm install @heyq02/openui.mbt @openuidev/lang-core
