@@ -1,0 +1,30 @@
+.github/workflows/compatibility.yml
+  h_a57efa94f24ca5 1-74
+.github/workflows/unit-test.yml
+  h_a57efa94f24ca5 21
+.gitignore
+  h_a57efa94f24ca5 16
+AGENTS.md
+  h_a57efa94f24ca5 22,46-47
+npm/README.md
+  h_a57efa94f24ca5 23-24
+npm/cli.js
+  h_a57efa94f24ca5 38,123-151,154-241,243-255
+npm/parser.wasm.js
+  h_a57efa94f24ca5 2
+src/parse_wbtest.mbt
+  h_a57efa94f24ca5 99-121
+src/parser.mbt
+  h_a57efa94f24ca5 6,55-58,61-68,335-337,342-344,346-347,433-439
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c435384fa4874209025cec477ab4266c7282443b",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
