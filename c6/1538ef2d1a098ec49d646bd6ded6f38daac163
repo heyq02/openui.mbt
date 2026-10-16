@@ -1,0 +1,18 @@
+moon.mod
+  h_a57efa94f24ca5 3
+npm/package.json
+  h_a57efa94f24ca5 3
+package.json
+  h_a57efa94f24ca5 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c61538ef2d1a098ec49d646bd6ded6f38daac163",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
