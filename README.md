@@ -34,6 +34,8 @@ const program = parseProgram('root = TextContent("Hello", "large")');
 
 `package.json`、`moon.mod` 和 `js/package.json` 的版本保持同一字符串。`pnpm release` 改这三处，提交 `chore: release v{version}`，打标签 `v{version}` 并推送。标签触发 [`.github/workflows/release.yaml`](.github/workflows/release.yaml)：`moon package` 后发布到 mooncakes.io，再把 Wasm 包发布到 npm。
 
+每次 push 和 pull request 还会触发 [`.github/workflows/release-commit.yml`](.github/workflows/release-commit.yml)，把 `@heyq02/openui.mbt` 发到 [pkg.pr.new](https://pkg.pr.new)。这不是正式版本。演示站通过 `file:../js` 使用同一次提交构建出的包，并用 npm override 替换 lang-core 里的旧 `@heyq02/openui-parser`。
+
 仓库需要两个发布凭据：
 
 - `MOONCAKES_TOKEN`：`~/.moon/credentials.json` 的 base64，只放在 Release 作业。

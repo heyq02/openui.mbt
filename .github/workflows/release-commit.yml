@@ -1,0 +1,16 @@
+name: Publish Any Commit
+on: [push, pull_request]
+
+permissions: {}
+
+jobs:
+  release:
+    uses: sxzz/workflows/.github/workflows/release-commit.yml@main
+    with:
+      compact: true
+      packages: ./js
+      build: |
+        curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+        export PATH="$HOME/.moon/bin:$PATH"
+        moon build --target wasm-gc --release
+        node js/build.mjs

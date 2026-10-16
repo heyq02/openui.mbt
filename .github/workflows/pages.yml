@@ -30,6 +30,7 @@ jobs:
         run: |
           moon test --target native --deny-warn
           moon build --target wasm-gc --release
+          node js/build.mjs
 
       - name: Use Node.js
         uses: actions/setup-node@v6
