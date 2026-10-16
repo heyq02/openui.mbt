@@ -94,7 +94,5 @@ export function createStream(schema, rootName = "") {
 
 /** Split an OpenUI `]]>openui:` message. `streaming` holds a partial marker line. */
 export function parseMessage(raw, options) {
-  return JSON.parse(
-    parseMessageOpenui(raw ?? "", options && options.streaming ? 1 : 0),
-  );
+  return JSON.parse(parseMessageOpenui(raw ?? "", options && options.streaming ? 1 : 0));
 }

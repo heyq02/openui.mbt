@@ -89,9 +89,6 @@ export interface OpenUiMessage {
   end: boolean;
 }
 
-export function parseMessage(
-  raw: string,
-  options?: { streaming?: boolean },
-): OpenUiMessage;
+export function parseMessage(raw: string, options?: { streaming?: boolean }): OpenUiMessage;
 
 export function createStream(schema: string, rootName?: string): OpenUiStream;
