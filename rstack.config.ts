@@ -15,7 +15,6 @@ define.extends([
       ignorePatterns: [
         '.github/**',
         '.cursor/**',
-        'docs/**',
         'web/**',
         'src/**',
         '**/*.md',

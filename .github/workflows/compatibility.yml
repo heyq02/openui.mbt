@@ -95,7 +95,7 @@ jobs:
         run: |
           node scripts/compatibility-report.mjs \
             --package upstream/packages/lang-core/package.json \
-            --out docs/compatibility.json \
+            --out compatibility.json \
             --stage parser=compatibility-parser.log \
             --stage lang-core=compatibility-lang-core.log \
             --stage workspace=compatibility-workspace.log
@@ -104,8 +104,8 @@ jobs:
         if: always() && steps.report.outcome == 'success' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/compatibility-report.mjs --publish docs/compatibility.json
+        run: node scripts/compatibility-report.mjs --publish compatibility.json
 
       - name: Check compatibility
         if: always() && steps.report.outcome == 'success'
-        run: node scripts/compatibility-report.mjs --check docs/compatibility.json
+        run: node scripts/compatibility-report.mjs --check compatibility.json

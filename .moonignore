@@ -10,7 +10,7 @@ bump.config.ts
 commitlint.config.js
 AGENTS.md
 scripts/
-docs/compatibility.json
+compatibility.json
 *.tgz
 *.log
 coveralls.json
