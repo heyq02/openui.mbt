@@ -1,0 +1,70 @@
+moon.mod
+  h_a57efa94f24ca5 1,5-6,10-16
+package.json
+  h_a57efa94f24ca5 1-41
+.github/workflows/autofix.yml
+  s_21c94720b5edeb::t_e1ef8aff1612e5 1-34
+.github/workflows/commitlint.yml
+  s_21c94720b5edeb::t_bc7716d8c617e5 1-24
+.github/workflows/coverage.yml
+  s_21c94720b5edeb::t_ab8a46a1322e70 1-60
+.github/workflows/pages.yml
+  s_21c94720b5edeb::t_fe0e48be630ba6 24-27
+.github/workflows/release.yaml
+  s_21c94720b5edeb::t_1ff995c1907b15 1,6,10,12-14,16-31,33,35-43,47-48,50-54,56-57,59,61,63
+.github/workflows/unit-test.yml
+  s_21c94720b5edeb::t_aed56c0e5047d5 1-85
+.gitignore
+  s_21c94720b5edeb::t_8f078391f7d497 2-14
+.moonignore
+  s_21c94720b5edeb::t_5af70dc389fa24 1-18
+.rstack/hooks/commit-msg
+  s_21c94720b5edeb::t_3407b572d37330 1
+.rstack/hooks/pre-commit
+  s_21c94720b5edeb::t_4b58ae51eb623d 1
+AGENTS.md
+  s_21c94720b5edeb::t_944b913862e63e 1-51
+README.md
+  s_21c94720b5edeb::t_a64b435ef1a24e 1-59
+bump.config.ts
+  s_21c94720b5edeb::t_cacbd70d677e74 1-9
+commitlint.config.js
+  s_21c94720b5edeb::t_f3936c592548a5 1
+js/README.md
+  s_21c94720b5edeb::t_188ba13dd07bc7 13-17
+js/build.mjs
+  s_21c94720b5edeb::t_d95faa85057cd7 1-3,6,8,11
+js/index.d.ts
+  s_21c94720b5edeb::t_d2b7c7f7d5c0da 31
+js/index.js
+  s_21c94720b5edeb::t_25114fff5861cd 1,4-5,15-18,28,33,40-43
+js/package.json
+  s_21c94720b5edeb::t_f27a99095b1865 5-20,22,38,40-45
+pnpm-lock.yaml
+  s_21c94720b5edeb::t_39c2ea354e66ab 1-3035
+pnpm-workspace.yaml
+  s_21c94720b5edeb::t_fcd2c840569082 1-11
+rstack.config.ts
+  s_21c94720b5edeb::t_7274b23341d3ec 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1f3217c9a3a99236b2f7327c32e9dd4bdc2651ae",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  },
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
