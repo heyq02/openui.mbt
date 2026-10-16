@@ -1,0 +1,19 @@
+npm/index.js
+  s_21c94720b5edeb::t_cfe6a1941bbc0e 19-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1867077c54a3c5ea6ad411274b41eb2f4c4fc173",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
