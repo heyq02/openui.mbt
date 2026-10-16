@@ -12,14 +12,14 @@ CI installs latest `moon`. Dated CDN pins return 403.
 
 ## Layout
 
-| Path | Role |
-|------|------|
-| `src/` | Lexer, parser, schema, materialize, streaming. Tests stay beside sources. |
-| `src/wasm/` | Wasm-GC exports, including the streaming session. `supported_targets = "wasm-gc"`. |
-| `npm/` | npm package. Embeds the release Wasm as base64. |
-| `web/` | Rsbuild demo. Its own npm install. |
+| Path                 | Role                                                                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/`               | Lexer, parser, schema, materialize, streaming. Tests stay beside sources.                                                                                 |
+| `src/wasm/`          | Wasm-GC exports, including the streaming session. `supported_targets = "wasm-gc"`.                                                                        |
+| `npm/`               | npm package. Embeds the release Wasm as base64.                                                                                                           |
+| `web/`               | Rsbuild demo. Its own npm install.                                                                                                                        |
 | `.github/workflows/` | `unit-test.yml`, `coverage.yml`, `commitlint.yml`, `autofix.yml`, `release.yaml`, `release-commit.yml`, `pages.yml`, `rsdoctor.yml`, `compatibility.yml`. |
-| `bump.config.ts` | Files bumpp rewrites: `package.json`, `moon.mod`, `npm/package.json`. |
+| `bump.config.ts`     | Files bumpp rewrites: `package.json`, `moon.mod`, `npm/package.json`.                                                                                     |
 
 Targets: `native`, `wasm`, `wasm-gc`, `js`. Native CI fails if the suite shrinks below `NATIVE_TEST_BASELINE` in `unit-test.yml`. Parser coverage floor is `COVERAGE_FLOOR_PERCENT` in `coverage.yml` (currently 98%). Both floors only rise.
 

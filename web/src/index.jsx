@@ -1,10 +1,13 @@
 import { Renderer } from "@openuidev/react-lang";
 import { openuiLibrary } from "@openuidev/react-ui";
+
 import "@openuidev/react-ui/defaults.css";
 import "@openuidev/react-ui/index.css";
-import { createRoot } from "react-dom/client";
 import { useState } from "react";
+import { createRoot } from "react-dom/client";
+
 import sample from "../signup.openui";
+
 import "./index.css";
 
 function App() {
@@ -33,9 +36,7 @@ function App() {
           </p>
           <p className={errors.length > 0 ? "error" : "status"}>{status}</p>
           {errors.length > 0 && (
-            <pre className="error">
-              {errors.map((error) => error.message).join("\n")}
-            </pre>
+            <pre className="error">{errors.map((error) => error.message).join("\n")}</pre>
           )}
         </section>
         <section className="preview" aria-label="渲染结果">
@@ -47,9 +48,7 @@ function App() {
                 setStatus("没有可渲染的根节点。");
                 return;
               }
-              setStatus(
-                `已渲染 ${result.root.typeName}，${result.meta.statementCount} 条语句。`,
-              );
+              setStatus(`已渲染 ${result.root.typeName}，${result.meta.statementCount} 条语句。`);
             }}
             onError={setErrors}
             onAction={(event) => {
