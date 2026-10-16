@@ -23,11 +23,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -45,6 +40,17 @@ jobs:
 
       - name: Clone OpenUI
         run: git clone --depth 1 https://github.com/thesysdev/openui.git upstream
+
+      - name: Setup pnpm
+        id: pnpm
+        working-directory: upstream
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+        run: |
+          spec="$(node -p "require('./package.json').packageManager")"
+          corepack enable
+          corepack prepare "$spec" --activate
+          pnpm --version
 
       - name: Install OpenUI
         working-directory: upstream
@@ -76,6 +82,7 @@ jobs:
           pnpm test 2>&1 | tee "$GITHUB_WORKSPACE/compatibility-lang-core.log"
 
       - name: Test workspace
+        id: workspace
         continue-on-error: true
         working-directory: upstream
         run: |
@@ -84,7 +91,7 @@ jobs:
 
       - name: Write compatibility result
         id: report
-        if: always()
+        if: always() && steps.workspace.outcome != 'skipped'
         run: |
           node scripts/compatibility-report.mjs \
             --package upstream/packages/lang-core/package.json \
