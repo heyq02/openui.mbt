@@ -44,7 +44,7 @@ pnpm run format
 
 `release.yaml` runs on a `v*` tag. The tag must match `moon.mod`, the root `package.json`, and `js/package.json`. It publishes the MoonBit module to mooncakes.io, then `@heyq02/openui.mbt` to npm with provenance.
 
-`release-commit.yml` uses `sxzz/workflows` `release-commit.yml` on every push and pull request. It builds the Wasm package and publishes `./js` with `pkg-pr-new`. That preview is not an npm release. `web/package.json` depends on `file:../js` and overrides `@heyq02/openui-parser` with it, because lang-core still imports the old package name. Pages runs `node js/build.mjs` before `npm ci`.
+`release-commit.yml` uses `sxzz/workflows` `release-commit.yml` on every push and pull request. It builds the Wasm package and publishes `./js` with `pkg-pr-new`. That preview is not an npm release. The parser API is `@heyq02/openui.mbt/parser`. `oui.mbt patch` rewrites installed `@openuidev/lang-core@1.0.1` `dist/index.mjs` and `dist/index.cjs`. `web/` depends on the official package and runs that command after install. Pages runs `node js/build.mjs` before `npm ci`.
 
 `.moonignore` keeps `web/`, `js/`, and the repo-hygiene files out of the mooncakes archive. The npm tarball is only the `js/` `files` list, including the generated `parser.wasm.js`.
 

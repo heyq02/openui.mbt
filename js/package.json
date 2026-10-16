@@ -21,8 +21,15 @@
   "license": "MIT",
   "author": "Ari <mail@heyq02.cn>",
   "type": "module",
+  "bin": {
+    "oui.mbt": "./cli.js"
+  },
   "exports": {
     ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./parser": {
       "types": "./index.d.ts",
       "default": "./index.js"
     }
@@ -30,6 +37,7 @@
   "files": [
     "index.js",
     "index.d.ts",
+    "cli.js",
     "parser.wasm.js",
     "README.md"
   ],

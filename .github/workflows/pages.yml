@@ -42,6 +42,10 @@ jobs:
         working-directory: web
         run: npm ci
 
+      - name: Patch OpenUI parser
+        working-directory: web
+        run: npx oui.mbt patch
+
       - name: Build site
         working-directory: web
         run: npm run build

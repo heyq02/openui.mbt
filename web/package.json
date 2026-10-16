@@ -5,11 +5,12 @@
   "scripts": {
     "dev": "rsbuild dev",
     "build": "rsbuild build",
-    "preview": "rsbuild preview"
+    "preview": "rsbuild preview",
+    "postinstall": "oui.mbt patch"
   },
   "dependencies": {
     "@heyq02/openui.mbt": "file:../js",
-    "@openuidev/lang-core": "https://github.com/heyq02/openui-moonbit-beta/releases/download/v1.0.1-moonbit.1/openuidev-lang-core-1.0.1.tgz",
+    "@openuidev/lang-core": "1.0.1",
     "@openuidev/react-headless": "0.18.1",
     "@openuidev/react-lang": "1.0.1",
     "@openuidev/react-ui": "0.18.1",
@@ -21,9 +22,5 @@
   "devDependencies": {
     "@rsbuild/core": "2.2.13",
     "@rsbuild/plugin-react": "^1.4.2"
-  },
-  "overrides": {
-    "@openuidev/lang-core": "$@openuidev/lang-core",
-    "@heyq02/openui-parser": "file:../js"
   }
 }
