@@ -1,0 +1,39 @@
+.github/workflows/unit-test.yml
+  s_21c94720b5edeb::t_d1e05acd6fb0f4 21
+AGENTS.md
+  s_21c94720b5edeb::t_79b7a4c1eb7a83 17-18
+npm/README.md
+  s_21c94720b5edeb::t_4216d3700ef45a 15-16
+npm/index.d.ts
+  s_21c94720b5edeb::t_a73f97a3537f87 62-70
+npm/index.js
+  s_21c94720b5edeb::t_d6986b6c9621f4 24-28,50-76
+npm/package.json
+  s_21c94720b5edeb::t_10579c2da1f0d2 19
+npm/parser.wasm.js
+  s_21c94720b5edeb::t_64dddf7c9e21a1 2
+src/materialize.mbt
+  s_21c94720b5edeb::t_56bc13a2ddbac1 143-144,149,152,162-164,170-172,176-179,184-187,191-201
+src/stream.mbt
+  s_21c94720b5edeb::t_9e62b7fbd35ea6 1-250
+src/stream_wbtest.mbt
+  s_21c94720b5edeb::t_46cf47ef6b1caf 1-130
+src/wasm/export.mbt
+  s_21c94720b5edeb::t_5737f0d92075f1 26-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "04b46480b955ba5ba96c7e6461b033f0c14ea0f1",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
