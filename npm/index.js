@@ -16,7 +16,17 @@ const wasmModule = new WebAssembly.Module(
   wasmBytes(wasmBase64),
   compileOptions,
 );
-const instance = new WebAssembly.Instance(wasmModule);
+
+// Node 22 keeps imported string constants as Wasm globals. Node 26 links
+// them while compiling, so the import list is empty.
+const stringConstants = {};
+for (const item of WebAssembly.Module.imports(wasmModule)) {
+  if (item.module === '_') stringConstants[item.name] = item.name;
+}
+const instance = new WebAssembly.Instance(
+  wasmModule,
+  Object.keys(stringConstants).length > 0 ? { _: stringConstants } : {},
+);
 const {
   parse_openui: parseOpenui,
   tokenize_openui: tokenizeOpenui,
