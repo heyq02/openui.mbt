@@ -1,0 +1,22 @@
+.github/workflows/unit-test.yml
+  h_a57efa94f24ca5 21
+npm/parser.wasm.js
+  h_a57efa94f24ca5 2
+src/ast.mbt
+  h_a57efa94f24ca5 230-436
+src/coverage_wbtest.mbt
+  h_a57efa94f24ca5 1-8,286-291
+src/wasm/export.mbt
+  h_a57efa94f24ca5 5-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fec0a2651d8d92a593ecf94144a373e6404720c7",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
