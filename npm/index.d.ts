@@ -60,10 +60,25 @@ export function materializeProgram(
   rootName?: string,
 ): MaterializeResult;
 
+export interface ParseResult {
+  root: MaterializedElement | null;
+  meta: {
+    incomplete: boolean;
+    unresolved: string[];
+    orphaned: string[];
+    statementCount: number;
+    errors: MaterializeError[];
+  };
+  stateDeclarations: Record<string, unknown>;
+  queryStatements: unknown[];
+  mutationStatements: unknown[];
+}
+
 export interface OpenUiStream {
-  push(chunk: string): MaterializeResult;
-  set(text: string): MaterializeResult;
-  finish(): MaterializeResult;
+  push(chunk: string, complete?: boolean): ParseResult;
+  set(text: string, complete?: boolean): ParseResult;
+  result(complete?: boolean): ParseResult;
+  finish(): ParseResult;
   dispose(): void;
 }
 

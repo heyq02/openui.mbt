@@ -69,10 +69,32 @@ pub fn stream_open(schema : String, root_name : String) -> Int32 {
 }
 
 ///|
-/// Append text and return the latest materialize JSON.
+/// Append text and return the latest ParseResult JSON.
+/// `complete` 1 checks the whole buffer in this same call.
+#export_name("stream_append")
+pub fn stream_append(id : Int32, chunk : String, complete : Int32) -> String {
+  @openui.stream_append(id, chunk, complete)
+}
+
+///|
+/// Append text and return the latest ParseResult JSON.
 #export_name("stream_push")
 pub fn stream_push(id : Int32, chunk : String) -> String {
   @openui.stream_push(id, chunk)
+}
+
+///|
+/// Replace the buffer. `complete` 1 checks the whole buffer in this same call.
+#export_name("stream_replace")
+pub fn stream_replace(id : Int32, text : String, complete : Int32) -> String {
+  @openui.stream_replace(id, text, complete)
+}
+
+///|
+/// Read the current ParseResult. `complete` 1 previews the final check.
+#export_name("stream_view")
+pub fn stream_view(id : Int32, complete : Int32) -> String {
+  @openui.stream_view(id, complete)
 }
 
 ///|

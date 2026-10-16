@@ -14,7 +14,7 @@ npm install @heyq02/openui.mbt @openuidev/lang-core@1.0.1
 npx oui.mbt patch
 ```
 
-`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse` 换成 Wasm 解析和物化。流式解析和 Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
+`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse` 和 `createStreamingParser()` 换成 Wasm 解析和物化。Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
 
 ```js
 import { parseProgram } from "@heyq02/openui.mbt/parser";
@@ -45,7 +45,7 @@ npm ci --prefix web
 pnpm run benchmark
 ```
 
-`--skip-demo` 只测体积和 Node 解析。流式解析仍走官方物化，不在上表里。
+`--skip-demo` 只测体积和 Node 解析。流式解析按行 `push`，最后一次带结束标志，patch 后走 Wasm。
 
 ## License
 

@@ -64,38 +64,58 @@ fn Hold::result(self : Hold) -> Int32 {
 }
 
 ///|
-fn scan_chars(next : () -> Char?) -> Int32 {
+/// Plain text is one `lexscan` match. Quotes and brackets are fed one by one.
+fn skip_plain(hold : Hold, skipped : StringView) -> Unit {
+  hold.index += skipped.length()
+}
+
+///|
+fn scan_scanner(scanner : @lexbuf.StringScanner) -> Int32 {
   let hold = Hold::new()
   while true {
-    match next() {
-      None => break
-      Some(ch) => hold.feed(ch.to_int())
+    if hold.quote != 0 && !hold.escape {
+      lexscan scanner {
+        re"^[^\"'\\\\]+" as skipped => skip_plain(hold, skipped)
+        re"^." as mark => hold.feed(mark.to_int())
+        _ => break
+      }
+    } else {
+      lexscan scanner {
+        re"^[^\"'(){}]+" as skipped => skip_plain(hold, skipped)
+        re"^." as mark => hold.feed(mark.to_int())
+        _ => break
+      }
     }
   }
   hold.result()
 }
 
 ///|
-fn scanner_char(scanner : @lexbuf.StringScanner) -> Char? {
-  lexscan scanner {
-    re"^." as mark => Some(mark)
-    _ => None
+fn scan_lexbuf(input : @lexbuf.Lexbuf) -> Int32 {
+  let hold = Hold::new()
+  while true {
+    if hold.quote != 0 && !hold.escape {
+      lexscan input {
+        re"^[^\"'\\\\]+" as skipped => skip_plain(hold, skipped)
+        re"^." as mark => hold.feed(mark.to_int())
+        _ => break
+      }
+    } else {
+      lexscan input {
+        re"^[^\"'(){}]+" as skipped => skip_plain(hold, skipped)
+        re"^." as mark => hold.feed(mark.to_int())
+        _ => break
+      }
+    }
   }
-}
-
-///|
-fn lexbuf_char(input : @lexbuf.Lexbuf) -> Char? {
-  lexscan input {
-    re"^." as mark => Some(mark)
-    _ => None
-  }
+  hold.result()
 }
 
 ///|
 /// Outermost unclosed quote or bracket, using `lexscan` on the whole source.
 fn hold_from(src : String) -> Int32 {
   let scanner = @lexbuf.StringScanner::{ data: src[:], cursor: 0, }
-  scan_chars(fn() { scanner_char(scanner) })
+  scan_scanner(scanner)
 }
 
 ///|
@@ -111,7 +131,7 @@ fn hold_from_chunks(chunks : Array[String]) -> Int32 {
       Some(chunk)
     }
   })
-  scan_chars(fn() { lexbuf_char(input) })
+  scan_lexbuf(input)
 }
 
 ///|

@@ -551,11 +551,11 @@ const schema = librarySchema(official, zod);
 const report = {
   langCore: supported,
   notes: [
-    "A is @openuidev/lang-core@1.0.1 after oui.mbt patch. B is the same package before the patch.",
-    "createParser().parse materializes in Wasm. Streaming still uses official classification and materialize. Renderer stays official.",
+    "官方 is @openuidev/lang-core@1.0.1. patch 后 is the same package after oui.mbt patch.",
+    "createParser().parse and createStreamingParser() materialize in Wasm. Renderer stays official.",
     "Workspace test wall time is not measured. Most packages never import the parser, and Vitest startup dominates that number.",
     "shippedEsm concatenates files. The demo bundle is the size a page actually downloads.",
-    "Page time is navigation start to the frame after the official Renderer commits signup.openui. It includes downloading the local bundle, evaluating JavaScript, compiling Wasm on A, parsing, and painting.",
+    "Page time is navigation start to the frame after the official Renderer commits signup.openui. It includes downloading the local bundle, evaluating JavaScript, compiling Wasm, parsing, and painting.",
   ],
   sizes: packageSizes(trees.officialTree, trees.patchedTree),
   coldImport: {
