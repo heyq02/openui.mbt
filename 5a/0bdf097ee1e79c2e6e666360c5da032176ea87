@@ -1,0 +1,29 @@
+AGENTS.md
+  s_21c94720b5edeb::t_d1b62db4fd58b7 56
+README.md
+  s_21c94720b5edeb::t_5e50f10051841e 43,52,54-56
+docs/benchmark.md
+  s_21c94720b5edeb::t_0fffe2edbce40b 3,29,33,42-44,51-52,54,62-64,66,74-75
+docs/parity.md
+  s_21c94720b5edeb::t_e7530949cac5af 3,12,20,28-32
+npm/README.md
+  s_21c94720b5edeb::t_1997b4ca94285f 22
+scripts/benchmark.mjs
+  s_21c94720b5edeb::t_d3f2660b1c5911 596
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5a0bdf097ee1e79c2e6e666360c5da032176ea87",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
