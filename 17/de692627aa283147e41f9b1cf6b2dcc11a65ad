@@ -1,0 +1,14 @@
+src/coverage_wbtest.mbt
+  h_a57efa94f24ca5 11-46,61,127-130,190,280-282,308-310,315,348-350,352,422
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "17de692627aa283147e41f9b1cf6b2dcc11a65ad",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
