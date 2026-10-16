@@ -29,7 +29,9 @@
     "@rsdoctor/rspack-plugin": "^1.6.5",
     "automd": "^0.4.3",
     "bumpp": "^12.3.0",
-    "rstack": "^0.8.3"
+    "oxfmt": "^0.73.0",
+    "rstack": "^0.8.3",
+    "vite-plus": "^1.2.0"
   },
   "packageManager": "pnpm@12.10.1",
   "engines": {
