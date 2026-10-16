@@ -16,8 +16,8 @@ concurrency:
 env:
   CI: "true"
   MOON_VERSION: "latest"
-  # Current parser coverage is about 57%. The floor only rises.
-  COVERAGE_FLOOR_PERCENT: "50"
+  # Current parser coverage is about 99%. The floor only rises.
+  COVERAGE_FLOOR_PERCENT: "98"
 
 jobs:
   coverage:

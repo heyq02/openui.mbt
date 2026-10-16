@@ -22,7 +22,7 @@ CI installs latest `moon`. Dated CDN pins return 403.
 | `.github/workflows/` | `unit-test.yml`, `coverage.yml`, `commitlint.yml`, `autofix.yml`, `release.yaml`, `release-commit.yml`, `pages.yml`, `rsdoctor.yml`, `compatibility.yml`. |
 | `bump.config.ts` | Files bumpp rewrites: `package.json`, `moon.mod`, `npm/package.json`. |
 
-Targets: `native`, `wasm`, `wasm-gc`, `js`. Native CI fails if the suite shrinks below `NATIVE_TEST_BASELINE` in `unit-test.yml`. Parser coverage floor is `COVERAGE_FLOOR_PERCENT` in `coverage.yml` (currently 50%). Both floors only rise.
+Targets: `native`, `wasm`, `wasm-gc`, `js`. Native CI fails if the suite shrinks below `NATIVE_TEST_BASELINE` in `unit-test.yml`. Parser coverage floor is `COVERAGE_FLOOR_PERCENT` in `coverage.yml` (currently 98%). Both floors only rise.
 
 ## Commands
 
