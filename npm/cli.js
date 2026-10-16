@@ -65,9 +65,8 @@ const { parseProgram: __ouiParseProgram } = require('@heyq02/openui.mbt/parser')
 ${SHIM}`;
 }
 
-function patchFile(path, kind) {
-  const source = readFileSync(path, 'utf8');
-  if (source.includes(MARKER)) return 'patched';
+function transform(source, kind, path) {
+  if (source.includes(MARKER)) return { status: 'patched', next: source };
   let next = source;
   let count = 0;
   for (const [from, to] of REPLACEMENTS) {
@@ -81,8 +80,7 @@ function patchFile(path, kind) {
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,
     );
   }
-  writeFileSync(path, preamble(kind) + next);
-  return 'updated';
+  return { status: 'updated', next: preamble(kind) + next };
 }
 
 function patch(cwd) {
@@ -95,18 +93,30 @@ function patch(cwd) {
   const version = JSON.parse(
     readFileSync(join(root, 'package.json'), 'utf8'),
   ).version;
+  if (version !== SUPPORTED) {
+    throw new Error(
+      `@openuidev/lang-core@${version} is not supported. oui.mbt patch matches ${SUPPORTED} and leaves the installed files unchanged.`,
+    );
+  }
   const targets = [
     ['dist/index.mjs', 'mjs'],
     ['dist/index.cjs', 'cjs'],
   ];
-  const results = [];
+  const prepared = [];
   for (const [file, kind] of targets) {
     const path = join(root, file);
     if (!existsSync(path)) throw new Error(`Missing ${path}`);
-    results.push(`${file}: ${patchFile(path, kind)}`);
+    prepared.push({
+      path,
+      file,
+      ...transform(readFileSync(path, 'utf8'), kind, path),
+    });
+  }
+  for (const item of prepared) {
+    if (item.status === 'updated') writeFileSync(item.path, item.next);
   }
   console.log(`Patched @openuidev/lang-core@${version} at ${root}`);
-  for (const line of results) console.log(line);
+  for (const item of prepared) console.log(`${item.file}: ${item.status}`);
 }
 
 const command = process.argv[2];

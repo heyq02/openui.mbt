@@ -14,6 +14,7 @@
     "automd": "automd",
     "build:parser": "moon build --target wasm-gc --release && node npm/build.mjs",
     "build:rsdoctor": "moon build --target wasm-gc --release && node npm/build.mjs && rs lib",
+    "compare": "node npm/compare.mjs",
     "commitlint": "commitlint",
     "format": "automd && rs fmt",
     "format:check": "rs fmt --check",

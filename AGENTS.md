@@ -35,10 +35,13 @@ moon test --deny-warn --target wasm-gc
 moon test --deny-warn --target js
 pnpm run build:parser
 pnpm test
+pnpm run compare
 pnpm run format
 ```
 
 `pnpm test` is native only. White-box tests live in `src/*_wbtest.mbt`.
+
+`pnpm run compare` checks a patched `@openuidev/lang-core@1.0.1` against the official package. It needs `web/node_modules`. The report is described in `docs/parity.md`.
 
 `pnpm run build:rsdoctor` bundles `@heyq02/openui.mbt` with `rs lib`. With `RSDOCTOR=true` and `CI` set, the report is `dist/.rsdoctor/rsdoctor-data.json`. The demo in `web/` is not part of that report.
 

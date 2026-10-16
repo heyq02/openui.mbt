@@ -19,4 +19,4 @@ npm install @heyq02/openui.mbt @openuidev/lang-core
 npx oui.mbt patch
 ```
 
-`oui.mbt patch` rewrites the installed `@openuidev/lang-core` so `parse` and the streaming parser call `@heyq02/openui.mbt/parser`. Classification, materialize, and the Renderer stay in OpenUI. The patch matches lang-core 1.0.1.
+`oui.mbt patch` rewrites the installed `@openuidev/lang-core` so `parse` and the streaming parser call `@heyq02/openui.mbt/parser`. Classification, materialize, and the Renderer stay in OpenUI. The patch matches lang-core 1.0.1. A different version, or a 1.0.1 bundle whose parser call sites have changed, makes the command exit before it writes either file.
