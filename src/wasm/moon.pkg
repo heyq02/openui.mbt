@@ -1,5 +1,5 @@
 import {
-  "heyq02/openui/parser",
+  "heyq02/openui",
 }
 
 supported_targets = "wasm-gc"

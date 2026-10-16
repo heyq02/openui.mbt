@@ -2,6 +2,8 @@ name = "heyq02/openui"
 
 version = "0.1.2"
 
+source = "src"
+
 readme = "README.md"
 
 repository = "https://github.com/heyq02/openui.mbt"

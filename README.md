@@ -14,7 +14,7 @@ MoonBit 实现的 [OpenUI Lang](https://github.com/thesysdev/openui) 解析器�
 moon add heyq02/openui
 ```
 
-模块名 `heyq02/openui`。解析、Schema 编译和物化在 `parser` 包，Wasm 导出在 `ffi` 包。Schema 约定见 [`docs/schema.md`](docs/schema.md)。
+模块名 `heyq02/openui`。解析、Schema 编译和物化在 `src`，Wasm 导出在 `src/wasm`。Schema 约定见 [`docs/schema.md`](docs/schema.md)。
 
 ## npm
 

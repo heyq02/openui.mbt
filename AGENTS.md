@@ -14,8 +14,8 @@ CI installs latest `moon`. Dated CDN pins return 403.
 
 | Path | Role |
 |------|------|
-| `parser/` | Lexer, parser, schema, materialize. Tests stay beside sources. |
-| `ffi/` | Wasm-GC exports. `supported_targets = "wasm-gc"`. |
+| `src/` | Lexer, parser, schema, materialize. Tests stay beside sources. |
+| `src/wasm/` | Wasm-GC exports. `supported_targets = "wasm-gc"`. |
 | `js/` | npm package. Embeds the release Wasm as base64. |
 | `web/` | Rsbuild demo. Its own npm install. |
 | `docs/schema.md` | JSON Schema contract. |
@@ -38,7 +38,7 @@ pnpm test
 pnpm run format
 ```
 
-`pnpm test` is native only. Black-box tests call `@parser` names. White-box tests live in `*_wbtest.mbt`.
+`pnpm test` is native only. White-box tests live in `src/*_wbtest.mbt`.
 
 `pnpm run build:rsdoctor` bundles `@heyq02/openui.mbt` with `rs lib`. With `RSDOCTOR=true` and `CI` set, the report is `dist/.rsdoctor/rsdoctor-data.json`. The demo in `web/` is not part of that report.
 
@@ -52,4 +52,4 @@ pnpm run format
 
 `MOONCAKES_TOKEN` is the base64 of `~/.moon/credentials.json` and belongs only on the release job. npm uses a Trusted Publisher for workflow `Release` on `heyq02/openui.mbt`. Do not cache `~/.moon`. Push and pull-request jobs stay offline.
 
-Before pushing parser changes, run `moon fmt` and `moon test --deny-warn` on native, plus wasm-gc when `ffi/` changes.
+Before pushing parser changes, run `moon fmt` and `moon test --deny-warn` on native, plus wasm-gc when `src/wasm/` changes.
