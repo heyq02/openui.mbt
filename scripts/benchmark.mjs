@@ -298,6 +298,13 @@ function parseBench(official, patched, schema) {
       iterations: 20,
       streamIterations: 0,
     },
+    {
+      name: "4000-fields",
+      source: documentOf(4000),
+      warmup: 3,
+      iterations: 15,
+      streamIterations: 0,
+    },
   ];
   const rows = [];
   for (const item of cases) {
