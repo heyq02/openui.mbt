@@ -1,0 +1,49 @@
+body {
+  margin: 24px;
+  color: #1f2328;
+  font: 15px/1.5 ui-sans-serif, system-ui, sans-serif;
+}
+
+main {
+  max-width: 960px;
+}
+
+.lead {
+  color: #59636e;
+}
+
+textarea {
+  width: 100%;
+  min-height: 200px;
+  font: 13px/1.45 ui-monospace, monospace;
+}
+
+button {
+  font: inherit;
+  padding: 6px 14px;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.stat {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f6f8fa;
+}
+
+pre {
+  max-height: 480px;
+  padding: 12px;
+  overflow: auto;
+  background: #f6f8fa;
+}
+
+.error {
+  color: #cf222e;
+  white-space: pre-wrap;
+}

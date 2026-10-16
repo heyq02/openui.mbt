@@ -1,0 +1,19 @@
+{
+  "moon": "0.1.20261012",
+  "target": "wasm-gc",
+  "optimize": "release",
+  "wasmBytes": 33002,
+  "gzipBytes": 14807,
+  "signupStatements": 8,
+  "signupErrors": 0,
+  "signupMedianMs": 0.0609,
+  "signupRepeated50MedianMs": 1.3519,
+  "host": "node",
+  "node": "v26.7.0",
+  "browser": {
+    "signupMedianMs": 0.1,
+    "gzipBytes": 15031,
+    "signupStatements": 8,
+    "signupErrors": 0
+  }
+}

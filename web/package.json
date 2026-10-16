@@ -1,0 +1,15 @@
+{
+  "name": "openui-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview",
+    "predev": "node scripts/copy-assets.mjs",
+    "prebuild": "node scripts/copy-assets.mjs"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "2.2.13"
+  }
+}
