@@ -2,7 +2,8 @@
 /// Parse a complete OpenUI Lang program and return JSON.
 #export_name("parse_openui")
 pub fn parse_openui(src : String) -> String {
-  @openui.parse_json(src)
+  // Compact JSON. Pretty-printing dominated the parse that lang-core immediately parses back.
+  @openui.parse(src).compact_json()
 }
 
 ///|

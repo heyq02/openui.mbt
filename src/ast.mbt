@@ -228,6 +228,213 @@ pub fn Program::to_json(self : Program) -> Json {
 }
 
 ///|
+fn write_hex_byte(buf : StringBuilder, code : Int32) -> Unit {
+  let digits = "0123456789abcdef"
+  match digits.at(code / 16).to_int().to_char() {
+    Some(ch) => buf.write_char(ch)
+    None => ()
+  }
+  match digits.at(code % 16).to_int().to_char() {
+    Some(ch) => buf.write_char(ch)
+    None => ()
+  }
+}
+
+///|
+fn write_json_string(buf : StringBuilder, text : String) -> Unit {
+  buf.write_char('"')
+  let mut index = 0
+  let length = text.length()
+  while index < length {
+    let code = text.at(index).to_int()
+    if code == 34 {
+      buf.write_string("\\\"")
+    } else if code == 92 {
+      buf.write_string("\\\\")
+    } else if code == 8 {
+      buf.write_string("\\b")
+    } else if code == 12 {
+      buf.write_string("\\f")
+    } else if code == 10 {
+      buf.write_string("\\n")
+    } else if code == 13 {
+      buf.write_string("\\r")
+    } else if code == 9 {
+      buf.write_string("\\t")
+    } else if code < 32 {
+      buf.write_string("\\u00")
+      write_hex_byte(buf, code)
+    } else {
+      match code.to_char() {
+        Some(ch) => buf.write_char(ch)
+        None => ()
+      }
+    }
+    index += 1
+  }
+  buf.write_char('"')
+}
+
+///|
+fn write_expr_list(buf : StringBuilder, items : Array[Expr]) -> Unit {
+  buf.write_char('[')
+  let mut index = 0
+  for item in items {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    write_expr_json(buf, item)
+    index += 1
+  }
+  buf.write_char(']')
+}
+
+///|
+fn write_expr_json(buf : StringBuilder, expr : Expr) -> Unit {
+  match expr {
+    Null => buf.write_string("{\"k\":\"Null\"}")
+    Bool(true) => buf.write_string("{\"k\":\"Bool\",\"v\":true}")
+    Bool(false) => buf.write_string("{\"k\":\"Bool\",\"v\":false}")
+    Num(_, repr) => {
+      buf.write_string("{\"k\":\"Num\",\"v\":")
+      buf.write_string(repr)
+      buf.write_char('}')
+    }
+    Str(text) => {
+      buf.write_string("{\"k\":\"Str\",\"v\":")
+      write_json_string(buf, text)
+      buf.write_char('}')
+    }
+    Ref(name) => {
+      buf.write_string("{\"k\":\"Ref\",\"n\":")
+      write_json_string(buf, name)
+      buf.write_char('}')
+    }
+    StateRef(name) => {
+      buf.write_string("{\"k\":\"StateRef\",\"n\":")
+      write_json_string(buf, name)
+      buf.write_char('}')
+    }
+    Comp(name, is_function, args) => {
+      buf.write_string("{\"k\":\"Comp\",\"name\":")
+      write_json_string(buf, name)
+      buf.write_string(",\"args\":")
+      write_expr_list(buf, args)
+      if is_function {
+        buf.write_string(",\"fn\":true")
+      }
+      buf.write_char('}')
+    }
+    Arr(items) => {
+      buf.write_string("{\"k\":\"Arr\",\"els\":")
+      write_expr_list(buf, items)
+      buf.write_char('}')
+    }
+    Obj(entries) => {
+      buf.write_string("{\"k\":\"Obj\",\"entries\":[")
+      let mut index = 0
+      for entry in entries {
+        if index > 0 {
+          buf.write_char(',')
+        }
+        let (key, value) = entry
+        buf.write_char('[')
+        write_json_string(buf, key)
+        buf.write_char(',')
+        write_expr_json(buf, value)
+        buf.write_char(']')
+        index += 1
+      }
+      buf.write_string("]}")
+    }
+    UnaryOp(op, operand) => {
+      buf.write_string("{\"k\":\"UnaryOp\",\"op\":")
+      write_json_string(buf, op)
+      buf.write_string(",\"operand\":")
+      write_expr_json(buf, operand)
+      buf.write_char('}')
+    }
+    BinOp(op, left, right) => {
+      buf.write_string("{\"k\":\"BinOp\",\"op\":")
+      write_json_string(buf, op)
+      buf.write_string(",\"left\":")
+      write_expr_json(buf, left)
+      buf.write_string(",\"right\":")
+      write_expr_json(buf, right)
+      buf.write_char('}')
+    }
+    Ternary(cond, then_branch, else_branch) => {
+      buf.write_string("{\"k\":\"Ternary\",\"cond\":")
+      write_expr_json(buf, cond)
+      buf.write_string(",\"then\":")
+      write_expr_json(buf, then_branch)
+      buf.write_string(",\"else\":")
+      write_expr_json(buf, else_branch)
+      buf.write_char('}')
+    }
+    Member(obj, field) => {
+      buf.write_string("{\"k\":\"Member\",\"obj\":")
+      write_expr_json(buf, obj)
+      buf.write_string(",\"field\":")
+      write_json_string(buf, field)
+      buf.write_char('}')
+    }
+    Index(obj, index) => {
+      buf.write_string("{\"k\":\"Index\",\"obj\":")
+      write_expr_json(buf, obj)
+      buf.write_string(",\"index\":")
+      write_expr_json(buf, index)
+      buf.write_char('}')
+    }
+    Assign(target, value) => {
+      buf.write_string("{\"k\":\"Assign\",\"target\":")
+      write_json_string(buf, target)
+      buf.write_string(",\"value\":")
+      write_expr_json(buf, value)
+      buf.write_char('}')
+    }
+  }
+}
+
+///|
+/// Statement JSON without the intermediate `Json` map. The Wasm binding parses this back in JavaScript.
+pub fn Program::compact_json(self : Program) -> String {
+  let buf = StringBuilder()
+  buf.write_string("{\"statements\":[")
+  let mut index = 0
+  for stmt in self.statements {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    buf.write_string("{\"id\":")
+    write_json_string(buf, stmt.id)
+    buf.write_string(",\"line\":")
+    buf.write_string(stmt.line.to_string())
+    buf.write_string(",\"expr\":")
+    write_expr_json(buf, stmt.expr)
+    buf.write_char('}')
+    index += 1
+  }
+  buf.write_string("],\"errors\":[")
+  index = 0
+  for err in self.errors {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    buf.write_string("{\"line\":")
+    buf.write_string(err.line.to_string())
+    buf.write_string(",\"column\":")
+    buf.write_string(err.column.to_string())
+    buf.write_string(",\"message\":")
+    write_json_string(buf, err.message)
+    buf.write_char('}')
+    index += 1
+  }
+  buf.write_string("]}")
+  buf.to_string()
+}
+
+///|
 pub fn Token::to_json(self : Token) -> Json {
   let fields : Array[(String, Json)] = [
     ("t", Json::string(self.kind.name())),

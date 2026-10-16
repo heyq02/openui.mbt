@@ -1,4 +1,12 @@
 ///|
+test "compact json keeps the statement shape" {
+  inspect(
+    parse("root = TextContent(\"Hi\", \"large\")\n").compact_json(),
+    content="{\"statements\":[{\"id\":\"root\",\"line\":1,\"expr\":{\"k\":\"Comp\",\"name\":\"TextContent\",\"args\":[{\"k\":\"Str\",\"v\":\"Hi\"},{\"k\":\"Str\",\"v\":\"large\"}]}}],\"errors\":[]}",
+  )
+}
+
+///|
 fn use_text(text : String) -> Unit {
   if text.length() < 0 {
     println(text)
@@ -275,6 +283,12 @@ test "remaining expression, schema, and materialize branches" {
   for node in nodes {
     use_text(node.dump())
     use_text(node.to_json().stringify())
+    use_text(
+      {
+        statements: [{ id: "root", expr: node, line: 1, }],
+        errors: [{ line: 1, column: 2, message: "a\"b\n", }],
+      }.compact_json(),
+    )
   }
   let snippets = [
     "-", "1\n-", "$", "@", "\"\\", "'\\'\\\\n\\t\\q'", "\"\\uAB\"", "   ", "root = -1\n",
