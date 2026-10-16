@@ -2,7 +2,7 @@
 
 <p>
   <a href="https://mooncakes.io/docs/heyq02/openui/"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fmooncakes.io%2Fapi-new%2Fv0%2Fmanifest%2Fheyq02%2Fopenui&query=%24.latest_version&label=mooncake&style=flat-square&colorA=564341&colorB=EDED91" alt="mooncake" /></a>
-  <a href="https://www.npmjs.com/package/@heyq02/openui-parser"><img src="https://img.shields.io/npm/v/@heyq02/openui-parser?label=npm&style=flat-square&colorA=564341&colorB=EDED91" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@heyq02/openui.mbt"><img src="https://img.shields.io/npm/v/@heyq02/openui.mbt?label=npm&style=flat-square&colorA=564341&colorB=EDED91" alt="npm" /></a>
   <a href="https://github.com/heyq02/openui.mbt/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-EDED91?style=flat-square&colorA=564341" alt="license" /></a>
 </p>
 
@@ -19,11 +19,11 @@ moon add heyq02/openui
 ## npm
 
 ```bash
-npm install @heyq02/openui-parser
+npm install @heyq02/openui.mbt
 ```
 
 ```js
-import { parseProgram } from "@heyq02/openui-parser";
+import { parseProgram } from "@heyq02/openui.mbt";
 
 const program = parseProgram('root = TextContent("Hello", "large")');
 ```
@@ -37,7 +37,7 @@ const program = parseProgram('root = TextContent("Hello", "large")');
 仓库需要两个发布凭据：
 
 - `MOONCAKES_TOKEN`：`~/.moon/credentials.json` 的 base64，只放在 Release 作业。
-- npm Trusted Publisher：仓库 `heyq02/openui.mbt`，工作流 `Release`，包 `@heyq02/openui-parser`。
+- npm Trusted Publisher：仓库 `heyq02/openui.mbt`，工作流 `Release`，包 `@heyq02/openui.mbt`。
 
 <!-- automd:contributors license=MIT author="heyq02" github="heyq02/openui.mbt" -->
 

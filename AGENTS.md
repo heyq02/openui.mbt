@@ -1,6 +1,6 @@
 # openui
 
-MoonBit parser for OpenUI Lang. Module `heyq02/openui`. The npm package is `@heyq02/openui-parser`.
+MoonBit parser for OpenUI Lang. Module `heyq02/openui`. The npm package is `@heyq02/openui.mbt`.
 
 ## Toolchain
 
@@ -42,7 +42,7 @@ pnpm run format
 
 ## Release
 
-`release.yaml` runs on a `v*` tag. The tag must match `moon.mod`, the root `package.json`, and `js/package.json`. It publishes the MoonBit module to mooncakes.io, then `@heyq02/openui-parser` to npm with provenance.
+`release.yaml` runs on a `v*` tag. The tag must match `moon.mod`, the root `package.json`, and `js/package.json`. It publishes the MoonBit module to mooncakes.io, then `@heyq02/openui.mbt` to npm with provenance.
 
 `.moonignore` keeps `web/`, `js/`, and the repo-hygiene files out of the mooncakes archive. The npm tarball is only the `js/` `files` list, including the generated `parser.wasm.js`.
 
