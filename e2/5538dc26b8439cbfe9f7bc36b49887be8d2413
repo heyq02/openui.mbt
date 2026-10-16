@@ -1,0 +1,33 @@
+docs/schema.md
+  s_21c94720b5edeb::t_a19aa00635df66 1-43
+ffi/export.mbt
+  s_21c94720b5edeb::t_9710f79fd2dc33 14-25
+js/index.d.ts
+  s_21c94720b5edeb::t_4f52bfbf04da4e 30-54,57-61
+js/index.js
+  s_21c94720b5edeb::t_5c567362559cff 17-21,32-39
+parser/materialize.mbt
+  s_21c94720b5edeb::t_7054a85417b7fa 1-945
+parser/materialize_wbtest.mbt
+  s_21c94720b5edeb::t_cc9a5db2daee48 1-205
+parser/schema.mbt
+  s_21c94720b5edeb::t_4b063a3f17a02d 1-961
+parser/schema_wbtest.mbt
+  s_21c94720b5edeb::t_b0d1be26d11c13 1-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e25538dc26b8439cbfe9f7bc36b49887be8d2413",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
