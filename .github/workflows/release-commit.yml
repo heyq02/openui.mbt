@@ -12,5 +12,6 @@ jobs:
       build: |
         curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
         export PATH="$HOME/.moon/bin:$PATH"
+        moon update
         moon build --target wasm-gc --release
         node npm/build.mjs
