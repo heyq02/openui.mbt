@@ -19,6 +19,7 @@ priv struct Issue {
   message : String
   line : Int32
   column : Int32
+  statement_id : String
 }
 
 ///|
@@ -30,6 +31,7 @@ priv struct Mat {
   mut reached : Array[String]
   visited : Map[String, Bool]
   mut visiting : Array[String]
+  mut current_statement : String
   errors : Array[Issue]
   use_cache : Bool
   cache : Ref[Map[String, Val]]
@@ -197,7 +199,15 @@ fn push_issue(
   message : String,
   line : Int32,
 ) -> Unit {
-  mat.errors.push({ code, component, path, message, line, column: 0, })
+  mat.errors.push({
+    code,
+    component,
+    path,
+    message,
+    line,
+    column: 0,
+    statement_id: mat.current_statement,
+  })
 }
 
 ///|
@@ -607,6 +617,7 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       message: err.message(),
       line: err.line,
       column: err.column,
+      statement_id: "",
     })
   }
   for err in self.catalog.errors {
@@ -617,6 +628,7 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       message: err.message(),
       line: 0,
       column: 0,
+      statement_id: "",
     })
   }
   match pick_root(self.program, self.defs, root_name) {
@@ -626,6 +638,7 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       None
     }
     Some((id, fallback)) => {
+      self.current_statement = id
       let root = match last_statement(self.program, self.defs, id) {
         None => None
         Some(stmt) =>
@@ -935,7 +948,7 @@ fn materialize_with(
   root_name : String,
 ) -> (Val?, Bool, Array[String], Array[String], Array[Issue], Int32) {
   let program = parse(src)
-  let count = program.statements.length()
+  let count = unique_statement_count(program)
   let catalog = catalog_for(schema)
   let defs = index_statements(program)
   let incomplete = source_incomplete(src)
@@ -947,6 +960,7 @@ fn materialize_with(
     reached: [],
     visited: Map([]),
     visiting: [],
+    current_statement: "",
     errors: [],
     use_cache: false,
     cache: Ref(Map([])),
@@ -965,7 +979,7 @@ fn materialize_program(
   cache : Ref[Map[String, Val]],
   cache_limit : Int32,
 ) -> (Val?, Bool, Array[String], Array[String], Array[Issue], Int32) {
-  let count = program.statements.length()
+  let count = unique_statement_count(program)
   let catalog = catalog_for(schema)
   let defs = index_statements(program)
   let mat = Mat::{
@@ -976,6 +990,7 @@ fn materialize_program(
     reached: [],
     visited: Map([]),
     visiting: [],
+    current_statement: "",
     errors: [],
     use_cache: true,
     cache,
@@ -1005,6 +1020,7 @@ fn materialize_statement(
     reached: [],
     visited: Map([]),
     visiting: [],
+    current_statement: "",
     errors: [],
     use_cache: false,
     cache: Ref(Map([])),
@@ -1112,6 +1128,7 @@ fn literal_component(
         message: "Unknown component \"" + name + "\"",
         line,
         column: 0,
+        statement_id,
       })
       Some(("", issues))
     }
@@ -1155,6 +1172,7 @@ fn literal_component(
             actual,
             line,
             column: 0,
+            statement_id,
           })
           if param.required {
             drop_component = true
@@ -1179,6 +1197,7 @@ fn literal_component(
           " excess dropped)",
           line,
           column: 0,
+          statement_id,
         })
       }
       for param in params {
@@ -1204,6 +1223,7 @@ fn literal_component(
               message: "missing required field \"/" + param.name + "\"",
               line,
               column: 0,
+              statement_id,
             })
           }
         }
@@ -1441,10 +1461,233 @@ fn write_issues(buf : StringBuilder, errors : Array[Issue]) -> Unit {
     buf.write_string(err.line.to_string())
     buf.write_string(",\"column\":")
     buf.write_string(err.column.to_string())
+    buf.write_string(",\"statementId\":")
+    write_json_string(buf, err.statement_id)
     buf.write_char('}')
     index += 1
   }
   buf.write_char(']')
+}
+
+///|
+fn blank_result() -> String {
+  "{\"root\":null,\"meta\":{\"incomplete\":true,\"unresolved\":[],\"orphaned\":[],\"statementCount\":0,\"errors\":[]},\"stateDeclarations\":{},\"queryStatements\":[],\"mutationStatements\":[]}"
+}
+
+///|
+fn empty_tail() -> String {
+  ",\"stateDeclarations\":{},\"queryStatements\":[],\"mutationStatements\":[]}"
+}
+
+///|
+fn has_side_statements(program : Program) -> Bool {
+  for stmt in program.statements {
+    if starts_with_dollar(stmt.id) {
+      return true
+    }
+    match stmt.expr {
+      Comp("Query", _, _) | Comp("Mutation", _, _) => return true
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn collect_state_refs(expr : Expr, found : Array[String]) -> Unit {
+  match expr {
+    StateRef(name) => push_unique(found, name)
+    Arr(items) =>
+      for item in items {
+        collect_state_refs(item, found)
+      }
+    Obj(entries) =>
+      for entry in entries {
+        let (_, value) = entry
+        collect_state_refs(value, found)
+      }
+    Comp(_, _, args) =>
+      for arg in args {
+        collect_state_refs(arg, found)
+      }
+    UnaryOp(_, value) => collect_state_refs(value, found)
+    BinOp(_, left, right) => {
+      collect_state_refs(left, found)
+      collect_state_refs(right, found)
+    }
+    Ternary(cond, yes, no) => {
+      collect_state_refs(cond, found)
+      collect_state_refs(yes, found)
+      collect_state_refs(no, found)
+    }
+    Member(value, _) => collect_state_refs(value, found)
+    Index(value, index) => {
+      collect_state_refs(value, found)
+      collect_state_refs(index, found)
+    }
+    Assign(_, value) => collect_state_refs(value, found)
+    _ => ()
+  }
+}
+
+///|
+fn write_expr_or_null(
+  buf : StringBuilder,
+  args : Array[Expr],
+  index : Int32,
+) -> Unit {
+  if index < args.length() {
+    write_expr_json(buf, args[index])
+  } else {
+    buf.write_string("null")
+  }
+}
+
+///|
+fn write_state_value(
+  buf : StringBuilder,
+  expr : Expr,
+  line : Int32,
+  schema : String,
+) -> Array[Issue] {
+  let (value, issues) = materialize_statement({ id: "", expr, line, }, schema)
+  write_val(buf, value, false)
+  issues
+}
+
+///|
+/// `stateDeclarations`, `queryStatements`, and `mutationStatements` in official order.
+fn side_tail(program : Program, schema : String) -> (String, Array[Issue]) {
+  let keys : Array[String] = []
+  let values : Map[String, String] = Map([])
+  let extra : Array[Issue] = []
+  let queries : Array[String] = []
+  let mutations : Array[String] = []
+  for stmt in program.statements {
+    match stmt.expr {
+      Comp("Query", _, args) => {
+        let buf = StringBuilder()
+        buf.write_string("{\"statementId\":")
+        write_json_string(buf, stmt.id)
+        buf.write_string(",\"toolAST\":")
+        write_expr_or_null(buf, args, 0)
+        buf.write_string(",\"argsAST\":")
+        write_expr_or_null(buf, args, 1)
+        buf.write_string(",\"defaultsAST\":")
+        write_expr_or_null(buf, args, 2)
+        buf.write_string(",\"refreshAST\":")
+        write_expr_or_null(buf, args, 3)
+        if args.length() > 1 {
+          let deps : Array[String] = []
+          collect_state_refs(args[1], deps)
+          if deps.length() > 0 {
+            buf.write_string(",\"deps\":")
+            write_string_list(buf, deps)
+          }
+        }
+        buf.write_string(",\"complete\":true}")
+        queries.push(buf.to_string())
+      }
+      Comp("Mutation", _, args) => {
+        let buf = StringBuilder()
+        buf.write_string("{\"statementId\":")
+        write_json_string(buf, stmt.id)
+        buf.write_string(",\"toolAST\":")
+        write_expr_or_null(buf, args, 0)
+        buf.write_string(",\"argsAST\":")
+        write_expr_or_null(buf, args, 1)
+        buf.write_char('}')
+        mutations.push(buf.to_string())
+      }
+      _ =>
+        if starts_with_dollar(stmt.id) {
+          let buf = StringBuilder()
+          let issues = write_state_value(buf, stmt.expr, stmt.line, schema)
+          for issue in issues {
+            extra.push(issue)
+          }
+          if !list_has(keys, stmt.id) {
+            keys.push(stmt.id)
+          }
+          values[stmt.id] = buf.to_string()
+        }
+    }
+  }
+  for stmt in program.statements {
+    let found : Array[String] = []
+    match stmt.expr {
+      Comp("Query", _, args) | Comp("Mutation", _, args) =>
+        for arg in args {
+          collect_state_refs(arg, found)
+        }
+      other => collect_state_refs(other, found)
+    }
+    for name in found {
+      if !list_has(keys, name) {
+        keys.push(name)
+        values[name] = "null"
+      }
+    }
+  }
+  let buf = StringBuilder()
+  buf.write_string(",\"stateDeclarations\":{")
+  let mut index = 0
+  for key in keys {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    write_json_string(buf, key)
+    buf.write_char(':')
+    match values.get(key) {
+      Some(json) => buf.write_string(json)
+      None => buf.write_string("null")
+    }
+    index = index + 1
+  }
+  buf.write_string("},\"queryStatements\":[")
+  index = 0
+  for item in queries {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    buf.write_string(item)
+    index = index + 1
+  }
+  buf.write_string("],\"mutationStatements\":[")
+  index = 0
+  for item in mutations {
+    if index > 0 {
+      buf.write_char(',')
+    }
+    buf.write_string(item)
+    index = index + 1
+  }
+  buf.write_string("]}")
+  (buf.to_string(), extra)
+}
+
+///|
+fn reported_issues(errors : Array[Issue]) -> Array[Issue] {
+  let kept : Array[Issue] = []
+  for err in errors {
+    if err.code != "parse-failed" {
+      kept.push(err)
+    }
+  }
+  kept
+}
+
+///|
+fn unique_statement_count(program : Program) -> Int32 {
+  let seen : Map[String, Bool] = Map([])
+  let mut count : Int32 = 0
+  for stmt in program.statements {
+    if !seen.contains(stmt.id) {
+      seen[stmt.id] = true
+      count = count + 1
+    }
+  }
+  count
 }
 
 ///|
@@ -1465,30 +1708,33 @@ pub fn materialize_result(
   schema : String,
   root_name : String,
 ) -> String {
-  encoded_elements.val = Map([])
-  let (root, incomplete, unresolved, orphaned, errors, count) = materialize_with(
-    src, schema, root_name,
-  )
-  let buf = StringBuilder()
-  buf.write_string("{\"root\":")
-  match root {
-    Some(value) => write_val(buf, value, true)
-    None => buf.write_string("null")
+  let prepared = normalize_source(src)
+  if prepared.empty {
+    return blank_result()
   }
-  buf.write_string(",\"meta\":{\"incomplete\":")
-  write_json_bool(buf, incomplete)
-  buf.write_string(",\"unresolved\":")
-  write_string_list(buf, unresolved)
-  buf.write_string(",\"orphaned\":")
-  write_string_list(buf, orphaned)
-  buf.write_string(",\"statementCount\":")
-  buf.write_string(count.to_string())
-  buf.write_string(",\"errors\":")
-  write_issues(buf, errors)
-  buf.write_string(
-    "},\"stateDeclarations\":{},\"queryStatements\":[],\"mutationStatements\":[]}",
+  encoded_elements.val = Map([])
+  let program = parse(prepared.text)
+  let (root, incomplete, unresolved, orphaned, errors, _count) = materialize_program(
+    program,
+    schema,
+    root_name,
+    prepared.incomplete,
+    Ref(Map([])),
+    0,
   )
-  buf.to_string()
+  let (tail, extra) = side_tail(program, schema)
+  for issue in extra {
+    errors.push(issue)
+  }
+  encode_parse_result(
+    root,
+    incomplete,
+    unresolved,
+    orphaned,
+    errors,
+    unique_statement_count(program),
+    tail,
+  )
 }
 
 ///|
@@ -1499,6 +1745,7 @@ fn encode_parse_result(
   orphaned : Array[String],
   errors : Array[Issue],
   count : Int32,
+  tail : String,
 ) -> String {
   let buf = StringBuilder()
   buf.write_string("{\"root\":")
@@ -1515,9 +1762,8 @@ fn encode_parse_result(
   buf.write_string(",\"statementCount\":")
   buf.write_string(count.to_string())
   buf.write_string(",\"errors\":")
-  write_issues(buf, errors)
-  buf.write_string(
-    "},\"stateDeclarations\":{},\"queryStatements\":[],\"mutationStatements\":[]}",
-  )
+  write_issues(buf, reported_issues(errors))
+  buf.write_string("}")
+  buf.write_string(tail)
   buf.to_string()
 }

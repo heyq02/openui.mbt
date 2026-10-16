@@ -19,4 +19,4 @@ npm install @heyq02/openui.mbt @openuidev/lang-core
 npx oui.mbt patch
 ```
 
-`oui.mbt patch` rewrites the installed `@openuidev/lang-core`. `createParser().parse` and `createStreamingParser()` materialize in Wasm and return the official `ParseResult` shape. The Renderer stays in OpenUI. The patch matches lang-core 1.0.1. A different version, or a 1.0.1 bundle whose parser call sites have changed, makes the command exit before it writes either file.
+`oui.mbt patch` rewrites the installed `@openuidev/lang-core`. `createParser().parse` and `createStreamingParser()` preprocess, auto-close, materialize, and extract state, query, and mutation statements in Wasm. They return the official `ParseResult` shape. The Renderer stays in OpenUI. The patch matches lang-core 1.0.1. A different version, or a 1.0.1 bundle whose parser call sites have changed, makes the command exit before it writes either file.

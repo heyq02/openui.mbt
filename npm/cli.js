@@ -37,22 +37,7 @@ const SHIM = `function parseMoonbitStatements(text) {
   return statements;
 }
 function parseMoonbitResult(input, schemaText, rootName) {
-  const source = input ?? '';
-  if (
-    source.indexOf('\`\`\`') === -1 &&
-    source.indexOf('//') === -1 &&
-    source.indexOf('#') === -1
-  ) {
-    const trimmed = source.trim();
-    if (!trimmed) return emptyResult();
-    return __ouiParseResult(trimmed, schemaText ?? '{}', rootName ?? '');
-  }
-  const trimmed = preprocess(source);
-  if (!trimmed) return emptyResult();
-  const { text, wasIncomplete } = autoClose(trimmed);
-  const result = __ouiParseResult(text, schemaText ?? '{}', rootName ?? '');
-  if (wasIncomplete && result && result.meta) result.meta.incomplete = true;
-  return result;
+  return __ouiParseResult(input ?? "", schemaText ?? "{}", rootName ?? "");
 }
 function createMoonbitStreamingParser(schemaText, rootName) {
   const session = __ouiCreateStream(schemaText ?? "{}", rootName ?? "");
