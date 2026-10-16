@@ -1,0 +1,18 @@
+# .moonignore replaces .gitignore for moon package / moon publish.
+node_modules/
+web/
+js/
+examples/browser/
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+rstack.config.ts
+bump.config.ts
+commitlint.config.js
+AGENTS.md
+*.tgz
+*.log
+coveralls.json
+_coverage/
+target/
+.mooncakes/

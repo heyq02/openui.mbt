@@ -1,0 +1,60 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coverage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  MOON_VERSION: "latest"
+  # Current parser coverage is about 57%. The floor only rises.
+  COVERAGE_FLOOR_PERCENT: "50"
+
+jobs:
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MoonBit
+        uses: cogna-dev/moonbit-actions/setup@v0
+        with:
+          version: ${{ env.MOON_VERSION }}
+
+      - name: moon test (native, coverage)
+        run: |
+          set -euo pipefail
+          moon test --enable-coverage --target native | tee /tmp/moon-test.log
+          summary="$(grep -E '^Total tests: [0-9]+, passed: [0-9]+, failed: [0-9]+\.?$' /tmp/moon-test.log | tail -n1)"
+          test -n "${summary}"
+          failed="$(echo "${summary}" | sed -E 's/.*failed: ([0-9]+).*/\1/')"
+          test "${failed}" = "0"
+          points="$(moon coverage report --ignore-missing-files -f summary -p heyq02/openui/parser | tee /dev/stderr | awk '/^Total: /{print $2}')"
+          num="${points%/*}"
+          den="${points#*/}"
+          echo "parser coverage ${num}/${den}"
+          if (( num * 100 < den * COVERAGE_FLOOR_PERCENT )); then
+            echo "parser coverage ${num}/${den} is below ${COVERAGE_FLOOR_PERCENT}%"
+            exit 1
+          fi
+          moon coverage report --ignore-missing-files -f coveralls -o coveralls.json -p heyq02/openui/parser
+
+      - name: Upload to Coveralls
+        uses: coverallsapp/github-action@v2
+        continue-on-error: true
+        with:
+          file: coveralls.json
+          format: coveralls
+          github-token: ${{ secrets.GITHUB_TOKEN }}

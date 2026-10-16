@@ -10,4 +10,8 @@ import { parseProgram } from "@heyq02/openui-parser";
 const program = parseProgram('root = TextContent("Hello", "large")');
 ```
 
-The package is published as a GitHub Release asset, not to the npm registry.
+`materializeProgram(source, schema, rootName)` returns the element tree plus `errors`, `unresolved`, `orphaned`, and `incomplete`.
+
+```bash
+npm install @heyq02/openui-parser
+```

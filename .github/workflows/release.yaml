@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Setup JS
+        uses: sxzz/workflows/setup-js@main
+        with:
+          fetch-all: true
+          cache: false
+
+      - name: Generate GitHub Changelog
+        run: pnpx changelogithub
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup MoonBit
+        uses: cogna-dev/moonbit-actions/setup@v0
+        with:
+          version: latest
+
+      - name: Check version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          mod="$(sed -nE 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' moon.mod | head -n1)"
+          root="$(node -p "require('./package.json').version")"
+          npm_ver="$(node -p "require('./js/package.json').version")"
+          test -n "${mod}"
+          test "${tag}" = "${mod}"
+          test "${tag}" = "${root}"
+          test "${tag}" = "${npm_ver}"
+
+      - name: Test and build Wasm
+        run: |
+          set -euo pipefail
+          moon test --deny-warn --target native
+          moon build --target wasm-gc --release
+          node js/build.mjs
+          test -s js/parser.wasm.js
+
+      - name: Package module
+        run: moon package -v
+
+      - name: Publish to mooncakes.io
+        uses: cogna-dev/moonbit-actions/publish@v0
+        with:
+          token: ${{ secrets.MOONCAKES_TOKEN }}
+
+      - name: Publish to npm
+        working-directory: js
+        run: npm publish --access public --provenance

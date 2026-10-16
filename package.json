@@ -1,0 +1,41 @@
+{
+  "name": "@heyq02/openui.mbt",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MoonBit parser for OpenUI Lang",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/heyq02/openui.mbt.git"
+  },
+  "license": "MIT",
+  "author": "Ari <mail@heyq02.cn>",
+  "type": "module",
+  "scripts": {
+    "automd": "automd",
+    "build:parser": "moon build --target wasm-gc --release && node js/build.mjs",
+    "commitlint": "commitlint",
+    "format": "automd && rs fmt",
+    "format:check": "rs fmt --check",
+    "prepare": "rs hooks",
+    "release": "bumpp",
+    "test": "moon test --target native --deny-warn"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.3",
+    "@heyq02/rstack-config": "^0.0.6",
+    "automd": "^0.4.3",
+    "bumpp": "^12.3.0",
+    "rstack": "^0.8.3"
+  },
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.10.1",
+      "onFail": "download"
+    }
+  }
+}

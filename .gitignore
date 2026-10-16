@@ -1,4 +1,17 @@
 _build/
+_coverage/
+coveralls.json
+.mooncakes/
+target/
+
+node_modules/
+*.tgz
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+
 examples/browser/parser.wasm
 web/node_modules/
 web/dist/

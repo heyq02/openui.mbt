@@ -1,8 +1,8 @@
-import { wasmBase64 } from "./parser.wasm.js";
+import { wasmBase64 } from './parser.wasm.js';
 
 const compileOptions = {
-  builtins: ["js-string"],
-  importedStringConstants: "_",
+  builtins: ['js-string'],
+  importedStringConstants: '_',
 };
 
 function wasmBytes(base64) {
@@ -12,7 +12,10 @@ function wasmBytes(base64) {
   return bytes;
 }
 
-const wasmModule = new WebAssembly.Module(wasmBytes(wasmBase64), compileOptions);
+const wasmModule = new WebAssembly.Module(
+  wasmBytes(wasmBase64),
+  compileOptions,
+);
 const instance = new WebAssembly.Instance(wasmModule);
 const {
   parse_openui: parseOpenui,
@@ -22,18 +25,20 @@ const {
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
 export function parseProgram(source) {
-  return JSON.parse(parseOpenui(source ?? ""));
+  return JSON.parse(parseOpenui(source ?? ''));
 }
 
 /** Tokenize OpenUI Lang source. */
 export function tokenize(source) {
-  return JSON.parse(tokenizeOpenui(source ?? ""));
+  return JSON.parse(tokenizeOpenui(source ?? ''));
 }
 
 /**
  * Materialize source against a library JSON Schema.
  * Returns the element tree plus errors, unresolved, orphaned, and incomplete.
  */
-export function materializeProgram(source, schema, rootName = "") {
-  return JSON.parse(materializeOpenui(source ?? "", schema ?? "{}", rootName ?? ""));
+export function materializeProgram(source, schema, rootName = '') {
+  return JSON.parse(
+    materializeOpenui(source ?? '', schema ?? '{}', rootName ?? ''),
+  );
 }

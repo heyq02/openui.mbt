@@ -2,7 +2,24 @@
   "name": "@heyq02/openui-parser",
   "version": "0.1.0",
   "description": "MoonBit Wasm-GC parser for OpenUI Lang",
+  "keywords": [
+    "moonbit",
+    "openui",
+    "parser",
+    "wasm",
+    "wasm-gc"
+  ],
+  "homepage": "https://github.com/heyq02/openui.mbt#readme",
+  "bugs": {
+    "url": "https://github.com/heyq02/openui.mbt/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/heyq02/openui.mbt.git",
+    "directory": "js"
+  },
   "license": "MIT",
+  "author": "Ari <mail@heyq02.cn>",
   "type": "module",
   "exports": {
     ".": {
@@ -18,11 +35,13 @@
   ],
   "scripts": {
     "build": "node build.mjs",
-    "prepare": "node build.mjs"
+    "prepublishOnly": "node build.mjs"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/heyq02/openui.mbt.git",
-    "directory": "js"
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

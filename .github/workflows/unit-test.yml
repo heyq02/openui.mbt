@@ -1,0 +1,85 @@
+name: Unit Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unit-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  # Dated CDN pins (e.g. 0.1.20260920) return 403; always install latest.
+  MOON_VERSION: "latest"
+  # Documented native baseline; the suite only grows.
+  NATIVE_TEST_BASELINE: "14"
+
+jobs:
+  test-native:
+    name: Test (native)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MoonBit
+        uses: cogna-dev/moonbit-actions/setup@v0
+        with:
+          version: ${{ env.MOON_VERSION }}
+
+      - name: moon check (native)
+        run: moon check --deny-warn --target native
+
+      - name: moon test (native)
+        run: |
+          set -euo pipefail
+          moon test --deny-warn --target native | tee /tmp/moon-test.log
+          summary="$(grep -E '^Total tests: [0-9]+, passed: [0-9]+, failed: [0-9]+\.?$' /tmp/moon-test.log | tail -n1)"
+          test -n "${summary}"
+          failed="$(echo "${summary}" | sed -E 's/.*failed: ([0-9]+).*/\1/')"
+          passed="$(echo "${summary}" | sed -E 's/.*passed: ([0-9]+).*/\1/')"
+          total="$(echo "${summary}" | sed -E 's/.*Total tests: ([0-9]+).*/\1/')"
+          echo "target=native total=${total} passed=${passed} failed=${failed}"
+          test "${failed}" = "0"
+          test "${passed}" = "${total}"
+          if [[ "${total}" -lt "${NATIVE_TEST_BASELINE}" ]]; then
+            echo "Native suite regressed: expected ≥ ${NATIVE_TEST_BASELINE} tests, got ${total}"
+            exit 1
+          fi
+
+  test:
+    name: Test (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [wasm, wasm-gc, js]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MoonBit
+        uses: cogna-dev/moonbit-actions/setup@v0
+        with:
+          version: ${{ env.MOON_VERSION }}
+
+      - name: moon test
+        run: |
+          set -euo pipefail
+          moon test --deny-warn --target "${{ matrix.target }}" | tee /tmp/moon-test.log
+          summary="$(grep -E '^Total tests: [0-9]+, passed: [0-9]+, failed: [0-9]+\.?$' /tmp/moon-test.log | tail -n1)"
+          test -n "${summary}"
+          failed="$(echo "${summary}" | sed -E 's/.*failed: ([0-9]+).*/\1/')"
+          passed="$(echo "${summary}" | sed -E 's/.*passed: ([0-9]+).*/\1/')"
+          total="$(echo "${summary}" | sed -E 's/.*Total tests: ([0-9]+).*/\1/')"
+          echo "target=${{ matrix.target }} total=${total} passed=${passed} failed=${failed}"
+          test "${failed}" = "0"
+          test "${passed}" = "${total}"
