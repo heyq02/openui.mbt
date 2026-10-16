@@ -5,11 +5,23 @@
   "scripts": {
     "dev": "rsbuild dev",
     "build": "rsbuild build",
-    "preview": "rsbuild preview",
-    "predev": "node scripts/copy-assets.mjs",
-    "prebuild": "node scripts/copy-assets.mjs"
+    "preview": "rsbuild preview"
+  },
+  "dependencies": {
+    "@openuidev/lang-core": "https://github.com/heyq02/openui-moonbit-beta/releases/download/v1.0.1-moonbit.1/openuidev-lang-core-1.0.1.tgz",
+    "@openuidev/react-headless": "0.18.1",
+    "@openuidev/react-lang": "1.0.1",
+    "@openuidev/react-ui": "0.18.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^4.1.5",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@rsbuild/core": "2.2.13"
+    "@rsbuild/core": "2.2.13",
+    "@rsbuild/plugin-react": "^1.4.2"
+  },
+  "overrides": {
+    "@openuidev/lang-core": "$@openuidev/lang-core"
   }
 }
