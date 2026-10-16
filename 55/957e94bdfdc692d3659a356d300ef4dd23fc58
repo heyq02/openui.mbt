@@ -1,0 +1,29 @@
+AGENTS.md
+  s_21c94720b5edeb::t_1bddb3df9cd28f 38,44-45
+docs/parity.md
+  s_21c94720b5edeb::t_f3a31bbca6bc30 1-34
+npm/README.md
+  s_21c94720b5edeb::t_cb547f584a37f3 22
+npm/cli.js
+  s_21c94720b5edeb::t_1f5946e162b262 68-69,83,96-100,105,109-116,119
+npm/compare.mjs
+  s_21c94720b5edeb::t_1ed740de37b33b 1-319
+package.json
+  s_21c94720b5edeb::t_944356a01ca63b 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "55957e94bdfdc692d3659a356d300ef4dd23fc58",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
