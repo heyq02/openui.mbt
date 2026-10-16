@@ -1,7 +1,7 @@
 # .moonignore replaces .gitignore for moon package / moon publish.
 node_modules/
 web/
-js/
+npm/
 package.json
 pnpm-lock.yaml
 pnpm-workspace.yaml

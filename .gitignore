@@ -18,5 +18,5 @@ dist/
 web/dist/
 web/public/parser.wasm
 web/public/signup.openui
-js/parser.wasm.js
-js/*.tgz
+npm/parser.wasm.js
+npm/*.tgz

@@ -36,7 +36,7 @@ jobs:
           tag="${GITHUB_REF_NAME#v}"
           mod="$(sed -nE 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' moon.mod | head -n1)"
           root="$(node -p "require('./package.json').version")"
-          npm_ver="$(node -p "require('./js/package.json').version")"
+          npm_ver="$(node -p "require('./npm/package.json').version")"
           test -n "${mod}"
           test "${tag}" = "${mod}"
           test "${tag}" = "${root}"
@@ -47,8 +47,8 @@ jobs:
           set -euo pipefail
           moon test --deny-warn --target native
           moon build --target wasm-gc --release
-          node js/build.mjs
-          test -s js/parser.wasm.js
+          node npm/build.mjs
+          test -s npm/parser.wasm.js
 
       - name: Package module
         run: moon package -v
@@ -59,5 +59,5 @@ jobs:
           token: ${{ secrets.MOONCAKES_TOKEN }}
 
       - name: Publish to npm
-        working-directory: js
+        working-directory: npm
         run: npm publish --access public --provenance

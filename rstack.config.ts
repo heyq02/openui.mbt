@@ -23,7 +23,7 @@ define.extends([
         'pnpm-lock.yaml',
         '_build/**',
         '.mooncakes/**',
-        'js/parser.wasm.js',
+        'npm/parser.wasm.js',
       ],
     },
     staged: {
@@ -40,8 +40,8 @@ define.lib({
   lib: [{ format: 'esm', bundle: true, dts: false }],
   source: {
     entry: {
-      index: './js/index.js',
-      cli: './js/cli.js',
+      index: './npm/index.js',
+      cli: './npm/cli.js',
     },
   },
   output: {

@@ -35,11 +35,11 @@ npm install @heyq02/openui.mbt @openuidev/lang-core
 npx oui.mbt patch
 ```
 
-包入口说明见 [`js/README.md`](js/README.md)。
+包入口说明见 [`npm/README.md`](npm/README.md)。
 
 ## 发布
 
-`package.json`、`moon.mod` 和 `js/package.json` 的版本保持同一字符串。`pnpm release` 改这三处，提交 `chore: release v{version}`，打标签 `v{version}` 并推送。标签触发 [`.github/workflows/release.yaml`](.github/workflows/release.yaml)：`moon package` 后发布到 mooncakes.io，再把 Wasm 包发布到 npm。
+`package.json`、`moon.mod` 和 `npm/package.json` 的版本保持同一字符串。`pnpm release` 改这三处，提交 `chore: release v{version}`，打标签 `v{version}` 并推送。标签触发 [`.github/workflows/release.yaml`](.github/workflows/release.yaml)：`moon package` 后发布到 mooncakes.io，再把 Wasm 包发布到 npm。
 
 每次 push 和 pull request 还会触发 [`.github/workflows/release-commit.yml`](.github/workflows/release-commit.yml)，把 `@heyq02/openui.mbt` 发到 [pkg.pr.new](https://pkg.pr.new)。这不是正式版本。演示站安装官方 `@openuidev/lang-core`，再运行 `oui.mbt patch`。
 

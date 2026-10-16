@@ -6,7 +6,7 @@ MoonBit parser for OpenUI Lang. Module `heyq02/openui`. The npm package is `@hey
 
 `moon` builds and tests the parser. Node is repo hygiene and the Wasm binding: [`@heyq02/rstack-config`](https://github.com/heyq02/rstack-config) (`rs fmt`, hooks, commitlint), [`automd`](https://automd.unjs.io) for the license block in `README.md`, and [`bumpp`](https://github.com/antfu-collective/bumpp). `package.json` pins `pnpm@12.10.1`.
 
-`moon.mod` `version`, root `package.json` `version`, and `js/package.json` `version` stay the same string. `pnpm release` updates all three, commits `chore: release v{version}`, tags `v{version}`, and pushes. `pnpm release --no-push` stops after the local commit and tag.
+`moon.mod` `version`, root `package.json` `version`, and `npm/package.json` `version` stay the same string. `pnpm release` updates all three, commits `chore: release v{version}`, tags `v{version}`, and pushes. `pnpm release --no-push` stops after the local commit and tag.
 
 CI installs latest `moon`. Dated CDN pins return 403.
 
@@ -16,11 +16,11 @@ CI installs latest `moon`. Dated CDN pins return 403.
 |------|------|
 | `src/` | Lexer, parser, schema, materialize. Tests stay beside sources. |
 | `src/wasm/` | Wasm-GC exports. `supported_targets = "wasm-gc"`. |
-| `js/` | npm package. Embeds the release Wasm as base64. |
+| `npm/` | npm package. Embeds the release Wasm as base64. |
 | `web/` | Rsbuild demo. Its own npm install. |
 | `docs/schema.md` | JSON Schema contract. |
 | `.github/workflows/` | `unit-test.yml`, `coverage.yml`, `commitlint.yml`, `autofix.yml`, `release.yaml`, `release-commit.yml`, `pages.yml`, `rsdoctor.yml`. |
-| `bump.config.ts` | Files bumpp rewrites: `package.json`, `moon.mod`, `js/package.json`. |
+| `bump.config.ts` | Files bumpp rewrites: `package.json`, `moon.mod`, `npm/package.json`. |
 
 Targets: `native`, `wasm`, `wasm-gc`, `js`. Native CI fails if the suite shrinks below `NATIVE_TEST_BASELINE` in `unit-test.yml`. Parser coverage floor is `COVERAGE_FLOOR_PERCENT` in `coverage.yml` (currently 50%). Both floors only rise.
 
@@ -44,9 +44,9 @@ pnpm run format
 
 ## Release
 
-`release.yaml` runs on a `v*` tag. The tag must match `moon.mod`, the root `package.json`, and `js/package.json`. It publishes the MoonBit module to mooncakes.io, then `@heyq02/openui.mbt` to npm with provenance.
+`release.yaml` runs on a `v*` tag. The tag must match `moon.mod`, the root `package.json`, and `npm/package.json`. It publishes the MoonBit module to mooncakes.io, then `@heyq02/openui.mbt` to npm with provenance.
 
-`release-commit.yml` uses `sxzz/workflows` `release-commit.yml` on every push and pull request. It builds the Wasm package and publishes `./js` with `pkg-pr-new`. That preview is not an npm release. The parser API is `@heyq02/openui.mbt/parser`. `oui.mbt patch` rewrites installed `@openuidev/lang-core@1.0.1` `dist/index.mjs` and `dist/index.cjs`. `web/` depends on the official package and runs that command after install. Pages runs `node js/build.mjs` before `npm ci`.
+`release-commit.yml` uses `sxzz/workflows` `release-commit.yml` on every push and pull request. It builds the Wasm package and publishes `./npm` with `pkg-pr-new`. That preview is not an npm release. The parser API is `@heyq02/openui.mbt/parser`. `oui.mbt patch` rewrites installed `@openuidev/lang-core@1.0.1` `dist/index.mjs` and `dist/index.cjs`. `web/` depends on the official package and runs that command after install. Pages runs `node npm/build.mjs` before `npm ci`.
 
 `.moonignore` keeps `web/`, `js/`, and the repo-hygiene files out of the mooncakes archive. The npm tarball is only the `js/` `files` list, including the generated `parser.wasm.js`.
 
