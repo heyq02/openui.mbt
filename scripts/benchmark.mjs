@@ -187,6 +187,20 @@ function documentOf(count) {
   return `${lines.join("\n")}\n`;
 }
 
+function nestedDocumentOf(count) {
+  const sections = [];
+  const lines = [];
+  for (let index = 0; index < count; index += 1) {
+    const field = `field${index}`;
+    const section = `section${index}`;
+    sections.push(section);
+    lines.push(`${section} = FormControl("Section ${index}", ${field})`);
+    lines.push(`${field} = TextContent("Field ${index}", "medium")`);
+  }
+  lines.unshift(`root = Stack([${sections.join(", ")}])`);
+  return `${lines.join("\n")}\n`;
+}
+
 function stream(parser, source) {
   const lines = source.split("\n");
   let result;
@@ -198,13 +212,18 @@ function stream(parser, source) {
   return result;
 }
 
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    const copy = {};
+    for (const key of Object.keys(value).sort()) copy[key] = canonicalize(value[key]);
+    return copy;
+  }
+  return value ?? null;
+}
+
 function fingerprint(result) {
-  return {
-    typeName: result.root?.typeName ?? null,
-    statements: result.meta?.statementCount ?? 0,
-    errors: (result.meta?.errors ?? []).length,
-    incomplete: Boolean(result.meta?.incomplete),
-  };
+  return JSON.stringify(canonicalize(result));
 }
 
 function sameFingerprint(actual, expected) {
@@ -282,39 +301,63 @@ function parseBench(official, patched, schema) {
       source: signup,
       warmup: 20,
       iterations: 100,
-      streamIterations: 40,
+      streamWarmup: 5,
+      streamIterations: 20,
     },
     {
       name: "50-fields",
       source: medium,
       warmup: 10,
       iterations: 40,
-      streamIterations: 15,
+      streamWarmup: 3,
+      streamIterations: 10,
+    },
+    {
+      name: "50-nested",
+      source: nestedDocumentOf(50),
+      warmup: 8,
+      iterations: 20,
+      streamWarmup: 2,
+      streamIterations: 8,
     },
     {
       name: "400-fields",
       source: large,
       warmup: 5,
       iterations: 20,
-      streamIterations: 0,
+      streamWarmup: 1,
+      streamIterations: 5,
     },
     {
       name: "4000-fields",
       source: documentOf(4000),
       warmup: 3,
       iterations: 15,
-      streamIterations: 0,
+      streamWarmup: 1,
+      streamIterations: 3,
     },
   ];
   const rows = [];
   for (const item of cases) {
-    const officialOnce = fingerprint(official.createParser(schema).parse(item.source));
-    const patchedOnce = fingerprint(patched.createParser(schema).parse(item.source));
+    const officialParsed = official.createParser(schema).parse(item.source);
+    const patchedParsed = patched.createParser(schema).parse(item.source);
+    const officialOnce = fingerprint(officialParsed);
+    const patchedOnce = fingerprint(patchedParsed);
     const row = {
       name: item.name,
       bytes: Buffer.byteLength(item.source),
-      official: officialOnce,
-      patched: patchedOnce,
+      official: {
+        typeName: officialParsed.root?.typeName ?? null,
+        statements: officialParsed.meta?.statementCount ?? 0,
+        errors: (officialParsed.meta?.errors ?? []).length,
+        incomplete: Boolean(officialParsed.meta?.incomplete),
+      },
+      patched: {
+        typeName: patchedParsed.root?.typeName ?? null,
+        statements: patchedParsed.meta?.statementCount ?? 0,
+        errors: (patchedParsed.meta?.errors ?? []).length,
+        incomplete: Boolean(patchedParsed.meta?.incomplete),
+      },
       match: sameFingerprint(patchedOnce, officialOnce),
       createAndParse: {
         official: time(
@@ -336,15 +379,26 @@ function parseBench(official, patched, schema) {
       patched: time(() => patchedParser.parse(item.source), item.warmup, item.iterations),
     };
     if (item.streamIterations > 0) {
+      const officialStream = fingerprint(
+        stream(official.createStreamingParser(schema), item.source),
+      );
+      const patchedStream = fingerprint(
+        stream(patched.createStreamingParser(schema), item.source),
+      );
+      row.streamMatch = sameFingerprint(patchedStream, officialStream);
+      row.streamAgrees = {
+        official: sameFingerprint(officialOnce, officialStream),
+        patched: sameFingerprint(patchedOnce, patchedStream),
+      };
       row.stream = {
         official: time(
           () => stream(official.createStreamingParser(schema), item.source),
-          Math.min(5, item.warmup),
+          item.streamWarmup,
           item.streamIterations,
         ),
         patched: time(
           () => stream(patched.createStreamingParser(schema), item.source),
-          Math.min(5, item.warmup),
+          item.streamWarmup,
           item.streamIterations,
         ),
       };
@@ -555,7 +609,7 @@ const report = {
     "createParser().parse and createStreamingParser() materialize in Wasm. Renderer stays official.",
     "Workspace test wall time is not measured. Most packages never import the parser, and Vitest startup dominates that number.",
     "shippedEsm concatenates files. The demo bundle is the size a page actually downloads.",
-    "Page time is navigation start to the frame after the official Renderer commits signup.openui. It includes downloading the local bundle, evaluating JavaScript, compiling Wasm, parsing, and painting.",
+    "Page time is navigation start to the frame after the official Renderer commits signup.openui. The parse page sends the whole document once. The stream page feeds it line by line through createStreamingParser, then paints the finished tree. Both include downloading the local bundle, evaluating JavaScript, compiling Wasm, and painting.",
   ],
   sizes: packageSizes(trees.officialTree, trees.patchedTree),
   coldImport: {
@@ -613,6 +667,16 @@ if (!skipDemo) {
             official: await pageSamples(`http://127.0.0.1:${officialServer.port}/bench.html`, 7),
             patched: await pageSamples(`http://127.0.0.1:${patchedServer.port}/bench.html`, 7),
           },
+          pageStream: {
+            official: await pageSamples(
+              `http://127.0.0.1:${officialServer.port}/bench.html?stream=1`,
+              7,
+            ),
+            patched: await pageSamples(
+              `http://127.0.0.1:${patchedServer.port}/bench.html?stream=1`,
+              7,
+            ),
+          },
         };
       } finally {
         officialServer.server.close();
@@ -631,4 +695,13 @@ rmSync(trees.root, { recursive: true, force: true });
 mkdirSync(join(repo, ".bench"), { recursive: true });
 writeFileSync(join(repo, ".bench/report.json"), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
-if (report.parse.some((row) => !row.match)) process.exit(1);
+if (
+  report.parse.some(
+    (row) =>
+      !row.match ||
+      (row.stream &&
+        (!row.streamMatch || !row.streamAgrees.official || !row.streamAgrees.patched)),
+  )
+) {
+  process.exit(1);
+}
