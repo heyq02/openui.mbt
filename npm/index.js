@@ -35,6 +35,7 @@ const {
   stream_view: streamView,
   stream_finish: streamFinish,
   stream_close: streamClose,
+  parse_message: parseMessageOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -89,4 +90,11 @@ export function createStream(schema, rootName = "") {
       streamClose(id);
     },
   };
+}
+
+/** Split an OpenUI `]]>openui:` message. `streaming` holds a partial marker line. */
+export function parseMessage(raw, options) {
+  return JSON.parse(
+    parseMessageOpenui(raw ?? "", options && options.streaming ? 1 : 0),
+  );
 }

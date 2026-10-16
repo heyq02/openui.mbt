@@ -82,4 +82,16 @@ export interface OpenUiStream {
   dispose(): void;
 }
 
+export interface OpenUiMessage {
+  content: string;
+  context: unknown;
+  attributes: Record<string, string>;
+  end: boolean;
+}
+
+export function parseMessage(
+  raw: string,
+  options?: { streaming?: boolean },
+): OpenUiMessage;
+
 export function createStream(schema: string, rootName?: string): OpenUiStream;
