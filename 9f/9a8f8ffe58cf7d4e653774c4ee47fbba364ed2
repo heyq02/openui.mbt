@@ -1,0 +1,28 @@
+npm/cli.js
+  h_a57efa94f24ca5 18-21,38-45,73,77,90
+npm/index.js
+  h_a57efa94f24ca5 34,62-68
+npm/parser.wasm.js
+  h_a57efa94f24ca5 2
+src/coverage_wbtest.mbt
+  h_a57efa94f24ca5 97-98,259-260,298-300
+src/lexer.mbt
+  h_a57efa94f24ca5 24,34,250,255-256,259,262-263,269,273,275,281-282,304-315,317-332,334-336,338-345,347-363,366,370-404,419-455,459,461-469,471,473-489,491-599,602
+src/materialize.mbt
+  h_a57efa94f24ca5 28,31,36-57,188-190,192-206,227,230,365,371,531-536,566-570,572,576-578,607,614,655,920,922-924,929,932,937,948,961,966-1113
+src/stream.mbt
+  h_a57efa94f24ca5 106
+src/wasm/export.mbt
+  h_a57efa94f24ca5 9-22,30-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9f9a8f8ffe58cf7d4e653774c4ee47fbba364ed2",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
