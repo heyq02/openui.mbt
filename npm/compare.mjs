@@ -35,7 +35,9 @@ async function ensureOfficialPackage() {
       'https://registry.npmjs.org/@openuidev/lang-core/-/lang-core-1.0.1.tgz',
     );
     if (!response.ok) {
-      throw new Error(`failed to download lang-core ${supported}: ${response.status}`);
+      throw new Error(
+        `failed to download lang-core ${supported}: ${response.status}`,
+      );
     }
     writeFileSync(tarball, Buffer.from(await response.arrayBuffer()));
   }
@@ -59,12 +61,20 @@ function prepareTrees(officialPackage) {
   const root = mkdtempSync(join(tmpdir(), 'openui-compare-'));
   const officialTree = join(root, 'official');
   const patchedTree = join(root, 'patched');
-  cpSync(officialPackage, join(officialTree, 'node_modules/@openuidev/lang-core'), {
-    recursive: true,
-  });
-  cpSync(officialPackage, join(patchedTree, 'node_modules/@openuidev/lang-core'), {
-    recursive: true,
-  });
+  cpSync(
+    officialPackage,
+    join(officialTree, 'node_modules/@openuidev/lang-core'),
+    {
+      recursive: true,
+    },
+  );
+  cpSync(
+    officialPackage,
+    join(patchedTree, 'node_modules/@openuidev/lang-core'),
+    {
+      recursive: true,
+    },
+  );
   linkDependency(officialTree, 'zod', zod);
   linkDependency(patchedTree, 'zod', zod);
   const scoped = join(patchedTree, 'node_modules/@heyq02');
@@ -95,15 +105,19 @@ function assertVersionMismatchLeavesFiles(officialPackage) {
       throw new Error(`unexpected patch failure: ${message}`);
     }
   }
-  if (!failed) throw new Error('patch accepted an unsupported lang-core version');
+  if (!failed)
+    throw new Error('patch accepted an unsupported lang-core version');
   const after = readFileSync(join(lang, 'dist/index.mjs'), 'utf8');
-  if (after !== before) throw new Error('version mismatch modified installed files');
+  if (after !== before)
+    throw new Error('version mismatch modified installed files');
   rmSync(tree, { recursive: true, force: true });
 }
 
 async function loadLang(tree) {
   return import(
-    pathToFileURL(join(tree, 'node_modules/@openuidev/lang-core/dist/index.mjs')).href
+    pathToFileURL(
+      join(tree, 'node_modules/@openuidev/lang-core/dist/index.mjs'),
+    ).href
   );
 }
 
@@ -228,7 +242,10 @@ const cases = [
   },
   { name: 'state', source: 'root = TextContent($name)\n$name = "Ada"\n' },
   { name: 'bad line', source: 'root = TextContent("Hi")\n!!!\n' },
-  { name: 'unclosed', source: 'root = TextContent("Hi")\nroot = TextContent("' },
+  {
+    name: 'unclosed',
+    source: 'root = TextContent("Hi")\nroot = TextContent("',
+  },
 ];
 
 const officialPackage = await ensureOfficialPackage();
@@ -248,8 +265,12 @@ const schema = librarySchema(official, zod);
 const diffs = [];
 
 for (const item of cases) {
-  const officialParse = summarize(official.createParser(schema).parse(item.source));
-  const patchedParse = summarize(patched.createParser(schema).parse(item.source));
+  const officialParse = summarize(
+    official.createParser(schema).parse(item.source),
+  );
+  const patchedParse = summarize(
+    patched.createParser(schema).parse(item.source),
+  );
   if (!same(patchedParse, officialParse)) {
     diffs.push({
       name: `${item.name} parse`,
@@ -292,10 +313,7 @@ const wasmBase64 = readFileSync(join(repo, 'npm/parser.wasm.js'), 'utf8').match(
 );
 if (!wasmBase64) throw new Error('parser.wasm.js is missing wasmBase64');
 const wasm = Buffer.from(JSON.parse(wasmBase64[1]), 'base64');
-const speed = time(
-  () => patched.createParser(schema).parse(signup),
-  200,
-);
+const speed = time(() => patched.createParser(schema).parse(signup), 200);
 const streamSpeed = time(
   () => stream(patched.createStreamingParser(schema), signup),
   50,
