@@ -10,7 +10,10 @@ const REPLACEMENTS = [
   ['split(tokenize(closed))', 'parseMoonbitStatements(closed)'],
   ['split(tokenize(raw))[0]', 'parseMoonbitStatements(raw)[0]'],
   ['split(tokenize(t))', 'parseMoonbitStatements(t)'],
-  ['classifyStatement(s, parseExpression(s.tokens))', 'classifyStatement(s, s.expr)'],
+  [
+    'classifyStatement(s, parseExpression(s.tokens))',
+    'classifyStatement(s, s.expr)',
+  ],
   ['ast: parseExpression(stmt.tokens)', 'ast: stmt.expr'],
 ];
 
@@ -37,7 +40,13 @@ function usage() {
 function findLangCore(start) {
   let dir = resolve(start);
   for (;;) {
-    const manifest = join(dir, 'node_modules', '@openuidev', 'lang-core', 'package.json');
+    const manifest = join(
+      dir,
+      'node_modules',
+      '@openuidev',
+      'lang-core',
+      'package.json',
+    );
     if (existsSync(manifest)) return dirname(manifest);
     const parent = dirname(dir);
     if (parent === dir) return null;
@@ -83,7 +92,9 @@ function patch(cwd) {
       'Cannot find @openuidev/lang-core. Install it in this project, then run oui.mbt patch.',
     );
   }
-  const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+  const version = JSON.parse(
+    readFileSync(join(root, 'package.json'), 'utf8'),
+  ).version;
   const targets = [
     ['dist/index.mjs', 'mjs'],
     ['dist/index.cjs', 'cjs'],
