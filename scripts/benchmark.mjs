@@ -382,9 +382,7 @@ function parseBench(official, patched, schema) {
       const officialStream = fingerprint(
         stream(official.createStreamingParser(schema), item.source),
       );
-      const patchedStream = fingerprint(
-        stream(patched.createStreamingParser(schema), item.source),
-      );
+      const patchedStream = fingerprint(stream(patched.createStreamingParser(schema), item.source));
       row.streamMatch = sameFingerprint(patchedStream, officialStream);
       row.streamAgrees = {
         official: sameFingerprint(officialOnce, officialStream),
@@ -699,8 +697,7 @@ if (
   report.parse.some(
     (row) =>
       !row.match ||
-      (row.stream &&
-        (!row.streamMatch || !row.streamAgrees.official || !row.streamAgrees.patched)),
+      (row.stream && (!row.streamMatch || !row.streamAgrees.official || !row.streamAgrees.patched)),
   )
 ) {
   process.exit(1);
