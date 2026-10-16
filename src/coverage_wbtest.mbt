@@ -8,10 +8,42 @@ fn use_text(text : String) -> Unit {
 ///|
 test "every token kind has a name" {
   let kinds : Array[TokenKind] = [
-    Newline, LParen, RParen, LBrack, RBrack, LBrace, RBrace, Comma, Colon,
-    Equals, True, False, Null, EOF, Str, Num, Ident, Type, StateVar, Dot, Plus,
-    Minus, Star, Slash, Percent, EqEq, NotEq, Greater, Less, GreaterEq, LessEq,
-    And, Or, Not, Question, BuiltinCall,
+    Newline,
+    LParen,
+    RParen,
+    LBrack,
+    RBrack,
+    LBrace,
+    RBrace,
+    Comma,
+    Colon,
+    Equals,
+    True,
+    False,
+    Null,
+    EOF,
+    Str,
+    Num,
+    Ident,
+    Type,
+    StateVar,
+    Dot,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    EqEq,
+    NotEq,
+    Greater,
+    Less,
+    GreaterEq,
+    LessEq,
+    And,
+    Or,
+    Not,
+    Question,
+    BuiltinCall,
   ]
   let buf = StringBuilder()
   for kind in kinds {
@@ -26,8 +58,7 @@ test "every token kind has a name" {
 
 ///|
 test "lexer covers numbers, escapes, and operators" {
-  let src =
-    " \t\r#\n" +
+  let src = " \t\r#\n" +
     "()[]{},:=true false null \"s\" 1 ident Type $state . + - * / % == != > < >= <= && || ! ? @Foo\n" +
     "1.5 2. 3e 4e+ 5E-2 6e+2 -7.25e-1 1-\n" +
     "\"\\\"\\\\\\/\\b\\f\\n\\r\\t\\u0041\\u00aF\\uD83D\\uDE00\\uD800\\u0041\\u12\\uXXXX\\q\\\"\n" +
@@ -93,33 +124,10 @@ test "parser and json cover every expression form" {
 ///|
 test "schema compilation covers invalid documents and every shape" {
   let samples = [
-    "",
-    "null",
-    "[]",
-    "{",
-    "\"unterminated",
-    "{\"a\"",
-    "{\"a\":",
-    "[1,]",
-    "[1 2]",
-    "{a:1}",
-    "tru",
-    "fals",
-    "nul",
-    "{\"a\":1 \"b\":2}",
-    "{} x",
-    "-",
-    "1.",
-    "1e",
-    "1e+",
-    "01",
-    "\"\\n\\r\\t\\b\\f\\\\\\\"\\/\\u0041\\u00aF\"",
-    "\"\\uD800\"",
-    "\"\\q\"",
-    "\"\\u12\"",
-    "\"\\u12GG\"",
-    "\"\u{0001}\"",
-    "  \n\t{\"a\":-12.5e+2,\"b\":0,\"c\":0.5,\"d\":1E-2}",
+    "", "null", "[]", "{", "\"unterminated", "{\"a\"", "{\"a\":", "[1,]", "[1 2]",
+    "{a:1}", "tru", "fals", "nul", "{\"a\":1 \"b\":2}", "{} x", "-", "1.", "1e",
+    "1e+", "01", "\"\\n\\r\\t\\b\\f\\\\\\\"\\/\\u0041\\u00aF\"", "\"\\uD800\"", "\"\\q\"",
+    "\"\\u12\"", "\"\\u12GG\"", "\"\u{0001}\"", "  \n\t{\"a\":-12.5e+2,\"b\":0,\"c\":0.5,\"d\":1E-2}",
     "{\"a\":1,\"a\":2}",
   ]
   for sample in samples {
@@ -179,8 +187,7 @@ test "schema compilation covers invalid documents and every shape" {
     #|}
   use_text(compile_schema(rich).dump())
   let broken_roots = [
-    "{\"properties\":[],\"$defs\":{},\"functions\":[],\"actions\":[]}",
-    "{\"$defs\":{\"Card\":{\"properties\":{\"t\":{\"type\":\"string\"}}},\"ActionExpression\":{},\"OpenUrl\":{},\"ToAssistant\":{},\"Save\":{}},\"actions\":{\"Save\":{\"params\":{}}}}",
+    "{\"properties\":[],\"$defs\":{},\"functions\":[],\"actions\":[]}", "{\"$defs\":{\"Card\":{\"properties\":{\"t\":{\"type\":\"string\"}}},\"ActionExpression\":{},\"OpenUrl\":{},\"ToAssistant\":{},\"Save\":{}},\"actions\":{\"Save\":{\"params\":{}}}}",
   ]
   for sample in broken_roots {
     use_text(compile_schema(sample).dump())
@@ -270,22 +277,9 @@ test "remaining expression, schema, and materialize branches" {
     use_text(node.to_json().stringify())
   }
   let snippets = [
-    "-",
-    "1\n-",
-    "$",
-    "@",
-    "\"\\",
-    "'\\'\\\\n\\t\\q'",
-    "\"\\uAB\"",
-    "   ",
-    "root = -1\n",
-    "root = -\n",
-    "root = @Foo\n",
-    "root = )\n",
-    "root = [,]\n",
-    "root = item.name\n",
-    "root = $count = 1\n",
-    "root = a ? b\n",
+    "-", "1\n-", "$", "@", "\"\\", "'\\'\\\\n\\t\\q'", "\"\\uAB\"", "   ", "root = -1\n",
+    "root = -\n", "root = @Foo\n", "root = )\n", "root = [,]\n", "root = item.name\n",
+    "root = $count = 1\n", "root = a ? b\n",
   ]
   for snippet in snippets {
     for tok in tokenize(snippet) {
@@ -311,13 +305,14 @@ test "remaining expression, schema, and materialize branches" {
   use_text(json_quote("a\"b\\c\n\r\td"))
   use_text(J::Arr([]).display())
   use_text(J::Arr([J::Num("1"), J::Bool(false), J::Null]).display())
-  use_text(J::Obj([("a\"b", J::Null), ("c\n", J::Arr([J::Str("x")]))]).display())
+  use_text(
+    J::Obj([("a\"b", J::Null), ("c\n", J::Arr([J::Str("x")]))]).display(),
+  )
   use_text(SchemaShape::Any.label())
   let failed = SchemaReader::{ src: "1", index: 0, failed: true, message: "x", }
   let _stopped = failed.parse_value()
   let schemas = [
-    "{\"$defs\":1,\"properties\":1,\"functions\":1,\"actions\":1}",
-    "{\"$defs\":{\"Box\":{\"properties\":[],\"required\":{}}},\"functions\":{\"F\":{}},\"actions\":{\"A\":{\"params\":[]}}}",
+    "{\"$defs\":1,\"properties\":1,\"functions\":1,\"actions\":1}", "{\"$defs\":{\"Box\":{\"properties\":[],\"required\":{}}},\"functions\":{\"F\":{}},\"actions\":{\"A\":{\"params\":[]}}}",
     "{\"$defs\":{\"Box\":{\"properties\":{\"title\":{\"enum\":[\"a\\\"b\",\"a\\\\c\",\"line\\n\",\"tab\\t\",\"cr\\r\",[],{}]}},\"required\":[\"title\"]}},\"properties\":{\"Box\":{}}}",
     "{\"functions\":{\"Percent\":{\"params\":{\"properties\":{\"n\":{}},\"required\":[\"n\"]}}}}",
   ]
@@ -350,16 +345,11 @@ test "remaining expression, schema, and materialize branches" {
     #|}
   let programs = [
     "root = Box(\"ok\", 1, false, null, {flag: false, n: 2, empty: null, child: slot}, [null, false, 1, \"x\", {a: false, b: null, c: 3, d: slot}, [null]], \"on\", \"s\", 1 + 2, slot, @Percent(!true, a ? b : c, item.name, items[0], $flag = false), \"extra\")\nslot = Slot(\"hi\")\n",
-    "root = Box(1, \"no\", \"no\", \"no\", \"no\", \"no\", 1, true, 1, 1)\n",
-    "root = Box(\"ok\", 1)\n",
-    "first = Box(\"a\", 1, true, null)\nsecond = Box(\"b\", 1, true, null)\n",
-    "root = \"hi\"\n",
-    "root = page\npage = Box(\"a\", 1, false, null)\n",
-    "root = a\na = b\nb = a\n",
+    "root = Box(1, \"no\", \"no\", \"no\", \"no\", \"no\", 1, true, 1, 1)\n", "root = Box(\"ok\", 1)\n",
+    "first = Box(\"a\", 1, true, null)\nsecond = Box(\"b\", 1, true, null)\n", "root = \"hi\"\n",
+    "root = page\npage = Box(\"a\", 1, false, null)\n", "root = a\na = b\nb = a\n",
     "root = Box(\"a\", 1, false, null, {}, [], \"on\", \"s\", @Nope(1), Query(\"q\"))\n",
-    "root = @Nope(1)\n",
-    "root = Query(\"q\")\n",
-    "root = u\nu = !true\nm = item.name\ni = items[0]\na = $x = 1\n",
+    "root = @Nope(1)\n", "root = Query(\"q\")\n", "root = u\nu = !true\nm = item.name\ni = items[0]\na = $x = 1\n",
   ]
   for program in programs {
     use_text(materialize_dump(program, schema, "Box"))
@@ -429,9 +419,7 @@ test "remaining expression, schema, and materialize branches" {
   use_text(val_json(element).stringify())
   use_text(
     materialize_dump(
-      "title = \"hi\"\npage = Box(\"a\", 1, false, null)\n",
-      schema,
-      "Box",
+      "title = \"hi\"\npage = Box(\"a\", 1, false, null)\n", schema, "Box",
     ),
   )
   let _quote = source_incomplete("\"hi\\n\"")
