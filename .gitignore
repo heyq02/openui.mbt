@@ -14,6 +14,8 @@ node_modules/
 
 examples/browser/parser.wasm
 web/node_modules/
+dist/
+.rsdoctor/
 web/dist/
 web/public/parser.wasm
 web/public/signup.openui

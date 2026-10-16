@@ -19,7 +19,7 @@ CI installs latest `moon`. Dated CDN pins return 403.
 | `js/` | npm package. Embeds the release Wasm as base64. |
 | `web/` | Rsbuild demo. Its own npm install. |
 | `docs/schema.md` | JSON Schema contract. |
-| `.github/workflows/` | `unit-test.yml`, `coverage.yml`, `commitlint.yml`, `autofix.yml`, `release.yaml`, `release-commit.yml`, `pages.yml`. |
+| `.github/workflows/` | `unit-test.yml`, `coverage.yml`, `commitlint.yml`, `autofix.yml`, `release.yaml`, `release-commit.yml`, `pages.yml`, `rsdoctor.yml`. |
 | `bump.config.ts` | Files bumpp rewrites: `package.json`, `moon.mod`, `js/package.json`. |
 
 Targets: `native`, `wasm`, `wasm-gc`, `js`. Native CI fails if the suite shrinks below `NATIVE_TEST_BASELINE` in `unit-test.yml`. Parser coverage floor is `COVERAGE_FLOOR_PERCENT` in `coverage.yml` (currently 50%). Both floors only rise.
@@ -39,6 +39,8 @@ pnpm run format
 ```
 
 `pnpm test` is native only. Black-box tests call `@parser` names. White-box tests live in `*_wbtest.mbt`.
+
+`pnpm run build:rsdoctor` bundles `@heyq02/openui.mbt` with `rs lib`. With `RSDOCTOR=true` and `CI` set, the report is `dist/.rsdoctor/rsdoctor-data.json`. The demo in `web/` is not part of that report.
 
 ## Release
 

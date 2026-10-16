@@ -13,6 +13,7 @@
   "scripts": {
     "automd": "automd",
     "build:parser": "moon build --target wasm-gc --release && node js/build.mjs",
+    "build:rsdoctor": "moon build --target wasm-gc --release && node js/build.mjs && rs lib",
     "commitlint": "commitlint",
     "format": "automd && rs fmt",
     "format:check": "rs fmt --check",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",
     "@heyq02/rstack-config": "^0.0.6",
+    "@rsdoctor/rspack-plugin": "^1.6.5",
     "automd": "^0.4.3",
     "bumpp": "^12.3.0",
     "rstack": "^0.8.3"
