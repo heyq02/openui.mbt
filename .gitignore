@@ -4,3 +4,5 @@ web/node_modules/
 web/dist/
 web/public/parser.wasm
 web/public/signup.openui
+js/parser.wasm.js
+js/*.tgz

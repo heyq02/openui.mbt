@@ -1,0 +1,44 @@
+name: Release parser
+
+on:
+  push:
+    tags:
+      - "parser-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Test and build Wasm
+        run: |
+          moon test --target native --deny-warn
+          moon build --target wasm-gc --release
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Pack
+        working-directory: js
+        run: npm pack
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" js/*.tgz \
+            --title "$GITHUB_REF_NAME" \
+            --notes "MoonBit Wasm-GC parser package for OpenUI Lang."
