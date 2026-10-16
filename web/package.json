@@ -9,7 +9,7 @@
     "postinstall": "oui.mbt patch"
   },
   "dependencies": {
-    "@heyq02/openui.mbt": "file:../js",
+    "@heyq02/openui.mbt": "file:../npm",
     "@openuidev/lang-core": "1.0.1",
     "@openuidev/react-headless": "0.18.1",
     "@openuidev/react-lang": "1.0.1",

@@ -12,8 +12,8 @@
   "type": "module",
   "scripts": {
     "automd": "automd",
-    "build:parser": "moon build --target wasm-gc --release && node js/build.mjs",
-    "build:rsdoctor": "moon build --target wasm-gc --release && node js/build.mjs && rs lib",
+    "build:parser": "moon build --target wasm-gc --release && node npm/build.mjs",
+    "build:rsdoctor": "moon build --target wasm-gc --release && node npm/build.mjs && rs lib",
     "commitlint": "commitlint",
     "format": "automd && rs fmt",
     "format:check": "rs fmt --check",
