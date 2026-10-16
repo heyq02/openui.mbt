@@ -32,6 +32,7 @@ priv struct Mat {
   visited : Map[String, Bool]
   mut visiting : Array[String]
   mut current_statement : String
+  mut partial : Bool
   errors : Array[Issue]
   use_cache : Bool
   cache : Ref[Map[String, Val]]
@@ -472,8 +473,37 @@ fn materialize_call(
       while index < params.length() && index < args.length() {
         let param = params[index]
         let value = materialize_expr(mat, args[index], line)
-        if matches_shape(param.shape, value) {
+        if value is Null && (param.node is Fields(_) || param.node is Items(_)) {
+          ()
+        } else if param.node is Open {
+          let _kept = refine(
+            mat,
+            name,
+            "/" + param.name,
+            param.node,
+            value,
+            line,
+          )
           props.push((param.name, value))
+        } else if mat.partial && param.node is Leaf(_, Some(_), _) {
+          let _kept = refine(
+            mat,
+            name,
+            "/" + param.name,
+            param.node,
+            value,
+            line,
+          )
+          props.push((param.name, value))
+        } else if matches_shape(param.shape, value) {
+          match refine(mat, name, "/" + param.name, param.node, value, line) {
+            Keep(next) => props.push((param.name, next))
+            Bad =>
+              if param.required {
+                drop_component = true
+                mismatched.push(param.name)
+              }
+          }
         } else {
           let expected = shape_label(param.shape)
           let actual = match literal_display(value) {
@@ -493,9 +523,13 @@ fn materialize_call(
             actual,
             line,
           )
-          if param.required {
-            drop_component = true
-            mismatched.push(param.name)
+          match lit_val(node_default(param.node)) {
+            Some(fallback) => props.push((param.name, fallback))
+            None =>
+              if param.required {
+                drop_component = true
+                mismatched.push(param.name)
+              }
           }
         }
         index += 1
@@ -531,15 +565,20 @@ fn materialize_call(
             }
           }
           if !present {
-            drop_component = true
-            push_issue(
-              mat,
-              "missing-required",
-              name,
-              "/" + param.name,
-              "missing required field \"/" + param.name + "\"",
-              line,
-            )
+            match lit_val(node_default(param.node)) {
+              Some(fallback) => props.push((param.name, fallback))
+              None => {
+                drop_component = true
+                push_issue(
+                  mat,
+                  "missing-required",
+                  name,
+                  "/" + param.name,
+                  "missing required field \"/" + param.name + "\"",
+                  line,
+                )
+              }
+            }
           }
         }
       }
@@ -609,6 +648,7 @@ fn orphan_ids(
 
 ///|
 fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
+  self.partial = incomplete
   for err in self.program.errors {
     self.errors.push({
       code: "parse-failed",
@@ -961,6 +1001,7 @@ fn materialize_with(
     visited: Map([]),
     visiting: [],
     current_statement: "",
+    partial: false,
     errors: [],
     use_cache: false,
     cache: Ref(Map([])),
@@ -991,6 +1032,7 @@ fn materialize_program(
     visited: Map([]),
     visiting: [],
     current_statement: "",
+    partial: false,
     errors: [],
     use_cache: true,
     cache,
@@ -1021,6 +1063,7 @@ fn materialize_statement(
     visited: Map([]),
     visiting: [],
     current_statement: "",
+    partial: false,
     errors: [],
     use_cache: false,
     cache: Ref(Map([])),
@@ -1100,6 +1143,18 @@ fn scalar_matches(shape : SchemaShape, expr : Expr) -> Bool {
 }
 
 ///|
+/// Fast path only for scalars and unchecked arrays. Nested schemas use `refine`.
+fn plain_node(node : SchemaNode) -> Bool {
+  match node {
+    Open => true
+    Items(Open) => true
+    Leaf(kind, None, Absent) =>
+      kind == "string" || kind == "number" || kind == "boolean"
+    _ => false
+  }
+}
+
+///|
 /// Literal component calls skip the value tree. Anything else uses `materialize_statement`.
 fn literal_component(
   catalog : SchemaCatalog,
@@ -1133,6 +1188,11 @@ fn literal_component(
       Some(("", issues))
     }
     Some(params) => {
+      for param in params {
+        if !plain_node(param.node) {
+          return None
+        }
+      }
       let buf = StringBuilder()
       buf.write_string("{\"type\":\"element\",\"typeName\":")
       write_json_string(buf, name)

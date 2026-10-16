@@ -225,7 +225,14 @@ test "runtime calls publish official mapped props" {
       {
         name: "Save",
         kind: Action,
-        params: [{ name: "id", required: true, shape: Str, }],
+        params: [
+          {
+            name: "id",
+            required: true,
+            shape: Str,
+            node: Leaf("string", None, Absent),
+          },
+        ],
       },
     ],
     errors: [],
@@ -366,4 +373,363 @@ test "preprocess and state stay in the parse result" {
   let _ = stream_replace(both, "root = TextContent(\" // c", 1)
   inspect(stream_dump(both).contains("incomplete: true"), content="true")
   let _ = stream_close(both)
+}
+
+///|
+fn nested_schema() -> String {
+  let src =
+    #|{
+    #|  "properties": {
+    #|    "ObjBox": {}, "ArrBox": {}, "TagBox": {}, "EnumBox": {}, "AnyBox": {},
+    #|    "ScalarBox": {}, "ListBox": {}, "CardBox": {}, "ReqScalar": {}, "DefBox": {},
+    #|    "SlotBox": {}, "ChartBox": {}, "NestDefBox": {}, "FlagBox": {},
+    #|    "BagBox": {}, "NeedBox": {}, "EmptyBox": {}
+    #|  },
+    #|  "$defs": {
+    #|    "ObjBox": { "properties": { "info": { "type": "object", "properties": { "author": { "type": "string" }, "views": { "type": "number" } }, "required": ["author"] } } },
+    #|    "ArrBox": { "properties": { "rows": { "type": "array", "items": { "type": "object", "properties": { "label": { "type": "string" }, "value": { "type": "number" } }, "required": ["label"] } } } },
+    #|    "TagBox": { "properties": { "tags": { "type": "array", "items": { "type": "string" } } } },
+    #|    "EnumBox": { "properties": { "status": { "enum": ["active", "inactive"] } } },
+    #|    "AnyBox": { "properties": { "combo": { "anyOf": [{ "type": "string" }, { "type": "number" }] } } },
+    #|    "ScalarBox": { "properties": { "title": { "type": "string" }, "count": { "type": "number" }, "flag": { "type": "boolean" } } },
+    #|    "ListBox": { "properties": { "children": { "type": "array" } } },
+    #|    "CardBox": { "properties": { "text": { "type": "string" } }, "required": ["text"] },
+    #|    "ReqScalar": { "properties": { "title": { "type": "string" } }, "required": ["title"] },
+    #|    "DefBox": { "properties": { "theme": { "type": "string", "default": "dark" } }, "required": ["theme"] },
+    #|    "SlotBox": { "properties": { "children": { "type": "array", "items": { "anyOf": [{ "$ref": "#/$defs/CardBox" }] } } } },
+    #|    "ChartBox": { "properties": { "labels": { "type": "array", "items": { "type": "string" } }, "variant": { "enum": ["grouped", "stacked"] } }, "required": ["labels"] },
+    #|    "NestDefBox": { "properties": { "cfg": { "type": "object", "properties": { "mode": { "enum": ["fast", "slow"], "default": "fast" }, "retries": { "type": "number", "default": 3 } }, "required": ["mode"] } } },
+    #|    "FlagBox": { "properties": { "flag": { "type": "boolean", "default": true } }, "required": ["flag"] },
+    #|    "BagBox": { "properties": { "bag": { "type": "object", "properties": { "tags": { "type": "array", "items": { "type": "string" } }, "box": { "type": "object", "properties": { "n": { "type": "number" } } } } } } },
+    #|    "NeedBox": { "properties": { "info": { "type": "object", "properties": { "author": { "type": "string" } }, "required": ["author"] } }, "required": ["info"] },
+    #|    "EmptyBox": { "properties": { "v": { "anyOf": [] } } }
+    #|  }
+    #|}
+  src
+}
+
+///|
+fn sink_schema() -> String {
+  let src =
+    #|{
+    #|  "properties": { "Sink": {} },
+    #|  "$defs": {
+    #|    "CardBox": { "properties": { "text": { "type": "string" } } },
+    #|    "Sink": { "properties": {
+    #|      "a": { "$ref": 1 },
+    #|      "b": { "enum": "on" },
+    #|      "c": "nope",
+    #|      "d": { "anyOf": {} },
+    #|      "e": { "anyOf": [{ "type": "string" }] },
+    #|      "f": { "anyOf": [] },
+    #|      "s": { "anyOf": [1] },
+    #|      "g": { "oneOf": [{ "$ref": "#/$defs/CardBox" }] },
+    #|      "h": { "oneOf": [{ "type": "number" }] },
+    #|      "i": { "oneOf": {} },
+    #|      "j": { "allOf": [{ "type": "string" }] },
+    #|      "k": { "type": "array", "items": [{ "type": "string" }] },
+    #|      "m": { "type": "object", "required": "author" },
+    #|      "n": { "type": "object", "required": ["a", 1] },
+    #|      "p": { "type": "date" },
+    #|      "q": { "default": null },
+    #|      "r": { "const": "fixed" }
+    #|    } }
+    #|  }
+    #|}
+  src
+}
+
+///|
+test "nested schema validation follows the official edge rule" {
+  let schema = nested_schema()
+  let _sink = compile_schema(sink_schema()).dump()
+  let tree =
+    #|{
+    #|  "properties": { "Tree": {} },
+    #|  "$defs": {
+    #|    "Tree": { "properties": { "node": { "$ref": "#/$defs/__schema0" } }, "required": ["node"] },
+    #|    "__schema0": { "type": "object", "properties": { "label": { "type": "string" } } }
+    #|  }
+    #|}
+  inspect(
+    materialize_result("root = Tree({ label: \"a\" })", tree, "").contains(
+      "\"label\":\"a\"",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result("root = Tree({ label: \"a\" })", tree, "").contains(
+      "\"errors\":[]",
+    ),
+    content="true",
+  )
+  let ok = materialize_result(
+    "root = ObjBox({ author: \"ann\", views: 3 })", schema, "",
+  )
+  inspect(ok.contains("\"author\":\"ann\""), content="true")
+  inspect(ok.contains("\"errors\":[]"), content="true")
+  let views = materialize_result(
+    "root = ObjBox({ author: \"ann\", views: \"lots\" })", schema, "",
+  )
+  inspect(views.contains("\"path\":\"/info/views\""), content="true")
+  inspect(views.contains("\"author\":\"ann\""), content="true")
+  inspect(views.contains("\"views\":"), content="false")
+  let rows = materialize_result(
+    "root = ArrBox([{ label: \"a\", value: \"x\" }])", schema, "",
+  )
+  inspect(rows.contains("\"path\":\"/rows/0/value\""), content="true")
+  let missing = materialize_result("root = ObjBox({ views: 3 })", schema, "")
+  inspect(missing.contains("\"code\":\"missing-required\""), content="true")
+  inspect(missing.contains("\"path\":\"/info/author\""), content="true")
+  inspect(missing.contains("\"info\""), content="false")
+  let nulled = materialize_result(
+    "root = ObjBox({ author: null, views: 3 })", schema, "",
+  )
+  inspect(nulled.contains("\"code\":\"null-required\""), content="true")
+  let tags = materialize_result("root = TagBox([\"a\", 2, \"c\"])", schema, "")
+  inspect(tags.contains("\"tags\":[\"a\",\"c\"]"), content="true")
+  let kept = materialize_result(
+    "root = ArrBox([{ label: \"a\", value: 1 }, { value: 2 }])", schema, "",
+  )
+  inspect(kept.contains("\"label\":\"a\""), content="true")
+  inspect(kept.contains("\"value\":2"), content="false")
+  inspect(
+    materialize_result("root = ReqScalar(5)", schema, "").contains(
+      "\"root\":null",
+    ),
+    content="true",
+  )
+  let theme = materialize_result("root = DefBox(5)", schema, "")
+  inspect(theme.contains("\"theme\":\"dark\""), content="true")
+  inspect(theme.contains("\"code\":\"type-mismatch\""), content="true")
+  let silent = materialize_result("root = DefBox()", schema, "")
+  inspect(silent.contains("\"theme\":\"dark\""), content="true")
+  inspect(silent.contains("\"errors\":[]"), content="true")
+  let flag = materialize_result("root = FlagBox()", schema, "")
+  inspect(flag.contains("\"flag\":true"), content="true")
+  inspect(flag.contains("\"errors\":[]"), content="true")
+  let mode = materialize_result(
+    "root = NestDefBox({ mode: \"warp\", retries: 1 })", schema, "",
+  )
+  inspect(mode.contains("\"mode\":\"fast\""), content="true")
+  inspect(mode.contains("\"retries\":1"), content="true")
+  let retries = materialize_result(
+    "root = NestDefBox({ mode: \"slow\", retries: \"many\" })", schema, "",
+  )
+  inspect(retries.contains("\"retries\":3"), content="true")
+  let absent = materialize_result(
+    "root = NestDefBox({ retries: 2 })", schema, "",
+  )
+  inspect(absent.contains("\"mode\":\"fast\""), content="true")
+  inspect(absent.contains("\"errors\":[]"), content="true")
+  let filled = materialize_result(
+    "root = NestDefBox({ mode: null, retries: 2 })", schema, "",
+  )
+  inspect(filled.contains("\"mode\":\"fast\""), content="true")
+  inspect(filled.contains("\"errors\":[]"), content="true")
+  inspect(
+    materialize_result(
+      "root = ChartBox(CardBox(\"x\"), \"grouped\")", schema, "",
+    ).contains("\"root\":null"),
+    content="true",
+  )
+  let variant = materialize_result(
+    "root = ChartBox([\"a\"], CardBox(\"x\"))", schema, "",
+  )
+  inspect(variant.contains("\"variant\":"), content="false")
+  inspect(variant.contains("\"labels\":[\"a\"]"), content="true")
+  let mixed = materialize_result(
+    "root = TagBox([\"a\", CardBox(\"x\"), \"b\"])", schema, "",
+  )
+  inspect(mixed.contains("\"tags\":[\"a\",\"b\"]"), content="true")
+  let slot = materialize_result(
+    "root = SlotBox([CardBox(\"hi\"), EnumBox(\"active\")])", schema, "",
+  )
+  inspect(slot.contains("\"errors\":[]"), content="true")
+  inspect(slot.contains("CardBox"), content="true")
+  inspect(slot.contains("EnumBox"), content="true")
+  let author = materialize_result(
+    "root = ObjBox({ author: CardBox(9) })", schema, "",
+  )
+  inspect(author.contains("\"component\":\"CardBox\""), content="true")
+  inspect(author.contains("\"path\":\"/info/author\""), content="true")
+  let data = materialize_result(
+    "root = SlotBox([CardBox(\"hi\"), { text: \"a\" }, \"b\", 3, [CardBox(\"x\")]])",
+    schema, "",
+  )
+  inspect(data.contains("plain object"), content="true")
+  inspect(data.contains("CardBox"), content="true")
+  let via = materialize_result(
+    "root = SlotBox(items)\nitems = [{ text: \"a\" }]", schema, "",
+  )
+  inspect(via.contains("\"children\":[]"), content="true")
+  inspect(
+    materialize_result("root = TagBox([\"a\", $x])", schema, "").contains(
+      "\"errors\":[]",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result(
+      "root = ObjBox({ author: \"a\", views: Sum([1, 2]) })", schema, "",
+    ).contains("\"errors\":[]"),
+    content="true",
+  )
+  inspect(
+    materialize_result("root = AnyBox({ anything: true })", schema, "").contains(
+      "\"errors\":[]",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result("root = ObjBox(null)", schema, "").contains(
+      "\"errors\":[]",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result("root = ObjBox()", schema, "").contains("\"errors\":[]"),
+    content="true",
+  )
+  inspect(
+    materialize_result(
+      "root = ObjBox({ author: \"a\", bonus: 99 })", schema, "",
+    ).contains("\"errors\":[]"),
+    content="true",
+  )
+  inspect(
+    materialize_result("root = ListBox([1, \"a\", true])", schema, "").contains(
+      "\"errors\":[]",
+    ),
+    content="true",
+  )
+  let scalar = materialize_result("root = ScalarBox(5)", schema, "")
+  inspect(scalar.contains("\"root\":null"), content="false")
+  inspect(scalar.contains("\"title\":"), content="false")
+  let open = stream_open(schema, "")
+  let partial = stream_push(open, "root = ObjBox({ views: 3 ")
+  inspect(partial.contains("\"errors\":[]"), content="true")
+  let done = stream_push(open, "})\n")
+  inspect(done.contains("\"code\":\"missing-required\""), content="true")
+  let _ = stream_close(open)
+  let bogus = materialize_result("root = EnumBox(\"bogus\")", schema, "")
+  inspect(bogus.contains("active"), content="true")
+  inspect(bogus.contains("bogus"), content="true")
+  inspect(value_kind(Null), content="null")
+  inspect(value_kind(Arr([])), content="array")
+  inspect(value_kind(Obj([])), content="object")
+  inspect(
+    value_kind(Element("Card", "", [], false, false)),
+    content="component \"Card\"",
+  )
+  inspect(value_kind(Runtime(Null)), content="value")
+  inspect(slot_actual(Null), content="null")
+  inspect(slot_actual(Boolean(true)), content="boolean")
+  inspect(
+    slot_actual(Element("Card", "", [], false, false)),
+    content="component \"Card\"",
+  )
+  inspect(slot_actual(Runtime(Null)), content="value")
+  inspect(same_value(Null, Boolean(true)), content="false")
+  inspect(same_value(Arr([Null]), Arr([])), content="false")
+  inspect(same_value(Arr([Str("a")]), Arr([Str("b")])), content="false")
+  let bag = materialize_result(
+    "root = BagBox({ tags: [\"a\", 2], box: \"no\" })", schema, "",
+  )
+  inspect(bag.contains("\"tags\":[\"a\"]"), content="true")
+  inspect(bag.contains("expects object"), content="true")
+  inspect(
+    materialize_result("root = BagBox({ tags: CardBox(\"x\") })", schema, "").contains(
+      "component",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result("root = BagBox({ tags: 1 })", schema, "").contains(
+      "expects array",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result("root = ObjBox({ author: 1, views: 3 })", schema, "").contains(
+      "\"info\":",
+    ),
+    content="false",
+  )
+  inspect(
+    materialize_result("root = NeedBox({ views: 3 })", schema, "").contains(
+      "\"root\":null",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result(
+      "root = NestDefBox({ mode: { a: 1 }, retries: 1 })", schema, "",
+    ).contains("\"errors\":[]"),
+    content="true",
+  )
+  inspect(
+    materialize_result("root = EmptyBox(1)", schema, "").contains(
+      "\"errors\":[]",
+    ),
+    content="true",
+  )
+  let cover = Mat::{
+    program: { statements: [], errors: [], },
+    catalog: compile_schema("{}"),
+    defs: Map([]),
+    unresolved: [],
+    reached: [],
+    visited: Map([]),
+    visiting: [],
+    current_statement: "",
+    partial: false,
+    errors: [],
+    use_cache: false,
+    cache: Ref(Map([])),
+    cache_limit: 0,
+  }
+  inspect(slot_open(cover, []), content="true")
+  inspect(plain_node(Items(Open)), content="true")
+  inspect(plain_node(Fields([], [])), content="false")
+  inspect(scalar_matches(Num, Str("a")), content="false")
+  inspect(scalar_matches(Boolean, Num(1.0, "1")), content="false")
+  inspect(scalar_matches(Null, Str("a")), content="false")
+  inspect(scalar_matches(Null, Null), content="true")
+  inspect(scalar_matches(Enum(["\"a\""]), Str("a")), content="false")
+  inspect(scalar_matches(Union([Str]), Num(1.0, "1")), content="false")
+  inspect(scalar_matches(Union([Str]), Str("a")), content="true")
+  inspect(scalar_display(Bool(true)) is Some("true"), content="true")
+  inspect(scalar_display(Bool(false)) is Some("false"), content="true")
+  inspect(scalar_display(Str("a")) is Some("\"a\""), content="true")
+  inspect(scalar_display(Ref("x")) is None, content="true")
+  let _enum_element = refine(
+    cover,
+    "E",
+    "/v",
+    Leaf("", Some(["\"a\""]), Absent),
+    Element("Card", "", [], false, false),
+    1,
+  )
+  let _object_element = refine(
+    cover,
+    "E",
+    "/v",
+    Fields([], []),
+    Element("Card", "", [], false, false),
+    1,
+  )
+  inspect(
+    materialize_result("root = SlotBox([true])", schema, "").contains("boolean"),
+    content="true",
+  )
+  let partial_enum = stream_open(schema, "")
+  let held_enum = stream_push(partial_enum, "root = EnumBox(\"")
+  inspect(held_enum.contains("\"code\":\"type-mismatch\""), content="false")
+  let _ = stream_close(partial_enum)
+  inspect(lit_of(Num("nope")) is Absent, content="true")
+  inspect(lit_of(Num("")) is Absent, content="true")
+  inspect(lit_of(Num(".")) is Absent, content="true")
+  inspect(lit_of(Num("1.2.3")) is Absent, content="true")
+  inspect(lit_of(Num("1.5")) is Num(1.5, "1.5"), content="true")
 }
