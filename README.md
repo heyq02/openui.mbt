@@ -24,7 +24,7 @@ const program = parseProgram('root = TextContent("Hello", "large")');
 
 其余入口见 [`npm/README.md`](npm/README.md)。
 
-## Benchmark
+## 基准测试
 
 2026-10-16，本机。对象是 `@openuidev/lang-core@1.0.1`，以及 `oui.mbt patch` 之后的同一个包。
 
