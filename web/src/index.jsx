@@ -4,7 +4,7 @@ import "@openuidev/react-ui/defaults.css";
 import "@openuidev/react-ui/index.css";
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
-import sample from "../../examples/signup.openui";
+import sample from "../signup.openui";
 import "./index.css";
 
 function App() {

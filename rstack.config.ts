@@ -17,7 +17,6 @@ define.extends([
         '.cursor/**',
         'docs/**',
         'web/**',
-        'examples/**',
         'parser/**',
         'ffi/**',
         '**/*.md',

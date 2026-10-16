@@ -12,7 +12,6 @@ node_modules/
 .env.*
 !.env.example
 
-examples/browser/parser.wasm
 web/node_modules/
 dist/
 .rsdoctor/
