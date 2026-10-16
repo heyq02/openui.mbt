@@ -1,0 +1,20 @@
+npm/cli.js
+  h_a57efa94f24ca5 39-49
+npm/parser.wasm.js
+  h_a57efa94f24ca5 2
+src/coverage_wbtest.mbt
+  h_a57efa94f24ca5 261-265,293
+src/materialize.mbt
+  h_a57efa94f24ca5 987,994,1009,1020-1023,1096
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a27c3c2513c1a22ac4e7eeccab317a17718245c8",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
