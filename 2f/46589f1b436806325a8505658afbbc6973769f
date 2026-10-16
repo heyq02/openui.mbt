@@ -1,0 +1,29 @@
+.github/workflows/pages.yml
+  s_21c94720b5edeb::t_1a9d22b0ad4799 33
+.github/workflows/release-commit.yml
+  s_21c94720b5edeb::t_3932936e635e0c 1-16
+AGENTS.md
+  s_21c94720b5edeb::t_4e9bccb3201c6b 22,47-48
+README.md
+  s_21c94720b5edeb::t_191febe805190e 37-38
+web/package-lock.json
+  s_21c94720b5edeb::t_fd0e204bcad54e 9,24-31,121-126
+web/package.json
+  s_21c94720b5edeb::t_fb4879412362e5 11,26-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2f46589f1b436806325a8505658afbbc6973769f",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
