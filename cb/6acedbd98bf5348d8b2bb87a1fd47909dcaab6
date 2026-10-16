@@ -1,0 +1,30 @@
+.github/workflows/pages.yml
+  h_a57efa94f24ca5 33
+.github/workflows/release-commit.yml
+  h_a57efa94f24ca5 11,16
+.github/workflows/release.yaml
+  h_a57efa94f24ca5 39,50-51,62
+.gitignore
+  h_a57efa94f24ca5 21-22
+.moonignore
+  h_a57efa94f24ca5 4
+AGENTS.md
+  h_a57efa94f24ca5 9,19,23,47,49
+README.md
+  h_a57efa94f24ca5 38,42
+rstack.config.ts
+  h_a57efa94f24ca5 26,43-44
+web/package-lock.json
+  h_a57efa94f24ca5 10,25,141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "cb6acedbd98bf5348d8b2bb87a1fd47909dcaab6",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
