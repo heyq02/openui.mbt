@@ -1,0 +1,20 @@
+bump.config.ts
+  h_a57efa94f24ca5 3,6
+npm/parser.wasm.js
+  h_a57efa94f24ca5 1-2
+package.json
+  h_a57efa94f24ca5 15-16
+web/package.json
+  h_a57efa94f24ca5 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a64bf6b18f96c9622ef32d11c612d9e10ee63500",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
