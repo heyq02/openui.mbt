@@ -1,0 +1,63 @@
+.github/workflows/pages.yml
+  s_21c94720b5edeb::t_ca7b23ec824753 1-58
+.gitignore
+  s_21c94720b5edeb::t_8a81a6210c3823 1-6
+examples/browser/baseline.json
+  s_21c94720b5edeb::t_b6ce3888c1f0e3 1-19
+examples/browser/bench.mjs
+  s_21c94720b5edeb::t_c02d388f62e96c 1-64
+examples/browser/index.html
+  s_21c94720b5edeb::t_a90421c6198da1 1-119
+examples/signup.openui
+  s_21c94720b5edeb::t_0dc7ba1d417285 1-8
+ffi/export.mbt
+  s_21c94720b5edeb::t_26dbd39dab4e5a 1-13
+ffi/moon.pkg
+  s_21c94720b5edeb::t_4ac3e149bdd19b 1-11
+moon.mod
+  s_21c94720b5edeb::t_dba0ae7607bed9 1-7
+parser/ast.mbt
+  s_21c94720b5edeb::t_b47d1a2b74446b 1-241
+parser/builtin.mbt
+  s_21c94720b5edeb::t_e830bfbb3b3a75 1-33
+parser/lexer.mbt
+  s_21c94720b5edeb::t_a794a98db1d3a5 1-507
+parser/moon.pkg
+  s_21c94720b5edeb::t_24a80154f68704 1
+parser/parse_wbtest.mbt
+  s_21c94720b5edeb::t_23c88d16bc8b8d 1-98
+parser/parser.mbt
+  s_21c94720b5edeb::t_651c7588256efe 1-471
+parser/token.mbt
+  s_21c94720b5edeb::t_8cc9c69ef5676d 1-96
+web/index.html
+  s_21c94720b5edeb::t_6ab73a6ee986c5 1-21
+web/package-lock.json
+  s_21c94720b5edeb::t_1d60610d450fb2 1-389
+web/package.json
+  s_21c94720b5edeb::t_7774a02fe1941c 1-15
+web/rsbuild.config.mjs
+  s_21c94720b5edeb::t_a7fca5686a9b86 1-17
+web/scripts/copy-assets.mjs
+  s_21c94720b5edeb::t_d438c38097d20b 1-24
+web/src/index.css
+  s_21c94720b5edeb::t_b0493150746dd2 1-49
+web/src/index.js
+  s_21c94720b5edeb::t_c2e33950d54b67 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e94c824dd250a052304d30b13f22aa4d6323e6fe",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
