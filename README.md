@@ -37,17 +37,6 @@ npx oui.mbt patch
 
 包入口说明见 [`npm/README.md`](npm/README.md)。
 
-## 发布
-
-`package.json`、`moon.mod` 和 `npm/package.json` 的版本保持同一字符串。`pnpm release` 改这三处，提交 `chore: release v{version}`，打标签 `v{version}` 并推送。标签触发 [`.github/workflows/release.yaml`](.github/workflows/release.yaml)：`moon package` 后发布到 mooncakes.io，再把 Wasm 包发布到 npm。
-
-每次 push 和 pull request 还会触发 [`.github/workflows/release-commit.yml`](.github/workflows/release-commit.yml)，把 `@heyq02/openui.mbt` 发到 [pkg.pr.new](https://pkg.pr.new)。这不是正式版本。演示站安装官方 `@openuidev/lang-core`，再运行 `oui.mbt patch`。
-
-仓库需要两个发布凭据：
-
-- `MOONCAKES_TOKEN`：`~/.moon/credentials.json` 的 base64，只放在 Release 作业。
-- npm Trusted Publisher：仓库 `heyq02/openui.mbt`，工作流 `Release`，包 `@heyq02/openui.mbt`。
-
 <!-- automd:contributors license=MIT author="heyq02" github="heyq02/openui.mbt" -->
 
 Published under the [MIT](https://github.com/heyq02/openui.mbt/blob/main/LICENSE) license.
