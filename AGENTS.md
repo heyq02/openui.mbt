@@ -48,7 +48,7 @@ pnpm run format
 
 `release-commit.yml` uses `sxzz/workflows` `release-commit.yml` on every push and pull request. It builds the Wasm package and publishes `./npm` with `pkg-pr-new`. That preview is not an npm release. The parser API is `@heyq02/openui.mbt/parser`. `oui.mbt patch` rewrites installed `@openuidev/lang-core@1.0.1` `dist/index.mjs` and `dist/index.cjs`. `web/` depends on the official package and runs that command after install. Pages runs `node npm/build.mjs` before `npm ci`.
 
-`.moonignore` keeps `web/`, `js/`, and the repo-hygiene files out of the mooncakes archive. The npm tarball is only the `js/` `files` list, including the generated `parser.wasm.js`.
+`.moonignore` keeps `web/`, `npm/`, and the repo-hygiene files out of the mooncakes archive. The npm tarball is only the `npm/` `files` list, including the generated `parser.wasm.js`.
 
 `MOONCAKES_TOKEN` is the base64 of `~/.moon/credentials.json` and belongs only on the release job. npm uses a Trusted Publisher for workflow `Release` on `heyq02/openui.mbt`. Do not cache `~/.moon`. Push and pull-request jobs stay offline.
 
