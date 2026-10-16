@@ -1,0 +1,20 @@
+.github/workflows/coverage.yml
+  h_a57efa94f24ca5 19-20
+.github/workflows/unit-test.yml
+  h_a57efa94f24ca5 21
+AGENTS.md
+  h_a57efa94f24ca5 25
+src/coverage_wbtest.mbt
+  h_a57efa94f24ca5 1-460
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c3624b8c20ca868bed1f9a57c711d82172c70682",
+  "prompts": {},
+  "humans": {
+    "h_a57efa94f24ca5": {
+      "author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
