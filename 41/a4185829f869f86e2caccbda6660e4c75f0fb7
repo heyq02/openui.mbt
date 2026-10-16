@@ -1,0 +1,25 @@
+.github/workflows/compatibility.yml
+  s_21c94720b5edeb::t_29d34f6fe94b72 98,107,111
+.moonignore
+  s_21c94720b5edeb::t_1219507f4eb594 13
+AGENTS.md
+  s_21c94720b5edeb::t_f145e021d14024 43,45,47
+README.md
+  s_21c94720b5edeb::t_1cea8599fdc0f9 7,18-47,68,72,79-107,109,111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "41a4185829f869f86e2caccbda6660e4c75f0fb7",
+  "prompts": {},
+  "sessions": {
+    "s_21c94720b5edeb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b7ed9afb-5878-430a-940a-ae57b2e8f727",
+        "model": "unknown"
+      },
+      "human_author": "heyongqi10 <heyongqi10@jd.com>"
+    }
+  }
+}
