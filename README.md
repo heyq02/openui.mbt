@@ -38,6 +38,23 @@ npx oui.mbt patch
 
 包入口说明见 [`npm/README.md`](npm/README.md)。
 
+## Benchmark
+
+A 是 `oui.mbt patch` 之后的 `@openuidev/lang-core@1.0.1`，B 是同一个包 patch 之前。patch 只替换语句解析，分类、Schema 物化和 Renderer 仍是官方代码。
+
+```bash
+npm ci --prefix web
+pnpm run benchmark
+```
+
+体积比较官方 `dist/index.mjs` 和 patch 后的同一文件，再加上 A 要带上的 Wasm。解析用同一份 Schema，跑 `web/signup.openui`、50 个字段和 400 个字段，取复用 parser 后 `parse` 的中位数。页面用同一份 `web/src/bench.jsx` 打两个生产包，Headless Chrome 从导航计到注册表单画出后的下一帧，每个包 7 次。过程和完整数字见 [`docs/benchmark.md`](docs/benchmark.md)。
+
+2026-10-16 本机的一次结果：
+
+- 体积：`index.mjs` 从 180172 字节增到 180649 字节。demo 生产包原始字节多 77891，逐文件 gzip 之和多 34198。多出来的是 Wasm。
+- 解析：两边结构一致。注册表单 0.0315 ms 对 0.0918 ms，400 个字段 0.7696 ms 对 1.8576 ms。A 更慢，短文档上的差距不到 0.1 ms。
+- 页面：热加载后 6 次都在 160–180 ms。这份表单的解析差落在页面时间里看不见。
+
 <!-- automd:contributors license=MIT author="heyq02" github="heyq02/openui.mbt" -->
 
 Published under the [MIT](https://github.com/heyq02/openui.mbt/blob/main/LICENSE) license.
