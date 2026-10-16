@@ -9,13 +9,12 @@
 
 MoonBit 写的 [OpenUI Lang](https://github.com/thesysdev/openui) 解析器，编译成 Wasm-GC 后从 npm 使用。
 
-`oui.mbt patch` 把已安装的 `@openuidev/lang-core@1.0.1` 里 `createParser().parse` 换成 Wasm 解析和物化。流式解析和 Renderer 仍是官方代码。
-
-## 安装
-
 ```bash
-npm install @heyq02/openui.mbt
+npm install @heyq02/openui.mbt @openuidev/lang-core@1.0.1
+npx oui.mbt patch
 ```
+
+`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse` 换成 Wasm 解析和物化。流式解析和 Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
 
 ```js
 import { parseProgram } from "@heyq02/openui.mbt/parser";
@@ -23,14 +22,7 @@ import { parseProgram } from "@heyq02/openui.mbt/parser";
 const program = parseProgram('root = TextContent("Hello", "large")');
 ```
 
-换成 OpenUI 的解析器：
-
-```bash
-npm install @heyq02/openui.mbt @openuidev/lang-core@1.0.1
-npx oui.mbt patch
-```
-
-版本不是 1.0.1，或这份 1.0.1 的解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。其余入口见 [`npm/README.md`](npm/README.md)。
+其余入口见 [`npm/README.md`](npm/README.md)。
 
 ## Benchmark
 
