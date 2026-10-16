@@ -34,52 +34,57 @@ npx oui.mbt patch
 
 ## Benchmark
 
-2026-10-16 本机一次结果。A 是 `oui.mbt patch` 之后的 `@openuidev/lang-core@1.0.1`，B 是同一个包 patch 之前。两边的结构指纹一致：注册表单 8 条语句、0 个错误，50 个字段 51 条语句，400 个字段 401 条语句。指纹只看根组件、语句数、错误数和 incomplete。
-
-复用 parser 的 `parse` 中位数，单位毫秒：
-
-| 文档 | B | A |
-| --- | ---: | ---: |
-| 注册表单，516 字节 | 0.0286 | 0.0365 |
-| 50 个字段 | 0.1022 | 0.0896 |
-| 400 个字段，22085 字节 | 0.7559 | 0.6315 |
-
-400 个字段 A 大约快 16%，50 个字段大约快 12%。注册表单仍是 B 更快。按行推送仍走官方物化，注册表单 0.1376 ms 对 0.2146 ms，50 个字段 1.9704 ms 对 2.3271 ms。页面热加载后 6 次都在 165–188 ms。
-
-| 文件 | 原始 | gzip |
-| --- | ---: | ---: |
-| B `dist/index.mjs` | 180172 | 48901 |
-| A `dist/index.mjs` | 181392 | 49331 |
-| A `parser.wasm.js` | 93868 | 38767 |
-| 其中的 Wasm 二进制 | 70334 | 28817 |
-
-demo 生产包（html + js + css，source map 不计）：B 3713817 字节（gzip 之和 1336967），A 3801807 字节（gzip 之和 1375005）。入口 `bench.*.js` 从 31609 字节（gzip 17969）变成 125958 字节（gzip 57628）。
+2026-10-16，本机。对象是 `@openuidev/lang-core@1.0.1`，以及 `oui.mbt patch` 之后的同一个包。
 
 ```bash
 npm ci --prefix web
 pnpm run benchmark
 ```
 
-`--skip-demo` 只测体积和 Node 解析，结果写到 `.bench/report.json`。400 个字段不做流式计时。整库测试的墙钟时间不作为性能结果。
+`--skip-demo` 只测体积和 Node 解析，结果写到 `.bench/report.json`。400 个字段不做流式计时。
 
-## 对照
+### 解析
 
-```bash
-npm ci --prefix web
-pnpm run compare
-```
+复用 parser 后 `parse` 的中位数。
 
-同一份组件 Schema 上，比较官方 `@openuidev/lang-core@1.0.1` 和 patch 之后的一次性解析、流式解析。对比根节点、`incomplete`、`unresolved`、`orphaned`、语句数、错误码和 state 声明。错误文案不参与对比。
+| 文档 | 官方 | patch 后 |
+| --- | ---: | ---: |
+| 注册表单，516 字节 | 0.0286 ms | 0.0365 ms |
+| 50 个字段 | 0.1022 ms | 0.0896 ms |
+| 400 个字段，22085 字节 | 0.7559 ms | 0.6315 ms |
 
-2026-10-16 这组样例上，7 条流式结果与官方结构一致。一次性解析有 6 处差异：
+400 个字段快 16%，50 个字段快 12%。注册表单是官方更快。
 
-- 注册表单的子节点没有 `statementId`，动作参数没有 `mappedProps`
-- 错误对象没有 `statementId`
-- `$name` 没有进入 `stateDeclarations`
-- 坏行多一条 `parse-failed`
-- 未闭合输入的语句数是 2，官方是 1
+流式解析仍走官方物化。
 
-先引用后定义的那条一次性解析没有差异。同一次打印：Wasm 70334 字节，gzip 28817 字节，一次性解析中位数 0.0586 ms，流式 0.2124 ms。
+| 文档 | 官方 | patch 后 |
+| --- | ---: | ---: |
+| 注册表单 | 0.1376 ms | 0.2146 ms |
+| 50 个字段 | 1.9704 ms | 2.3271 ms |
+
+结构指纹只看根组件、语句数、错误数和 incomplete，两边相同：注册表单 8 条语句、0 个错误，50 个字段 51 条语句，400 个字段 401 条语句。
+
+### 体积
+
+| 文件 | 原始 | gzip |
+| --- | ---: | ---: |
+| 官方 `dist/index.mjs` | 180172 | 48901 |
+| patch 后 `dist/index.mjs` | 181392 | 49331 |
+| `parser.wasm.js` | 93868 | 38767 |
+| Wasm 二进制 | 70334 | 28817 |
+
+demo 生产包含 html、js、css，不计 source map。
+
+| | 原始 | gzip 之和 |
+| --- | ---: | ---: |
+| 官方 | 3713817 | 1336967 |
+| patch 后 | 3801807 | 1375005 |
+| 官方入口 `bench.*.js` | 31609 | 17969 |
+| patch 后入口 `bench.*.js` | 125958 | 57628 |
+
+### 页面
+
+Headless Chrome 从导航计到注册表单画出后的下一帧。热加载后 6 次都在 165–188 ms。
 
 <!-- automd:contributors license=MIT author="heyq02" github="heyq02/openui.mbt" -->
 

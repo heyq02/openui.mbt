@@ -40,7 +40,7 @@ pnpm run format
 
 `pnpm test` is native only. White-box tests live in `src/*_wbtest.mbt`.
 
-`pnpm run compare` checks a patched `@openuidev/lang-core@1.0.1` against the official package. It needs `web/node_modules`. The README records the sample set and the structural gaps.
+`pnpm run compare` checks a patched `@openuidev/lang-core@1.0.1` against the official package. It needs `web/node_modules`. The README benchmark is the published timing and size result.
 
 `pnpm run benchmark` compares that patched package with the official package: dist size, parse time, demo bundle size, and time until the demo paints. The method, the limits, and the latest numbers are in the README. `--skip-demo` stops after the Node measurements.
 
