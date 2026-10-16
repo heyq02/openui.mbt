@@ -1,6 +1,6 @@
 name = "heyq02/openui"
 
-version = "0.1.8"
+version = "0.1.9"
 
 source = "src"
 
