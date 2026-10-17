@@ -141,7 +141,12 @@ export function resolveField(obj: unknown, path: unknown): unknown;
 export function toNumber(value: unknown): number;
 export function rootStep(tag: string): {
   op: string;
-  error?: { source: string; code: string; statementId: string; message: string };
+  error?: {
+    source: string;
+    code: string;
+    statementId: string;
+    message: string;
+  };
 };
 export function eachStep(payload: {
   phase?: string;

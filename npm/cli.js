@@ -130,11 +130,11 @@ const REPLACEMENTS = [
   ],
   [
     'function evaluateRoot(result, evalCtx) {\n\tif (result.root) return evaluateElementProps(result.root, evalCtx);\n\tif (!result.rootExpression) return null;\n\tconst value = evaluate(result.rootExpression, evalCtx.ctx, { library: evalCtx.library });\n\tif (isElementNode(value)) return evaluateElementProps(value, evalCtx);\n\tevalCtx.errors?.push({\n\t\tsource: "runtime",\n\t\tcode: "no-root",\n\t\tstatementId: "root",\n\t\tmessage: "root does not evaluate to a component"\n\t});\n\treturn null;\n}\n',
-    'function evaluateRoot(result, evalCtx) {\n\treturn evaluateRootMoonbit(result, evalCtx);\n}\n',
+    "function evaluateRoot(result, evalCtx) {\n\treturn evaluateRootMoonbit(result, evalCtx);\n}\n",
   ],
   [
     'function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\tif (name === "Each") {\n\t\tif (args.length < 3) return [];\n\t\tconst arr = evaluate(args[0], context);\n\t\tif (!Array.isArray(arr)) return [];\n\t\tconst varName = args[1].k === "Ref" ? args[1].n : args[1].k === "Str" ? args[1].v : null;\n\t\tif (!varName) return [];\n\t\tconst template = args[2];\n\t\treturn arr.map((item, _idx) => {\n\t\t\tconst substituted = substituteRef(template, varName, item);\n\t\t\tconst childCtx = {\n\t\t\t\t...context,\n\t\t\t\tresolveRef: (refName) => {\n\t\t\t\t\tif (refName === varName) return item;\n\t\t\t\t\treturn context.resolveRef(refName);\n\t\t\t\t}\n\t\t\t};\n\t\t\tconst result = evaluate(substituted, childCtx, schemaCtx);\n\t\t\tif (schemaCtx && isElementNode(result)) return evaluateElementInline(result, childCtx, schemaCtx);\n\t\t\treturn result;\n\t\t});\n\t}\n\treturn null;\n}\n',
-    'function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\treturn evaluateLazyBuiltinMoonbit(name, args, context, schemaCtx);\n}\n',
+    "function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\treturn evaluateLazyBuiltinMoonbit(name, args, context, schemaCtx);\n}\n",
   ],
 ];
 
