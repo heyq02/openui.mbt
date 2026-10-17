@@ -72,6 +72,8 @@ const {
   prop_error: propErrorOpenui,
   store_keep: storeKeepOpenui,
   store_init: storeInitOpenui,
+  query_slot: querySlotOpenui,
+  query_error: queryErrorOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1286,12 +1288,368 @@ export function storeInit(payload) {
   return JSON.parse(storeInitOpenui(JSON.stringify(payload ?? {})));
 }
 
+/** Which cached value and status lists a query contributes. */
+export function querySlot(payload) {
+  return JSON.parse(querySlotOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Structured query or mutation failure. `statementId` stays null here. */
+export function queryError(payload) {
+  const source = payload && typeof payload.source === "string" ? payload.source : "";
+  const kind = payload && typeof payload.kind === "string" ? payload.kind : "";
+  const tool = payload && typeof payload.tool === "string" ? payload.tool : "";
+  const detail = payload && typeof payload.detail === "string" ? payload.detail : "";
+  return JSON.parse(queryErrorOpenui(JSON.stringify({ source, kind, tool, detail })));
+}
+
 /** Runtime error object for a prop that throws. `statementId` stays null here. */
 export function propError(payload) {
   const key = payload && typeof payload.key === "string" ? payload.key : "";
   const typeName = payload && typeof payload.typeName === "string" ? payload.typeName : "";
   const message = payload && typeof payload.message === "string" ? payload.message : "";
   return JSON.parse(propErrorOpenui(JSON.stringify({ key, typeName, message })));
+}
+
+export function createQueryManager(toolProvider, host = {}) {
+  const ToolNotFoundError = host.ToolNotFoundError;
+  const McpToolError = host.McpToolError;
+  function readQueryValue(q, cache) {
+    const entry = cache.get(q.cacheKey);
+    const dataSet = Boolean(entry && entry.data !== void 0);
+    let prev = false;
+    let prevData = false;
+    let prevEntry;
+    if (!dataSet && q.prevCacheKey) {
+      prev = true;
+      prevEntry = cache.get(q.prevCacheKey);
+      prevData = Boolean(prevEntry && prevEntry.data !== void 0);
+    }
+    const step = querySlot({ phase: "value", data: dataSet, prev, prevData });
+    if (step.op === "data") return entry.data;
+    if (step.op === "prev") return prevEntry.data;
+    return q.defaults;
+  }
+  function assignQueryRow(out, sid, q, cache) {
+    const entry = cache.get(q.cacheKey);
+    const dataSet = Boolean(entry && entry.data !== void 0);
+    let prev = false;
+    let prevData = false;
+    let prevEntry;
+    if (!dataSet && q.prevCacheKey) {
+      prev = true;
+      prevEntry = cache.get(q.prevCacheKey);
+      prevData = Boolean(prevEntry && prevEntry.data !== void 0);
+    }
+    const step = querySlot({ phase: "value", data: dataSet, prev, prevData });
+    if (step.op === "data") out[sid] = entry.data;
+    else if (step.op === "prev") out[sid] = prevEntry.data;
+    else out[sid] = q.defaults;
+    const loading = Boolean(q.loading);
+    const flags = querySlot({
+      phase: "flags",
+      loading,
+      ever: loading && Boolean(q.everFetched),
+      error: Boolean(q.error),
+    });
+    if (flags.load) out.__openui_loading.push(sid);
+    if (flags.refetch) out.__openui_refetching.push(sid);
+    if (flags.error) out.__openui_errors.push(q.error);
+  }
+  function queryFailure(source, err, toolName, statementId, detail) {
+    let kind = "other";
+    let text = detail;
+    if (err instanceof ToolNotFoundError) kind = "missing";
+    else if (err instanceof McpToolError) {
+      kind = "mcp";
+      text = err.toolErrorText;
+    } else if (arguments.length < 5) text = err instanceof Error ? err.message : String(err);
+    const error = queryError({
+      source,
+      kind,
+      tool: String(toolName),
+      detail: String(text),
+    });
+    error.statementId = statementId;
+    error.toolName = toolName;
+    if (kind === "missing") {
+      error.hint = err.availableTools.length
+        ? `Available tools: ${err.availableTools.join(", ")}`
+        : undefined;
+    }
+    return error;
+  }
+  const queries = /* @__PURE__ */ new Map();
+  const mutations = /* @__PURE__ */ new Map();
+  const cache = /* @__PURE__ */ new Map();
+  const listeners = /* @__PURE__ */ new Set();
+  let snapshot = {
+    __openui_loading: [],
+    __openui_refetching: [],
+    __openui_errors: [],
+  };
+  let snapshotJson = JSON.stringify(snapshot);
+  let disposed = false;
+  let generation = 0;
+  function rebuildSnapshot() {
+    const out = {
+      __openui_loading: [],
+      __openui_refetching: [],
+      __openui_errors: [],
+    };
+    for (const [sid, q] of queries) {
+      assignQueryRow(out, sid, q, cache);
+    }
+    for (const [sid, m] of mutations) {
+      out[sid] = m.result;
+      if (m.error) out.__openui_errors.push(m.error);
+    }
+    try {
+      const outJson = JSON.stringify(out);
+      if (outJson === snapshotJson) return false;
+      snapshot = out;
+      snapshotJson = outJson;
+    } catch {
+      snapshot = out;
+      snapshotJson = "";
+    }
+    return true;
+  }
+  function notify() {
+    for (const listener of [...listeners]) listener();
+  }
+  async function executeFetch(cacheKey, statementId) {
+    if (!toolProvider) return;
+    const q = queries.get(statementId);
+    if (!q) return;
+    const fetchKey = cacheKey;
+    const toolName = q.toolName;
+    const args = q.args;
+    let entry = cache.get(fetchKey);
+    if (!entry) {
+      entry = {
+        data: void 0,
+        inFlight: true,
+      };
+      cache.set(fetchKey, entry);
+    } else entry.inFlight = true;
+    q.loading = true;
+    rebuildSnapshot();
+    notify();
+    try {
+      const data = await toolProvider.callTool(toolName, args ?? {});
+      if (disposed) return;
+      const current = queries.get(statementId);
+      if (!current || current.cacheKey !== fetchKey) {
+        entry.inFlight = false;
+        return;
+      }
+      entry.data = data ?? null;
+      current.everFetched = true;
+      current.error = void 0;
+      if (current.prevCacheKey && current.prevCacheKey !== fetchKey) {
+        const prevKey = current.prevCacheKey;
+        current.prevCacheKey = void 0;
+        cleanupCacheEntry(prevKey);
+      }
+    } catch (err) {
+      const current = queries.get(statementId);
+      if (current && current.cacheKey === fetchKey) {
+        current.error = queryFailure("query", err, toolName, statementId);
+      }
+      console.error(`Query "${toolName}" failed:`, err);
+    } finally {
+      entry.inFlight = false;
+      const current = queries.get(statementId);
+      if (current && current.cacheKey === fetchKey) {
+        current.loading = false;
+        if (rebuildSnapshot()) notify();
+        if (current.needsRefetch) {
+          current.needsRefetch = false;
+          executeFetch(current.cacheKey, statementId);
+        }
+      } else if (rebuildSnapshot()) notify();
+    }
+  }
+  /** Remove a cache entry if no query references it. */
+  function cleanupCacheEntry(cacheKey) {
+    for (const q of queries.values())
+      if (q.cacheKey === cacheKey || q.prevCacheKey === cacheKey) return;
+    cache.delete(cacheKey);
+  }
+  function evaluateQueries(queryNodes) {
+    if (disposed) return;
+    const activeIds = new Set(queryNodes.map((n) => n.statementId));
+    for (const [sid, q] of queries)
+      if (!activeIds.has(sid)) {
+        if (q.timer) clearInterval(q.timer);
+        queries.delete(sid);
+        cleanupCacheEntry(q.cacheKey);
+        if (q.prevCacheKey) cleanupCacheEntry(q.prevCacheKey);
+      }
+    for (const node of queryNodes) {
+      if (!node.complete) continue;
+      const cacheKey = buildCacheKey(node.toolName, node.args, node.deps);
+      const existing = queries.get(node.statementId);
+      if (existing) {
+        if (existing.cacheKey !== cacheKey) existing.prevCacheKey = existing.cacheKey;
+        existing.toolName = node.toolName;
+        existing.args = node.args;
+        existing.defaults = node.defaults;
+        existing.cacheKey = cacheKey;
+      } else
+        queries.set(node.statementId, {
+          toolName: node.toolName,
+          args: node.args,
+          defaults: node.defaults,
+          cacheKey,
+          loading: false,
+          everFetched: false,
+          refreshInterval: 0,
+          needsRefetch: false,
+        });
+      const q = queries.get(node.statementId);
+      const entry = cache.get(cacheKey);
+      const hasSettledData = entry && entry.data !== void 0 && !entry.inFlight;
+      if (toolProvider && !hasSettledData && !entry?.inFlight)
+        executeFetch(cacheKey, node.statementId);
+      const newInterval = node.refreshInterval ?? 0;
+      if (newInterval !== q.refreshInterval) {
+        if (q.timer) {
+          clearInterval(q.timer);
+          q.timer = void 0;
+        }
+        if (newInterval > 0)
+          q.timer = setInterval(() => {
+            if (disposed || !toolProvider) return;
+            if (!cache.get(q.cacheKey)?.inFlight) executeFetch(q.cacheKey, node.statementId);
+          }, newInterval * 1e3);
+        q.refreshInterval = newInterval;
+      }
+    }
+    if (rebuildSnapshot()) notify();
+  }
+  function getResult(statementId) {
+    const q = queries.get(statementId);
+    if (!q) return null;
+    return readQueryValue(q, cache);
+  }
+  function isLoading(statementId) {
+    return queries.get(statementId)?.loading ?? false;
+  }
+  function isAnyLoading() {
+    for (const q of queries.values()) if (q.loading) return true;
+    return false;
+  }
+  function invalidate(statementIds) {
+    if (disposed || !toolProvider) return;
+    const targets = statementIds?.length
+      ? statementIds.filter((sid) => queries.has(sid))
+      : [...queries.keys()];
+    for (const sid of targets) {
+      const q = queries.get(sid);
+      if (!q) continue;
+      if (cache.get(q.cacheKey)?.inFlight) q.needsRefetch = true;
+      else executeFetch(q.cacheKey, sid);
+    }
+  }
+  function registerMutations(nodes) {
+    const activeIds = new Set(nodes.map((n) => n.statementId));
+    for (const sid of mutations.keys()) if (!activeIds.has(sid)) mutations.delete(sid);
+    for (const node of nodes) {
+      const existing = mutations.get(node.statementId);
+      if (existing) {
+        if (existing.toolName !== node.toolName) {
+          existing.toolName = node.toolName;
+          existing.result = {
+            status: "idle",
+            data: null,
+            error: null,
+          };
+          existing.error = void 0;
+        }
+      } else
+        mutations.set(node.statementId, {
+          toolName: node.toolName,
+          result: { status: "idle" },
+        });
+    }
+    if (rebuildSnapshot()) notify();
+  }
+  async function fireMutation(statementId, evaluatedArgs, refreshQueryIds) {
+    if (disposed || !toolProvider) return false;
+    const m = mutations.get(statementId);
+    if (!m) return false;
+    if (m.result.status === "loading") return false;
+    const gen = generation;
+    m.result = { status: "loading" };
+    rebuildSnapshot();
+    notify();
+    let success = false;
+    try {
+      const data = await toolProvider.callTool(m.toolName, evaluatedArgs);
+      if (disposed || gen !== generation) return false;
+      m.result = {
+        status: "success",
+        data,
+      };
+      m.error = void 0;
+      success = true;
+    } catch (err) {
+      if (disposed || gen !== generation) return false;
+      const msg = err instanceof Error ? err.message : String(err);
+      m.result = {
+        status: "error",
+        error: msg,
+      };
+      m.error = queryFailure("mutation", err, m.toolName, statementId, msg);
+    }
+    rebuildSnapshot();
+    notify();
+    if (success && refreshQueryIds?.length) invalidate(refreshQueryIds);
+    return success;
+  }
+  function getMutationResult(statementId) {
+    return mutations.get(statementId)?.result ?? null;
+  }
+  function subscribe(listener) {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  }
+  function getSnapshot() {
+    return snapshot;
+  }
+  function activate() {
+    disposed = false;
+  }
+  function dispose() {
+    disposed = true;
+    generation++;
+    listeners.clear();
+    for (const q of queries.values()) {
+      if (q.timer) {
+        clearInterval(q.timer);
+        q.timer = void 0;
+      }
+      q.refreshInterval = 0;
+      q.loading = false;
+      q.needsRefetch = false;
+    }
+    mutations.clear();
+  }
+  return {
+    evaluateQueries,
+    getResult,
+    isLoading,
+    isAnyLoading,
+    invalidate,
+    registerMutations,
+    fireMutation,
+    getMutationResult,
+    subscribe,
+    getSnapshot,
+    activate,
+    dispose,
+  };
 }
 
 /** Official `toNumber`. An existing number is returned as itself. */

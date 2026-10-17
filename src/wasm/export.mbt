@@ -405,3 +405,17 @@ pub fn store_keep(payload_json : String) -> String {
 pub fn store_init(payload_json : String) -> String {
   @openui.store_init(payload_json)
 }
+
+///|
+/// Query snapshot choice. The host keeps the cache entry.
+#export_name("query_slot")
+pub fn query_slot(payload_json : String) -> String {
+  @openui.query_slot(payload_json)
+}
+
+///|
+/// Query or mutation error text. The host keeps live ids.
+#export_name("query_error")
+pub fn query_error(payload_json : String) -> String {
+  @openui.query_error(payload_json)
+}
