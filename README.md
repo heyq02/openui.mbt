@@ -14,7 +14,7 @@ npm install @heyq02/openui.mbt @openuidev/lang-core@1.0.1
 npx oui.mbt patch
 ```
 
-`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse`、`createStreamingParser()`、`parseMessage()` 和 `buildMessage()` 换成 Wasm。预处理、自动补全、物化、state、query、mutation 的提取，以及 `]]>openui:` 消息的切分和写回都在 MoonBit 里完成。Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
+`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse`、`createStreamingParser()`、`parseMessage()`、`buildMessage()`、`parseRules()`、`parseStructuredRules()`、`enrichErrors()` 和内置字段校验换成 Wasm。`url` 与 `pattern` 仍调用宿主的 `URL` 和 `RegExp`。预处理、自动补全、物化、state、query、mutation 的提取，以及 `]]>openui:` 消息的切分和写回都在 MoonBit 里完成。Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
 
 ```js
 import { parseProgram } from "@heyq02/openui.mbt/parser";

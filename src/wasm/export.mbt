@@ -143,3 +143,35 @@ pub fn build_message(
     end != 0,
   )
 }
+
+///|
+/// Parse string validation rules into JSON.
+#export_name("parse_rules")
+pub fn parse_rules(rules_json : String) -> String {
+  @openui.parse_rules(rules_json)
+}
+
+///|
+/// Keep structured rules tagged `true` or `arg`.
+#export_name("parse_structured_rules")
+pub fn parse_structured_rules(entries_json : String) -> String {
+  @openui.parse_structured_rules(entries_json)
+}
+
+///|
+/// Run one built-in validator. Empty means the value passed.
+#export_name("builtin_check")
+pub fn builtin_check(
+  kind : String,
+  value_json : String,
+  arg_json : String,
+) -> String {
+  @openui.builtin_check(kind, value_json, arg_json)
+}
+
+///|
+/// Hint strings for parser validation errors. Empty means no hint.
+#export_name("enrich_hints")
+pub fn enrich_hints(payload_json : String) -> String {
+  @openui.enrich_hints(payload_json)
+}

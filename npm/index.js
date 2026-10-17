@@ -37,6 +37,10 @@ const {
   stream_close: streamClose,
   parse_message: parseMessageOpenui,
   build_message: buildMessageOpenui,
+  parse_rules: parseRulesOpenui,
+  parse_structured_rules: parseStructuredRulesOpenui,
+  builtin_check: builtinCheckOpenui,
+  enrich_hints: enrichHintsOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -119,4 +123,132 @@ export function buildMessage(message) {
     JSON.stringify(pairs),
     message && message.end ? 1 : 0,
   );
+}
+
+/** Parse string rules. Numeric min, max, minLength, and maxLength arguments become numbers. */
+export function parseRules(rules) {
+  if (!Array.isArray(rules)) return [];
+  const strings = [];
+  for (const rule of rules) {
+    if (typeof rule === "string") strings.push(rule);
+  }
+  const parsed = JSON.parse(parseRulesOpenui(JSON.stringify(strings)));
+  return parsed.map((item) => {
+    if (item.inf === 1) return { type: item.type, arg: Infinity };
+    if (item.inf === -1) return { type: item.type, arg: -Infinity };
+    if (Object.prototype.hasOwnProperty.call(item, "arg")) return { type: item.type, arg: item.arg };
+    return { type: item.type };
+  });
+}
+
+/** Parse a rules object. `false`, `null`, and `undefined` are dropped. `true` has no argument. */
+export function parseStructuredRules(rules) {
+  if (!rules || typeof rules !== "object" || Array.isArray(rules)) return [];
+  const entries = Object.entries(rules);
+  const tagged = entries.map(([key, val]) => [
+    key,
+    val === false || val === undefined || val === null ? "skip" : val === true ? "true" : "arg",
+  ]);
+  const plan = JSON.parse(parseStructuredRulesOpenui(JSON.stringify(tagged)));
+  const result = [];
+  for (const item of plan) {
+    if (Object.prototype.hasOwnProperty.call(item, "i")) result.push({ type: item.type, arg: entries[item.i][1] });
+    else result.push({ type: item.type });
+  }
+  return result;
+}
+
+function encodeBound(arg) {
+  const number = Number(arg);
+  if (Number.isNaN(number)) return { k: "nan" };
+  if (number === Infinity) return { k: "pinf" };
+  if (number === -Infinity) return { k: "ninf" };
+  return { k: "n", v: number };
+}
+
+function tagValue(value) {
+  if (value === null) return { t: "null" };
+  if (value === undefined) return { t: "u" };
+  const kind = typeof value;
+  if (kind === "string") return { t: "s", v: value };
+  if (kind === "number") return { t: "n", v: encodeBound(value) };
+  if (kind === "boolean") return { t: "b", v: value };
+  if (kind !== "object") return { t: "other", host: encodeBound(parseFloat(String(value))) };
+  if (Array.isArray(value)) {
+    return { t: "a", v: value.map(tagValue), host: encodeBound(parseFloat(String(value))) };
+  }
+  const tagged = {
+    t: "o",
+    vals: Object.keys(value).map((key) => tagValue(value[key])),
+    host: encodeBound(parseFloat(String(value))),
+  };
+  if ("value" in value) tagged.inner = tagValue(value.value);
+  return tagged;
+}
+
+const builtinMessages = {
+  required: "This field is required",
+  options: "At least one option is required",
+  email: "Please enter a valid email",
+  numeric: "Must be a number",
+};
+
+/** Run one built-in rule. `url` and `pattern` stay in the host because they use `URL` and `RegExp`. */
+export function checkBuiltin(kind, value, arg) {
+  const code = builtinCheckOpenui(kind, JSON.stringify(tagValue(value)), JSON.stringify(encodeBound(arg)));
+  if (!code) return undefined;
+  if (builtinMessages[code]) return builtinMessages[code];
+  const number = Number(arg);
+  if (code === "min") return `Must be at least ${number}`;
+  if (code === "max") return `Must be no more than ${number}`;
+  if (code === "minLength") return `Must be at least ${number} characters`;
+  if (code === "maxLength") return `Must be no more than ${number} characters`;
+  return undefined;
+}
+
+/** Attach parser hints. `statementId: undefined` stays on the object. */
+export function enrichErrors(validationErrors, schema, componentNames) {
+  const items = [];
+  let needsNames = false;
+  for (const ve of validationErrors) {
+    if (ve && ve.code === "unknown-component") needsNames = true;
+    const item = {
+      code: ve && typeof ve.code === "string" ? ve.code : "",
+      component: ve && ve.component != null ? String(ve.component) : "",
+    };
+    if (ve && (ve.code === "missing-required" || ve.code === "null-required")) {
+      const def = schema.$defs?.[ve.component];
+      if (def?.properties) {
+        item.keys = Object.keys(def.properties);
+        const required = [];
+        for (const entry of def.required ?? []) {
+          if (typeof entry === "string") required.push(entry);
+        }
+        item.required = required;
+      }
+    }
+    items.push(item);
+  }
+  const names = needsNames ? componentNames.map((name) => String(name)) : [];
+  const hints = JSON.parse(enrichHintsOpenui(JSON.stringify({ names, items })));
+  return validationErrors.map((ve, index) => {
+    const error = {
+      source: "parser",
+      code: ve.code,
+      message: ve.message,
+      component: ve.component,
+      path: ve.path || undefined,
+      statementId: ve.statementId,
+      ...(ve.severity && { severity: ve.severity }),
+    };
+    const hint = hints[index] || "";
+    if (ve.code === "unknown-component") {
+      if (hint) error.hint = hint;
+    } else if (ve.code === "missing-required" || ve.code === "null-required") {
+      error.hint = hint || undefined;
+    } else if (ve.code === "inline-reserved" && hint) {
+      error.hint = hint;
+    }
+    return error;
+  });
 }

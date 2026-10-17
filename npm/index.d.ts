@@ -98,4 +98,32 @@ export function buildMessage(message: {
   end?: boolean;
 }): string;
 
+export interface ParsedRule {
+  type: string;
+  arg?: unknown;
+}
+
+export function parseRules(rules: unknown): ParsedRule[];
+
+export function parseStructuredRules(rules: unknown): ParsedRule[];
+
+export function checkBuiltin(kind: string, value: unknown, arg?: unknown): string | undefined;
+
+export interface EnrichedError {
+  source: "parser";
+  code: string;
+  message: string;
+  component: string;
+  path?: string;
+  statementId?: string;
+  severity?: string;
+  hint?: string;
+}
+
+export function enrichErrors(
+  validationErrors: Array<Record<string, unknown>>,
+  schema: { $defs?: Record<string, { properties?: object; required?: unknown[] }> } | null | undefined,
+  componentNames: string[],
+): EnrichedError[];
+
 export function createStream(schema: string, rootName?: string): OpenUiStream;
