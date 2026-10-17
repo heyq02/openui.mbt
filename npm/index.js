@@ -27,6 +27,7 @@ const instance = new WebAssembly.Instance(
 const {
   parse_openui: parseOpenui,
   tokenize_openui: tokenizeOpenui,
+  split_statements: splitStatementsOpenui,
   materialize_openui: materializeOpenui,
   parse_result: parseResultOpenui,
   stream_open: streamOpen,
@@ -99,6 +100,11 @@ export function parseProgram(source) {
 /** Tokenize OpenUI Lang source. */
 export function tokenize(source) {
   return JSON.parse(tokenizeOpenui(source ?? ""));
+}
+
+/** Statement ranges over official numeric token codes. */
+export function splitStatements(types) {
+  return JSON.parse(splitStatementsOpenui(JSON.stringify(types ?? [])));
 }
 
 /**
