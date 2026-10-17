@@ -454,3 +454,10 @@ pub fn list_step(payload_json : String) -> String {
 pub fn inline_step(payload_json : String) -> String {
   @openui.inline_step(payload_json)
 }
+
+///|
+/// Field-validator branch. The host still builds `URL`, `RegExp`, and bound text.
+#export_name("check_value")
+pub fn check_value(payload_json : String) -> String {
+  @openui.check_value(payload_json)
+}

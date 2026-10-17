@@ -79,6 +79,7 @@ const {
   call_arg: callArgOpenui,
   list_step: listStepOpenui,
   inline_step: inlineStepOpenui,
+  check_value: checkValueOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1321,6 +1322,11 @@ export function listStep(payload) {
 /** Inline element gate. `keep` means `hasDynamicProps === false`. */
 export function inlineStep(payload) {
   return JSON.parse(inlineStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Field-validator branch. Static messages and bound codes come back as JSON. */
+export function checkValue(payload) {
+  return JSON.parse(checkValueOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */

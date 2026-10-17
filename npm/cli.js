@@ -38,7 +38,7 @@ const REPLACEMENTS = [
   ],
   [
     'const builtInValidators = {\n\trequired: (value) => {\n\t\tif (isEmpty(value)) return "This field is required";\n\t\tif (typeof value === "object" && !Array.isArray(value) && value !== null) {\n\t\t\tconst vals = Object.values(value);\n\t\t\tif (vals.length > 0 && vals.every((v) => typeof v === "boolean") && !vals.some(Boolean)) return "At least one option is required";\n\t\t}\n\t},\n\temail: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return "Please enter a valid email";\n\t\treturn /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value) ? void 0 : "Please enter a valid email";\n\t},\n\turl: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return "Please enter a valid URL";\n\t\ttry {\n\t\t\tnew URL(value);\n\t\t\treturn;\n\t\t} catch {\n\t\t\treturn "Please enter a valid URL";\n\t\t}\n\t},\n\tnumeric: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value === "number" && !isNaN(value)) return void 0;\n\t\tif (typeof value === "string" && !isNaN(parseFloat(value)) && value.trim() !== "") return void 0;\n\t\treturn "Must be a number";\n\t},\n\tmin: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tconst n = typeof value === "number" ? value : parseFloat(String(value));\n\t\tif (isNaN(n)) return void 0;\n\t\tconst min = Number(arg);\n\t\treturn n >= min ? void 0 : `Must be at least ${min}`;\n\t},\n\tmax: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tconst n = typeof value === "number" ? value : parseFloat(String(value));\n\t\tif (isNaN(n)) return void 0;\n\t\tconst max = Number(arg);\n\t\treturn n <= max ? void 0 : `Must be no more than ${max}`;\n\t},\n\tminLength: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return void 0;\n\t\tconst min = Number(arg);\n\t\treturn value.length >= min ? void 0 : `Must be at least ${min} characters`;\n\t},\n\tmaxLength: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return void 0;\n\t\tconst max = Number(arg);\n\t\treturn value.length <= max ? void 0 : `Must be no more than ${max} characters`;\n\t},\n\tpattern: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string" || typeof arg !== "string") return void 0;\n\t\ttry {\n\t\t\treturn new RegExp(arg).test(value) ? void 0 : "Invalid format";\n\t\t} catch {\n\t\t\treturn;\n\t\t}\n\t}\n};\n',
-    'const builtInValidators = {\n\trequired: (value) => builtinMoonbit("required", value),\n\temail: (value) => builtinMoonbit("email", value),\n\turl: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return "Please enter a valid URL";\n\t\ttry {\n\t\t\tnew URL(value);\n\t\t\treturn;\n\t\t} catch {\n\t\t\treturn "Please enter a valid URL";\n\t\t}\n\t},\n\tnumeric: (value) => builtinMoonbit("numeric", value),\n\tmin: (value, arg) => builtinMoonbit("min", value, arg),\n\tmax: (value, arg) => builtinMoonbit("max", value, arg),\n\tminLength: (value, arg) => builtinMoonbit("minLength", value, arg),\n\tmaxLength: (value, arg) => builtinMoonbit("maxLength", value, arg),\n\tpattern: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string" || typeof arg !== "string") return void 0;\n\t\ttry {\n\t\t\treturn new RegExp(arg).test(value) ? void 0 : "Invalid format";\n\t\t} catch {\n\t\t\treturn;\n\t\t}\n\t}\n};\n',
+    "const builtInValidators = {\n\trequired: (value) => requiredMoonbit(value),\n\temail: (value) => emailMoonbit(value),\n\turl: (value) => urlMoonbit(value),\n\tnumeric: (value) => numericMoonbit(value),\n\tmin: (value, arg) => minMoonbit(value, arg),\n\tmax: (value, arg) => maxMoonbit(value, arg),\n\tminLength: (value, arg) => minLengthMoonbit(value, arg),\n\tmaxLength: (value, arg) => maxLengthMoonbit(value, arg),\n\tpattern: (value, arg) => patternMoonbit(value, arg)\n};\n",
   ],
   [
     'function enrichErrors(validationErrors, schema, componentNames) {\n\treturn validationErrors.map((ve) => {\n\t\tconst error = {\n\t\t\tsource: "parser",\n\t\t\tcode: ve.code,\n\t\t\tmessage: ve.message,\n\t\t\tcomponent: ve.component,\n\t\t\tpath: ve.path || void 0,\n\t\t\tstatementId: ve.statementId,\n\t\t\t...ve.severity && { severity: ve.severity }\n\t\t};\n\t\tif (ve.code === "unknown-component" && componentNames.length) error.hint = `Available components: ${componentNames.join(", ")}`;\n\t\telse if (ve.code === "missing-required" || ve.code === "null-required") error.hint = buildSignatureHint(ve.component, schema.$defs?.[ve.component]);\n\t\telse if (ve.code === "inline-reserved") error.hint = `Declare as a top-level statement: myVar = ${ve.component}(...)`;\n\t\treturn error;\n\t});\n}\n',
@@ -179,6 +179,14 @@ const REPLACEMENTS = [
   [
     "function evaluateElementInline(el, context, schemaCtx) {\n\tif (el.hasDynamicProps === false) return el;\n\tconst def = schemaCtx.library.components[el.typeName];\n\tconst evaluated = {};\n\tfor (const [key, value] of Object.entries(el.props)) {\n\t\tconst propSchema = def?.props?.shape?.[key];\n\t\tevaluated[key] = evaluatePropInline(value, context, schemaCtx, propSchema);\n\t}\n\treturn {\n\t\t...el,\n\t\tprops: evaluated\n\t};\n}\n",
     "function evaluateElementInline(el, context, schemaCtx) {\n\treturn evaluateElementInlineMoonbit(el, context, schemaCtx);\n}\n",
+  ],
+  [
+    'function isEmpty(value) {\n\tif (value === null || value === void 0 || value === "") return true;\n\tif (Array.isArray(value) && value.length === 0) return true;\n\tif (value && typeof value === "object" && !Array.isArray(value) && "value" in value) return isEmpty(value.value);\n\tif (typeof value === "object" && value !== null && !Array.isArray(value) && Object.keys(value).length === 0) return true;\n\treturn false;\n}\n',
+    "function isEmpty(value) {\n\treturn isEmptyMoonbit(value);\n}\n",
+  ],
+  [
+    'function validate(value, rules, customValidators) {\n\tfor (const rule of rules) {\n\t\tconst validator = customValidators?.[rule.type] ?? builtInValidators[rule.type];\n\t\tif (!validator) {\n\t\t\tconsole.warn(`[openui] Unknown validation rule type: "${rule.type}"`);\n\t\t\tcontinue;\n\t\t}\n\t\tconst error = validator(value, rule.arg);\n\t\tif (error) return error;\n\t}\n}\n',
+    "function validate(value, rules, customValidators) {\n\treturn validateMoonbit(value, rules, customValidators);\n}\n",
   ],
 ];
 
@@ -777,6 +785,100 @@ function evaluateElementInlineMoonbit(el, context, schemaCtx) {
   }
   return { ...el, props: evaluated };
 }
+function checkText(step, bound) {
+  if (step.op !== "fail") return void 0;
+  if (step.code === "min") return "Must be at least " + bound;
+  if (step.code === "max") return "Must be no more than " + bound;
+  if (step.code === "minLength") return "Must be at least " + bound + " characters";
+  if (step.code === "maxLength") return "Must be no more than " + bound + " characters";
+  return step.text;
+}
+function isEmptyMoonbit(value) {
+  const nil = value === null || value === void 0 || value === "";
+  const array = Array.isArray(value);
+  const blank = __ouiCheck({ phase: "blank", nil, empty: array && value.length === 0 });
+  if (blank.op === "empty") return true;
+  const object = Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  const has = object && "value" in value;
+  if (has && __ouiCheck({ phase: "wrap", has: true }).op === "dive") return isEmptyMoonbit(value.value);
+  if (!object) return __ouiCheck({ phase: "done" }).op === "empty";
+  return __ouiCheck({ phase: "keys", n: Object.keys(value).length }).op === "empty";
+}
+function requiredMoonbit(value) {
+  if (isEmptyMoonbit(value)) return checkText(__ouiCheck({ phase: "msg", code: "required" }));
+  if (typeof value === "object" && !Array.isArray(value) && value !== null) {
+    const vals = Object.values(value);
+    const options = vals.length > 0 && vals.every((v) => typeof v === "boolean") && !vals.some(Boolean);
+    if (options) return checkText(__ouiCheck({ phase: "msg", code: "options" }));
+  }
+}
+function emailMoonbit(value) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string") return checkText(__ouiCheck({ phase: "msg", code: "email" }));
+  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value) ? void 0 : checkText(__ouiCheck({ phase: "msg", code: "email" }));
+}
+function urlMoonbit(value) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string") return checkText(__ouiCheck({ phase: "msg", code: "url" }));
+  try {
+    new URL(value);
+    return;
+  } catch {
+    return checkText(__ouiCheck({ phase: "msg", code: "url" }));
+  }
+}
+function numericMoonbit(value) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value === "number" && !isNaN(value)) return void 0;
+  if (typeof value === "string" && !isNaN(parseFloat(value)) && value.trim() !== "") return void 0;
+  return checkText(__ouiCheck({ phase: "msg", code: "numeric" }));
+}
+function minMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (isNaN(n)) return void 0;
+  const min = Number(arg);
+  return checkText(__ouiCheck({ phase: "bound", kind: "min", ok: n >= min }), min);
+}
+function maxMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (isNaN(n)) return void 0;
+  const max = Number(arg);
+  return checkText(__ouiCheck({ phase: "bound", kind: "max", ok: n <= max }), max);
+}
+function minLengthMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string") return void 0;
+  const min = Number(arg);
+  return checkText(__ouiCheck({ phase: "bound", kind: "minLength", ok: value.length >= min }), min);
+}
+function maxLengthMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string") return void 0;
+  const max = Number(arg);
+  return checkText(__ouiCheck({ phase: "bound", kind: "maxLength", ok: value.length <= max }), max);
+}
+function patternMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string" || typeof arg !== "string") return void 0;
+  try {
+    if (new RegExp(arg).test(value)) return void 0;
+    return checkText(__ouiCheck({ phase: "msg", code: "format" }));
+  } catch {
+    return;
+  }
+}
+function validateMoonbit(value, rules, customValidators) {
+  for (const rule of rules) {
+    const validator = customValidators?.[rule.type] ?? builtInValidators[rule.type];
+    const known = Boolean(validator);
+    const error = known ? validator(value, rule.arg) : void 0;
+    const step = __ouiCheck({ phase: "rule", known, hit: Boolean(error) });
+    if (step.op === "warn") console.warn('[openui] Unknown validation rule type: "' + rule.type + '"');
+    if (step.op === "stop") return error;
+  }
+}
 `;
 
 function usage() {
@@ -797,11 +899,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -814,7 +916,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 50;
+  const expected = 52;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

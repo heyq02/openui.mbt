@@ -210,6 +210,18 @@ export function listStep(payload: {
   op?: string;
 }): { op: string; sign?: number };
 export function inlineStep(payload: { frozen?: boolean }): { op: string };
+export function checkValue(payload: {
+  phase?: string;
+  nil?: boolean;
+  empty?: boolean;
+  has?: boolean;
+  n?: number;
+  code?: string;
+  kind?: string;
+  ok?: boolean;
+  known?: boolean;
+  hit?: boolean;
+}): { op: string; text?: string; code?: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;
