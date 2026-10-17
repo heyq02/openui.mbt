@@ -1221,9 +1221,7 @@ function encodeStable(value, key, arrays, depth) {
 /** JSON text with sorted keys. `undefined` when the root value is omitted. */
 export function stableStringify(value) {
   try {
-    const marked = stableStringifyOpenui(
-      JSON.stringify(encodeStable(value, "", [], 0)),
-    );
+    const marked = stableStringifyOpenui(JSON.stringify(encodeStable(value, "", [], 0)));
     if (marked === "U") return undefined;
     if (marked === "Ebigint") throw new TypeError("Do not know how to serialize a BigInt");
     if (marked.startsWith("S")) return marked.slice(1);
