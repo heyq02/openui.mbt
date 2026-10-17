@@ -63,6 +63,7 @@ const {
   is_action_plan: isActionPlanOpenui,
   flatten_plans: flattenPlansOpenui,
   extract_tool_result: extractToolOpenui,
+  stable_stringify: stableStringifyOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1146,6 +1147,97 @@ export function flattenPlans(values) {
     }
   }
   return { steps };
+}
+
+const stableDepthLimit = 1000;
+
+function stringifyJson(value) {
+  return JSON.stringify(value, (_key, val) => {
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      const sorted = {};
+      for (const k of Object.keys(val).sort()) sorted[k] = val[k];
+      return sorted;
+    }
+    if (val === undefined) return "__undefined__";
+    if (typeof val === "number") {
+      if (Number.isNaN(val)) return "__NaN__";
+      if (val === Infinity) return "__Inf__";
+      if (val === -Infinity) return "__-Inf__";
+    }
+    return val;
+  });
+}
+
+class ArrayCycle extends Error {}
+
+function encodeRaw(value, arrays, depth) {
+  if (depth > stableDepthLimit) throw new RangeError("Maximum call stack size exceeded");
+  if (typeof value === "bigint") throw new TypeError("Do not know how to serialize a BigInt");
+  if (value === null) return { t: "z" };
+  if (value === undefined) return { t: "u" };
+  const kind = typeof value;
+  if (kind === "string") return { t: "s", v: value };
+  if (kind === "boolean") return { t: "b", v: value };
+  if (kind === "number") {
+    if (Number.isNaN(value)) return { t: "nan" };
+    if (value === Infinity) return { t: "pinf" };
+    if (value === -Infinity) return { t: "ninf" };
+    return { t: "n", v: value };
+  }
+  if (kind === "function") return { t: "f" };
+  if (kind === "symbol") return { t: "y" };
+  if (kind !== "object") return { t: "z" };
+  if (Array.isArray(value)) {
+    if (arrays.includes(value)) throw new ArrayCycle();
+    arrays.push(value);
+    try {
+      const items = [];
+      for (let i = 0; i < value.length; i += 1) {
+        items.push(i in value ? encodeStable(value[i], String(i), arrays, depth + 1) : { t: "u" });
+      }
+      return { t: "a", v: items };
+    } finally {
+      arrays.pop();
+    }
+  }
+  const entries = [];
+  for (const key of Object.keys(value).sort()) {
+    entries.push([key, encodeStable(value[key], key, arrays, depth + 1)]);
+  }
+  return { t: "o", v: entries };
+}
+
+function encodeStable(value, key, arrays, depth) {
+  if (
+    value !== null &&
+    (typeof value === "object" || typeof value === "function") &&
+    typeof value.toJSON === "function"
+  ) {
+    return encodeRaw(value.toJSON(key), arrays, depth + 1);
+  }
+  return encodeRaw(value, arrays, depth);
+}
+
+/** JSON text with sorted keys. `undefined` when the root value is omitted. */
+export function stableStringify(value) {
+  try {
+    const marked = stableStringifyOpenui(
+      JSON.stringify(encodeStable(value, "", [], 0)),
+    );
+    if (marked === "U") return undefined;
+    if (marked === "Ebigint") throw new TypeError("Do not know how to serialize a BigInt");
+    if (marked.startsWith("S")) return marked.slice(1);
+    throw new TypeError(marked.slice(1) || marked);
+  } catch (error) {
+    if (error instanceof ArrayCycle) return stringifyJson(value);
+    throw error;
+  }
+}
+
+/** Query cache key. `deps == null` omits the suffix. */
+export function buildCacheKey(toolName, args, deps) {
+  const depsKey = deps != null ? `::${stableStringify(deps)}` : "";
+  return `${toolName}::${stableStringify(args)}${depsKey}`;
 }
 
 /** Decide an MCP `callTool` result from tags. The host throws, returns, and parses. */

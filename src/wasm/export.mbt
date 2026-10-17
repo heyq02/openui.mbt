@@ -342,3 +342,10 @@ pub fn flatten_plans(tags_json : String) -> String {
 pub fn extract_tool_result(payload_json : String) -> String {
   @openui.extract_tool_result(payload_json)
 }
+
+///|
+/// Stable JSON text. The host applies `toJSON` and reports cycles.
+#export_name("stable_stringify")
+pub fn stable_stringify(value_json : String) -> String {
+  @openui.stable_stringify(value_json)
+}
