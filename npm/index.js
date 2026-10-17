@@ -111,7 +111,12 @@ export function buildMessage(message) {
       ? message.context
       : JSON.stringify(message.context)
     : "";
-  const content =
-    message && message.content !== undefined ? String(message.content) : "undefined";
-  return buildMessageOpenui(content, context, hasContext ? 1 : 0, JSON.stringify(pairs), message && message.end ? 1 : 0);
+  const content = message && message.content !== undefined ? String(message.content) : "undefined";
+  return buildMessageOpenui(
+    content,
+    context,
+    hasContext ? 1 : 0,
+    JSON.stringify(pairs),
+    message && message.end ? 1 : 0,
+  );
 }

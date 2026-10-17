@@ -25,7 +25,7 @@ const REPLACEMENTS = [
     "function parseMessage(raw, options) {\n\treturn parseMoonbitMessage(raw, options);\n}\n",
   ],
   [
-    "function buildMessage({ content, context, attributes, end }) {\n\tconst query = Object.entries(attributes ?? {}).map(([key, value]) => `${encode(key)}=${encode(value)}`).join(\"&\");\n\tlet out = `${PREFIX}content${query ? `?${query}` : \"\"}\\n${content}`;\n\tif (context != null) out += `\\n${PREFIX}context\\n${typeof context === \"string\" ? context : JSON.stringify(context)}`;\n\treturn end ? `${out}\\n${PREFIX}end` : out;\n}\n",
+    'function buildMessage({ content, context, attributes, end }) {\n\tconst query = Object.entries(attributes ?? {}).map(([key, value]) => `${encode(key)}=${encode(value)}`).join("&");\n\tlet out = `${PREFIX}content${query ? `?${query}` : ""}\\n${content}`;\n\tif (context != null) out += `\\n${PREFIX}context\\n${typeof context === "string" ? context : JSON.stringify(context)}`;\n\treturn end ? `${out}\\n${PREFIX}end` : out;\n}\n',
     "function buildMessage(message) {\n\treturn buildMoonbitMessage(message);\n}\n",
   ],
 ];
