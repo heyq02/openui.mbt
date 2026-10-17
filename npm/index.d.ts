@@ -152,6 +152,15 @@ export function generatePrompt(spec: {
   inlineMode?: unknown;
   additionalRules?: unknown[];
 }): string;
+export function cloudConfig(spec: {
+  library?: unknown;
+  promptOptions?: {
+    examples?: unknown;
+    preamble?: unknown;
+    additionalRules?: unknown;
+  } | null;
+  instructions?: unknown;
+}): string;
 export function callBuiltin(name: string, args: Record<string, unknown>): unknown;
 export function lazyStep(
   name: string,

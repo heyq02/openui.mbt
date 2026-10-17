@@ -268,3 +268,10 @@ pub fn lazy_step(name : String, kinds_json : String) -> String {
 pub fn generate_prompt(spec_json : String) -> String {
   @openui.generate_prompt(spec_json)
 }
+
+///|
+/// Decide a cloud config block. The host still serializes the JSON.
+#export_name("cloud_config")
+pub fn cloud_config(spec_json : String) -> String {
+  @openui.cloud_config(spec_json)
+}

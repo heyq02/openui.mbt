@@ -53,6 +53,7 @@ const {
   call_builtin: callBuiltinOpenui,
   lazy_step: lazyStepOpenui,
   generate_prompt: generatePromptOpenui,
+  cloud_config: cloudConfigOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -610,6 +611,114 @@ export function generatePrompt(spec) {
   };
   if (spec.preamble != null) encoded.preamble = String(spec.preamble);
   return generatePromptOpenui(JSON.stringify(encoded));
+}
+
+function tagCloudValue(value) {
+  if (value === null) return { t: "z" };
+  if (value === undefined) return { t: "u" };
+  const type = typeof value;
+  if (type === "string") return { t: "s", v: value };
+  if (type === "number") {
+    return {
+      t: "n",
+      v: Object.is(value, -0)
+        ? "-0"
+        : Number.isNaN(value)
+          ? "nan"
+          : value === Infinity
+            ? "inf"
+            : value === -Infinity
+              ? "-inf"
+              : value,
+      j: String(value),
+    };
+  }
+  if (type === "boolean") return { t: "b", v: value };
+  if (type === "bigint" || type === "function") return { t: "x", j: String(value) };
+  if (type === "symbol") return { t: "x", j: String(value), sym: true };
+  if (Array.isArray(value)) {
+    const items = [];
+    for (let index = 0; index < value.length; index += 1) {
+      items.push(
+        Object.prototype.hasOwnProperty.call(value, index)
+          ? tagCloudValue(value[index])
+          : { t: "h" },
+      );
+    }
+    return { t: "a", v: items };
+  }
+  if (type === "object") {
+    const tagged = {
+      t: "o",
+      v: Object.entries(value).map(([key, item]) => [key, tagCloudValue(item)]),
+    };
+    if (typeof value.toString === "function" && value.toString !== Object.prototype.toString) {
+      try {
+        tagged.j = String(value);
+      } catch {
+        tagged.throw = true;
+      }
+    }
+    return tagged;
+  }
+  return { t: "x", throw: true };
+}
+
+function stringifyGroupComponents(library) {
+  const groups = library?.componentGroups ?? [];
+  for (const group of groups) {
+    if (
+      !group ||
+      typeof group !== "object" ||
+      Array.isArray(group) ||
+      typeof group.name !== "string" ||
+      !Array.isArray(group.components)
+    ) {
+      continue;
+    }
+    for (const comp of group.components) {
+      if (typeof comp !== "string") String(comp);
+    }
+  }
+}
+
+/** Official `generateCloudConfig` block. Library checks run in Wasm. */
+export function cloudConfig(spec) {
+  const library = spec.library;
+  const options = spec.promptOptions;
+  const encoded = {
+    hasLibrary: Boolean(library),
+    hasPromptOptions: Boolean(options),
+    examples: Boolean(options?.examples),
+    preamble: Boolean(options?.preamble),
+    rules: Boolean(options?.additionalRules),
+    library: library ? tagCloudValue(library) : { t: "u" },
+  };
+  const decision = JSON.parse(cloudConfigOpenui(JSON.stringify(encoded)));
+  if (decision.t === "throw") {
+    const componentGroups = library.componentGroups;
+    for (const _group of componentGroups ?? []) break;
+  }
+  if (decision.t === "string") stringifyGroupComponents(library);
+  if (decision.t === "err") throw new Error(decision.m);
+  let config;
+  if (decision.t === "version") {
+    config = { libraryVersion: "0.1.0" };
+  } else {
+    const { components: _components, ...chatLibrary } = library;
+    const promptOptions = {};
+    for (const key of decision.options ?? []) {
+      if (key === "examples") promptOptions.examples = options.examples;
+      else if (key === "preamble") promptOptions.preamble = options.preamble;
+      else if (key === "additionalRules") promptOptions.additionalRules = options.additionalRules;
+    }
+    config = {
+      chatLibrary,
+      ...(Object.keys(promptOptions).length > 0 ? { systemPromptOptions: promptOptions } : {}),
+    };
+  }
+  const block = `]]>openui:config\n${JSON.stringify(config)}`;
+  return spec.instructions ? `${block}\n${spec.instructions}` : block;
 }
 
 /** `Run`, `Set`, and `Reset` decision. `op` is `run`, `set`, `reset`, or `none`. */
