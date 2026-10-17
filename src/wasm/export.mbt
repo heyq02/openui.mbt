@@ -447,3 +447,10 @@ pub fn call_arg(payload_json : String) -> String {
 pub fn list_step(payload_json : String) -> String {
   @openui.list_step(payload_json)
 }
+
+///|
+/// Whether an inline element keeps its current props.
+#export_name("inline_step")
+pub fn inline_step(payload_json : String) -> String {
+  @openui.inline_step(payload_json)
+}

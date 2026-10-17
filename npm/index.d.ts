@@ -209,6 +209,7 @@ export function listStep(payload: {
   desc?: boolean;
   op?: string;
 }): { op: string; sign?: number };
+export function inlineStep(payload: { frozen?: boolean }): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;

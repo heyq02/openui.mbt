@@ -78,6 +78,7 @@ const {
   strip_assign: stripAssignOpenui,
   call_arg: callArgOpenui,
   list_step: listStepOpenui,
+  inline_step: inlineStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1315,6 +1316,11 @@ export function callArg(payload) {
 /** `Sort` and `Filter` branch. The host still uses `localeCompare` and `==`. */
 export function listStep(payload) {
   return JSON.parse(listStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Inline element gate. `keep` means `hasDynamicProps === false`. */
+export function inlineStep(payload) {
+  return JSON.parse(inlineStepOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */
