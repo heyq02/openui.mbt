@@ -77,6 +77,7 @@ const {
   state_field: stateFieldOpenui,
   strip_assign: stripAssignOpenui,
   call_arg: callArgOpenui,
+  list_step: listStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1309,6 +1310,11 @@ export function stripAssign(payload) {
 /** Null-argument deletion and missing-required check. The host evaluates the arguments. */
 export function callArg(payload) {
   return JSON.parse(callArgOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** `Sort` and `Filter` branch. The host still uses `localeCompare` and `==`. */
+export function listStep(payload) {
+  return JSON.parse(listStepOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */

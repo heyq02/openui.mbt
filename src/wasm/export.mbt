@@ -440,3 +440,10 @@ pub fn strip_assign(payload_json : String) -> String {
 pub fn call_arg(payload_json : String) -> String {
   @openui.call_arg(payload_json)
 }
+
+///|
+/// `Sort` and `Filter` branch. The host compares with `localeCompare` and `==`.
+#export_name("list_step")
+pub fn list_step(payload_json : String) -> String {
+  @openui.list_step(payload_json)
+}

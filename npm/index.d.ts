@@ -201,6 +201,14 @@ export function callArg(payload: {
   absent?: boolean;
   bare?: boolean;
 }): { op: string };
+export function listStep(payload: {
+  phase?: string;
+  kind?: string;
+  array?: boolean;
+  numeric?: boolean;
+  desc?: boolean;
+  op?: string;
+}): { op: string; sign?: number };
 export function queryError(payload: {
   source?: string;
   kind?: string;

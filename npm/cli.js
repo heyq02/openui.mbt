@@ -168,6 +168,14 @@ const REPLACEMENTS = [
     "function missesRequired(args, params) {\n\treturn !!params.required?.some((key) => args[key] == null && getSchemaDefaultValue(params.properties?.[key]) === void 0);\n}\n",
     "function missesRequired(args, params) {\n\treturn missesRequiredMoonbit(args, params);\n}\n",
   ],
+  [
+    'fn: ({ array, field, direction }) => {\n\t\t\tif (!Array.isArray(array)) return array;\n\t\t\tconst f = String(field ?? "");\n\t\t\tconst desc = String(direction ?? "asc") === "desc";\n\t\t\treturn [...array].sort((a, b) => {\n\t\t\t\tconst av = f ? resolveField(a, f) : a;\n\t\t\t\tconst bv = f ? resolveField(b, f) : b;\n\t\t\t\tconst aIsNumeric = typeof av === "number" || typeof av === "string" && !isNaN(Number(av)) && av !== "";\n\t\t\t\tconst bIsNumeric = typeof bv === "number" || typeof bv === "string" && !isNaN(Number(bv)) && bv !== "";\n\t\t\t\tif (aIsNumeric && bIsNumeric) {\n\t\t\t\t\tconst diff = toNumber(av) - toNumber(bv);\n\t\t\t\t\treturn desc ? -diff : diff;\n\t\t\t\t}\n\t\t\t\tconst cmp = String(av ?? "").localeCompare(String(bv ?? ""));\n\t\t\t\treturn desc ? -cmp : cmp;\n\t\t\t});\n\t\t}',
+    "fn: ({ array, field, direction }) => sortArrayMoonbit(array, field, direction)",
+  ],
+  [
+    'fn: ({ array, field, operator, value }) => {\n\t\t\tif (!Array.isArray(array)) return [];\n\t\t\tconst f = String(field ?? "");\n\t\t\tconst o = String(operator ?? "==");\n\t\t\treturn array.filter((item) => {\n\t\t\t\tconst v = f ? resolveField(item, f) : item;\n\t\t\t\tswitch (o) {\n\t\t\t\t\tcase "==": return v == value;\n\t\t\t\t\tcase "!=": return v != value;\n\t\t\t\t\tcase ">": return toNumber(v) > toNumber(value);\n\t\t\t\t\tcase "<": return toNumber(v) < toNumber(value);\n\t\t\t\t\tcase ">=": return toNumber(v) >= toNumber(value);\n\t\t\t\t\tcase "<=": return toNumber(v) <= toNumber(value);\n\t\t\t\t\tcase "contains": return String(v ?? "").includes(String(value ?? ""));\n\t\t\t\t\tdefault: return false;\n\t\t\t\t}\n\t\t\t});\n\t\t}',
+    "fn: ({ array, field, operator, value }) => filterArrayMoonbit(array, field, operator, value)",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -720,6 +728,39 @@ function missesRequiredMoonbit(args, params) {
     return __ouiCallArg({ phase: "miss", absent, bare }).op === "miss";
   });
 }
+function sortArrayMoonbit(array, field, direction) {
+  const opened = __ouiListStep({ phase: "open", kind: "sort", array: Array.isArray(array) });
+  if (opened.op !== "sort") return array;
+  const f = String(field ?? "");
+  const desc = String(direction ?? "asc") === "desc";
+  return [...array].sort((a, b) => {
+    const av = f ? resolveField(a, f) : a;
+    const bv = f ? resolveField(b, f) : b;
+    const aIsNumeric = typeof av === "number" || typeof av === "string" && !isNaN(Number(av)) && av !== "";
+    const bIsNumeric = typeof bv === "number" || typeof bv === "string" && !isNaN(Number(bv)) && bv !== "";
+    const step = __ouiListStep({ phase: "pair", numeric: aIsNumeric && bIsNumeric, desc });
+    if (step.op === "num") return (toNumber(av) - toNumber(bv)) * step.sign;
+    return String(av ?? "").localeCompare(String(bv ?? "")) * step.sign;
+  });
+}
+function filterArrayMoonbit(array, field, operator, value) {
+  const opened = __ouiListStep({ phase: "open", kind: "filter", array: Array.isArray(array) });
+  if (opened.op !== "filter") return [];
+  const f = String(field ?? "");
+  const o = String(operator ?? "==");
+  return array.filter((item) => {
+    const v = f ? resolveField(item, f) : item;
+    const step = __ouiListStep({ phase: "cmp", op: o });
+    if (step.op === "eq") return v == value;
+    if (step.op === "ne") return v != value;
+    if (step.op === "gt") return toNumber(v) > toNumber(value);
+    if (step.op === "lt") return toNumber(v) < toNumber(value);
+    if (step.op === "ge") return toNumber(v) >= toNumber(value);
+    if (step.op === "le") return toNumber(v) <= toNumber(value);
+    if (step.op === "has") return String(v ?? "").includes(String(value ?? ""));
+    return false;
+  });
+}
 `;
 
 function usage() {
@@ -740,11 +781,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -757,7 +798,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 47;
+  const expected = 49;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,
