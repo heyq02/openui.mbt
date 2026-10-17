@@ -261,6 +261,31 @@ export function msgStep(payload: {
   kind?: string;
   named?: boolean;
 }): { op: string };
+export function shapeStep(payload: {
+  phase?: string;
+  bad?: boolean;
+  nil?: boolean;
+  ast?: boolean;
+  element?: boolean;
+  composite?: boolean;
+  object?: boolean;
+  array?: boolean;
+  typed?: boolean;
+  enums?: boolean;
+  listed?: boolean;
+  partial?: boolean;
+  shaped?: boolean;
+  present?: boolean;
+  list?: boolean;
+  defined?: boolean;
+  required?: boolean;
+  invalid?: boolean;
+  same?: boolean;
+  changed?: boolean;
+  fresh?: boolean;
+  open?: boolean;
+  valid?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;

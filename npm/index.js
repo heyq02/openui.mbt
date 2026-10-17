@@ -85,6 +85,7 @@ const {
   mapped_comp: mappedCompOpenui,
   leaf_step: leafStepOpenui,
   msg_step: msgStepOpenui,
+  shape_step: shapeStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1357,6 +1358,11 @@ export function leafStep(payload) {
 /** Validation message branch. `none` leaves the official message undefined. */
 export function msgStep(payload) {
   return JSON.parse(msgStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Schema validation branch. `keep` returns the original value. */
+export function shapeStep(payload) {
+  return JSON.parse(shapeStepOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */
