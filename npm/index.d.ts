@@ -139,6 +139,19 @@ export function isActionPlan(value: unknown): boolean;
 export function flattenPlans(values: unknown): { steps: unknown[] } | unknown;
 export function resolveField(obj: unknown, path: unknown): unknown;
 export function toNumber(value: unknown): number;
+export function rootStep(tag: string): {
+  op: string;
+  error?: { source: string; code: string; statementId: string; message: string };
+};
+export function eachStep(payload: {
+  phase?: string;
+  name?: string;
+  n?: number;
+  wide?: boolean;
+  array?: boolean;
+  k?: string;
+  ok?: boolean;
+}): { op: string };
 export function stableStringify(value: unknown): string | undefined;
 export function buildCacheKey(toolName: unknown, args: unknown, deps: unknown): string;
 export function extractToolResult(payload: {

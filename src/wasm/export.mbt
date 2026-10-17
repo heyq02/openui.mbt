@@ -363,3 +363,17 @@ pub fn resolve_field(path_json : String) -> String {
 pub fn to_number(value_json : String) -> String {
   @openui.to_number(value_json)
 }
+
+///|
+/// Next step for `evaluateRoot`. The host evaluates and keeps the element.
+#export_name("evaluate_root")
+pub fn evaluate_root(tag : String) -> String {
+  @openui.evaluate_root(tag)
+}
+
+///|
+/// `Each` gate. The host evaluates the list and the template.
+#export_name("each_step")
+pub fn each_step(payload_json : String) -> String {
+  @openui.each_step(payload_json)
+}

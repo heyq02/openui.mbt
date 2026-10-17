@@ -128,6 +128,14 @@ const REPLACEMENTS = [
     'function toNumber(val) {\n\tif (typeof val === "number") return val;\n\tif (typeof val === "string") {\n\t\tconst n = Number(val);\n\t\treturn isNaN(n) ? 0 : n;\n\t}\n\tif (typeof val === "boolean") return val ? 1 : 0;\n\treturn 0;\n}\n',
     "function toNumber(val) {\n\treturn toNumberMoonbit(val);\n}\n",
   ],
+  [
+    'function evaluateRoot(result, evalCtx) {\n\tif (result.root) return evaluateElementProps(result.root, evalCtx);\n\tif (!result.rootExpression) return null;\n\tconst value = evaluate(result.rootExpression, evalCtx.ctx, { library: evalCtx.library });\n\tif (isElementNode(value)) return evaluateElementProps(value, evalCtx);\n\tevalCtx.errors?.push({\n\t\tsource: "runtime",\n\t\tcode: "no-root",\n\t\tstatementId: "root",\n\t\tmessage: "root does not evaluate to a component"\n\t});\n\treturn null;\n}\n',
+    'function evaluateRoot(result, evalCtx) {\n\treturn evaluateRootMoonbit(result, evalCtx);\n}\n',
+  ],
+  [
+    'function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\tif (name === "Each") {\n\t\tif (args.length < 3) return [];\n\t\tconst arr = evaluate(args[0], context);\n\t\tif (!Array.isArray(arr)) return [];\n\t\tconst varName = args[1].k === "Ref" ? args[1].n : args[1].k === "Str" ? args[1].v : null;\n\t\tif (!varName) return [];\n\t\tconst template = args[2];\n\t\treturn arr.map((item, _idx) => {\n\t\t\tconst substituted = substituteRef(template, varName, item);\n\t\t\tconst childCtx = {\n\t\t\t\t...context,\n\t\t\t\tresolveRef: (refName) => {\n\t\t\t\t\tif (refName === varName) return item;\n\t\t\t\t\treturn context.resolveRef(refName);\n\t\t\t\t}\n\t\t\t};\n\t\t\tconst result = evaluate(substituted, childCtx, schemaCtx);\n\t\t\tif (schemaCtx && isElementNode(result)) return evaluateElementInline(result, childCtx, schemaCtx);\n\t\t\treturn result;\n\t\t});\n\t}\n\treturn null;\n}\n',
+    'function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\treturn evaluateLazyBuiltinMoonbit(name, args, context, schemaCtx);\n}\n',
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -342,6 +350,62 @@ function resolveFieldMoonbit(obj, path) {
 function toNumberMoonbit(val) {
   return __ouiToNumber(val);
 }
+function evaluateRootMoonbit(result, evalCtx) {
+  const step = __ouiEvaluateRoot(result.root ? "root" : result.rootExpression ? "expr" : "none");
+  if (step.op === "props") return evaluateElementProps(result.root, evalCtx);
+  if (step.op !== "eval") return null;
+  const value = evaluate(result.rootExpression, evalCtx.ctx, { library: evalCtx.library });
+  const after = __ouiEvaluateRoot(isElementNode(value) ? "element" : "miss");
+  if (after.op === "props") return evaluateElementProps(value, evalCtx);
+  evalCtx.errors?.push(after.error);
+  return null;
+}
+function eachLength(args) {
+  const length = args.length;
+  if (typeof length === "number" && Number.isFinite(length)) return { n: length };
+  if (length === -Infinity) return { n: -1 };
+  if (length < 3) return { n: 0 };
+  return { wide: true };
+}
+function evaluateLazyBuiltinMoonbit(name, args, context, schemaCtx) {
+  const openPayload = {
+    phase: "open",
+    name: typeof name === "string" ? name : "",
+  };
+  if (name === "Each") Object.assign(openPayload, eachLength(args));
+  const open = __ouiEach(openPayload);
+  if (open.op === "empty") return [];
+  if (open.op !== "eval") return null;
+  const arr = evaluate(args[0], context);
+  const listed = __ouiEach({ phase: "array", array: Array.isArray(arr) });
+  if (listed.op !== "bind") return [];
+  let slot = "";
+  let named = null;
+  if (args[1].k === "Ref") {
+    slot = "Ref";
+    named = args[1].n;
+  } else if (args[1].k === "Str") {
+    slot = "Str";
+    named = args[1].v;
+  }
+  const picked = __ouiEach({ phase: "name", k: slot, ok: Boolean(named) });
+  if (picked.op !== "map") return [];
+  const varName = named;
+  const template = args[2];
+  return arr.map((item, _idx) => {
+    const substituted = substituteRef(template, varName, item);
+    const childCtx = {
+      ...context,
+      resolveRef: (refName) => {
+        if (refName === varName) return item;
+        return context.resolveRef(refName);
+      },
+    };
+    const result = evaluate(substituted, childCtx, schemaCtx);
+    if (schemaCtx && isElementNode(result)) return evaluateElementInline(result, childCtx, schemaCtx);
+    return result;
+  });
+}
 `;
 
 function usage() {
@@ -362,11 +426,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -379,7 +443,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 37;
+  const expected = 39;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

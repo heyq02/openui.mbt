@@ -66,6 +66,8 @@ const {
   stable_stringify: stableStringifyOpenui,
   resolve_field: resolveFieldOpenui,
   to_number: toNumberOpenui,
+  evaluate_root: evaluateRootOpenui,
+  each_step: eachStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1253,6 +1255,16 @@ export function resolveField(obj, path) {
     cur = cur[part];
   }
   return cur;
+}
+
+/** Next `evaluateRoot` step. `miss` includes the fixed `no-root` error. */
+export function rootStep(tag) {
+  return JSON.parse(evaluateRootOpenui(typeof tag === "string" ? tag : ""));
+}
+
+/** `Each` gate. The host still evaluates the list and the template. */
+export function eachStep(payload) {
+  return JSON.parse(eachStepOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Official `toNumber`. An existing number is returned as itself. */
