@@ -208,6 +208,30 @@ const REPLACEMENTS = [
     'function validationMessage(component, path, issue) {\n\tswitch (issue.code) {\n\t\tcase "type-mismatch": return `field "${path}" expects ${issue.expected} but got ${issue.actual}`;\n\t\tcase "missing-required": return `missing required field "${path}"${issue.signature ? ` — signature: ${issue.signature}` : ""}`;\n\t\tcase "null-required": return `required field "${path}" cannot be null${issue.signature ? ` — signature: ${issue.signature}` : ""}`;\n\t\tcase "unknown-component": return `Unknown component "${component}" — not found in catalog or builtins${issue.available?.length ? `. Available components: ${issue.available.join(", ")}` : ""}`;\n\t\tcase "inline-reserved": return `${component}() must be declared as a top-level statement, not used inline as a value`;\n\t\tcase "excess-args": return `${component} takes ${issue.declared} arg(s), got ${issue.got} (${issue.got - issue.declared} excess dropped)`;\n\t\tcase "unknown-function": return `Unknown function "@${component}": not a built-in or action step. The call evaluates to null`;\n\t\tcase "no-root":\n\t\t\tif (issue.reason === "not-component") return "root does not evaluate to a component";\n\t\t\tif (issue.reason === "fallback") return `No root statement. Rendering the first statement that calls the root component ${component}`;\n\t\t\treturn component ? `No root statement, and no statement calls the root component ${component}` : "No root statement";\n\t}\n}\n',
     "function validationMessage(component, path, issue) {\n\treturn validationMessageMoonbit(component, path, issue);\n}\n",
   ],
+  [
+    "function resolveInvalidValue(required, defaultValue) {\n\tif (defaultValue !== void 0) return defaultValue;\n\treturn required ? INVALID : void 0;\n}\n",
+    "function resolveInvalidValue(required, defaultValue) {\n\treturn resolveInvalidValueMoonbit(required, defaultValue);\n}\n",
+  ],
+  [
+    'function validateElementPosition(element, s, component, path, ctx) {\n\tif (isCompositeSchema(s)) return false;\n\tif (typeof s["type"] === "string" || Array.isArray(s["enum"]) || "const" in s) {\n\t\tpushValidationIssue(ctx, component, path, {\n\t\t\tcode: "type-mismatch",\n\t\t\texpected: typeof s["type"] === "string" ? s["type"] : "a literal value",\n\t\t\tactual: `component "${element.typeName}"`\n\t\t});\n\t\treturn true;\n\t}\n\treturn false;\n}\n',
+    "function validateElementPosition(element, s, component, path, ctx) {\n\treturn validateElementPositionMoonbit(element, s, component, path, ctx);\n}\n",
+  ],
+  [
+    'function validateObjectValue(value, s, component, path, ctx) {\n\tif (typeof value !== "object" || Array.isArray(value)) {\n\t\tpushValidationIssue(ctx, component, path, {\n\t\t\tcode: "type-mismatch",\n\t\t\texpected: "object",\n\t\t\tactual: jsType(value)\n\t\t});\n\t\treturn INVALID;\n\t}\n\tconst obj = value;\n\tlet out;\n\tconst props = s["properties"] && typeof s["properties"] === "object" ? s["properties"] : NO_PROPS;\n\tconst required = Array.isArray(s["required"]) ? s["required"] : NO_REQUIRED;\n\tlet invalid = false;\n\tif (!ctx.partial) for (const key of required) {\n\t\tconst present = key in obj;\n\t\tif (!present || obj[key] == null) {\n\t\t\tconst fallback = getSchemaDefaultValue(props[key]);\n\t\t\tif (fallback !== void 0) {\n\t\t\t\t(out ??= { ...obj })[key] = fallback;\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tpushValidationIssue(ctx, component, `${path}/${key}`, { code: present ? "null-required" : "missing-required" });\n\t\t\tinvalid = true;\n\t\t}\n\t}\n\tfor (const key of Object.keys(props)) {\n\t\tif (!(key in obj)) continue;\n\t\tconst sub = props[key];\n\t\tlet next = validateSchemaValue(obj[key], sub, component, `${path}/${key}`, ctx);\n\t\tif (next === INVALID) {\n\t\t\tnext = resolveInvalidValue(required.includes(key), getSchemaDefaultValue(sub));\n\t\t\tif (next === INVALID) {\n\t\t\t\tinvalid = true;\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t}\n\t\tif (next === obj[key]) continue;\n\t\tout ??= { ...obj };\n\t\tif (next === void 0) delete out[key];\n\t\telse out[key] = next;\n\t}\n\treturn invalid ? INVALID : out ?? obj;\n}\n',
+    "function validateObjectValue(value, s, component, path, ctx) {\n\treturn validateObjectValueMoonbit(value, s, component, path, ctx);\n}\n",
+  ],
+  [
+    'function validateArrayValue(value, s, component, path, ctx) {\n\tif (!Array.isArray(value)) {\n\t\tpushValidationIssue(ctx, component, path, {\n\t\t\tcode: "type-mismatch",\n\t\t\texpected: "array",\n\t\t\tactual: jsType(value)\n\t\t});\n\t\treturn INVALID;\n\t}\n\tconst items = s["items"];\n\tif (!items || typeof items !== "object" || Array.isArray(items)) return value;\n\tlet out;\n\tfor (let i = 0; i < value.length; i++) {\n\t\tconst next = validateSchemaValue(value[i], items, component, `${path}/${i}`, ctx);\n\t\tif (next !== value[i] && !out) out = value.slice(0, i);\n\t\tif (out && next !== INVALID) out.push(next);\n\t}\n\treturn out ?? value;\n}\n',
+    "function validateArrayValue(value, s, component, path, ctx) {\n\treturn validateArrayValueMoonbit(value, s, component, path, ctx);\n}\n",
+  ],
+  [
+    'function validateLeafValue(value, s, component, path, ctx) {\n\tconst leaf = getScalarTypeInfo(s);\n\tif (leaf.expectedType == null && leaf.enumValues == null) return false;\n\tif (leaf.enumValues && ctx.partial) return false;\n\tconst mismatch = checkTypeMismatch(value, leaf);\n\tif (mismatch) {\n\t\tpushValidationIssue(ctx, component, path, {\n\t\t\tcode: "type-mismatch",\n\t\t\t...mismatch\n\t\t});\n\t\treturn true;\n\t}\n\treturn false;\n}\n',
+    "function validateLeafValue(value, s, component, path, ctx) {\n\treturn validateLeafValueMoonbit(value, s, component, path, ctx);\n}\n",
+  ],
+  [
+    'function validateSchemaValue(value, schema, component, path, ctx) {\n\tif (!schema || typeof schema !== "object" || Array.isArray(schema)) return value;\n\tconst s = schema;\n\tif (value == null) return value;\n\tif (isASTNode(value)) return value;\n\tif (isElementNode(value)) return validateElementPosition(value, s, component, path, ctx) ? INVALID : value;\n\tif (isCompositeSchema(s)) {\n\t\tif (!isOnlyComponentSlot(s, ctx)) return value;\n\t\tpushValidationIssue(ctx, component, path, {\n\t\t\tcode: "type-mismatch",\n\t\t\texpected: slotRefNames(s).join(" | "),\n\t\t\tactual: Array.isArray(value) ? "array" : typeof value === "object" ? "plain object" : typeof value\n\t\t});\n\t\treturn INVALID;\n\t}\n\tconst type = s["type"];\n\tif (type === "object") return validateObjectValue(value, s, component, path, ctx);\n\tif (type === "array") return validateArrayValue(value, s, component, path, ctx);\n\treturn validateLeafValue(value, s, component, path, ctx) ? INVALID : value;\n}\n',
+    "function validateSchemaValue(value, schema, component, path, ctx) {\n\treturn validateSchemaValueMoonbit(value, schema, component, path, ctx);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -1075,6 +1099,140 @@ function validationMessageMoonbit(component, path, issue) {
   }
   return undefined;
 }
+function resolveInvalidValueMoonbit(required, defaultValue) {
+  const defined = defaultValue !== void 0;
+  const step = __ouiShape({ phase: "repair", defined, required: !defined && Boolean(required) });
+  if (step.op === "keep") return defaultValue;
+  if (step.op === "invalid") return INVALID;
+  return undefined;
+}
+function validateElementPositionMoonbit(element, s, component, path, ctx) {
+  if (__ouiShape({ phase: "place", composite: isCompositeSchema(s) }).op === "skip") return false;
+  const shaped = typeof s["type"] === "string" || Array.isArray(s["enum"]) || "const" in s;
+  if (__ouiShape({ phase: "shaped", shaped }).op === "bad") {
+    pushValidationIssue(ctx, component, path, {
+      code: "type-mismatch",
+      expected: typeof s["type"] === "string" ? s["type"] : "a literal value",
+      actual: 'component "' + element.typeName + '"'
+    });
+    return true;
+  }
+  return false;
+}
+function validateObjectValueMoonbit(value, s, component, path, ctx) {
+  if (__ouiShape({ phase: "box", bad: typeof value !== "object" || Array.isArray(value) }).op === "mismatch") {
+    pushValidationIssue(ctx, component, path, {
+      code: "type-mismatch",
+      expected: "object",
+      actual: jsType(value)
+    });
+    return INVALID;
+  }
+  const obj = value;
+  let out;
+  const first = s["properties"];
+  const propsPresent = Boolean(first);
+  const propsObject = propsPresent && typeof s["properties"] === "object";
+  const props = __ouiShape({ phase: "props", present: propsPresent, object: propsObject }).op === "use" ? s["properties"] : NO_PROPS;
+  const listed = Array.isArray(s["required"]);
+  const required = __ouiShape({ phase: "req", list: listed }).op === "use" ? s["required"] : NO_REQUIRED;
+  let invalid = false;
+  if (__ouiShape({ phase: "need", partial: Boolean(ctx.partial) }).op === "scan") {
+    for (const key of required) {
+      const present = key in obj;
+      const nil = present && obj[key] == null;
+      if (__ouiShape({ phase: "hole", present, nil }).op !== "fill") continue;
+      const fallback = getSchemaDefaultValue(props[key]);
+      if (__ouiShape({ phase: "fill", defined: fallback !== void 0 }).op === "default") {
+        (out ??= { ...obj })[key] = fallback;
+        continue;
+      }
+      pushValidationIssue(ctx, component, path + "/" + key, {
+        code: present ? "null-required" : "missing-required"
+      });
+      invalid = true;
+    }
+  }
+  for (const key of Object.keys(props)) {
+    if (!(key in obj)) continue;
+    const sub = props[key];
+    let next = validateSchemaValue(obj[key], sub, component, path + "/" + key, ctx);
+    if (__ouiShape({ phase: "edge", invalid: next === INVALID }).op === "repair") {
+      next = resolveInvalidValue(required.includes(key), getSchemaDefaultValue(sub));
+      if (next === INVALID) {
+        invalid = true;
+        continue;
+      }
+    }
+    if (__ouiShape({ phase: "same", same: next === obj[key] }).op === "keep") continue;
+    out ??= { ...obj };
+    if (__ouiShape({ phase: "write", nil: next === void 0 }).op === "delete") delete out[key];
+    else out[key] = next;
+  }
+  if (__ouiShape({ phase: "done", invalid }).op === "invalid") return INVALID;
+  return out ?? obj;
+}
+function validateArrayValueMoonbit(value, s, component, path, ctx) {
+  if (__ouiShape({ phase: "box", bad: !Array.isArray(value) }).op === "mismatch") {
+    pushValidationIssue(ctx, component, path, {
+      code: "type-mismatch",
+      expected: "array",
+      actual: jsType(value)
+    });
+    return INVALID;
+  }
+  const items = s["items"];
+  const bad = !items || typeof items !== "object" || Array.isArray(items);
+  if (__ouiShape({ phase: "items", bad }).op === "keep") return value;
+  let out;
+  for (let i = 0; i < value.length; i++) {
+    const next = validateSchemaValue(value[i], items, component, path + "/" + i, ctx);
+    const changed = next !== value[i];
+    if (__ouiShape({ phase: "cell", changed, fresh: !out }).op === "copy") out = value.slice(0, i);
+    if (__ouiShape({ phase: "push", open: Boolean(out), valid: next !== INVALID }).op === "push") out.push(next);
+  }
+  return out ?? value;
+}
+function validateLeafValueMoonbit(value, s, component, path, ctx) {
+  const leaf = getScalarTypeInfo(s);
+  const typed = leaf.expectedType != null;
+  const enums = !typed && leaf.enumValues != null;
+  if (__ouiShape({ phase: "leaf", typed, enums }).op === "skip") return false;
+  const listed = Boolean(leaf.enumValues);
+  const partial = listed && Boolean(ctx.partial);
+  if (__ouiShape({ phase: "defer", listed, partial }).op === "defer") return false;
+  const mismatch = checkTypeMismatch(value, leaf);
+  if (__ouiShape({ phase: "miss", bad: Boolean(mismatch) }).op === "bad") {
+    pushValidationIssue(ctx, component, path, {
+      code: "type-mismatch",
+      ...mismatch
+    });
+    return true;
+  }
+  return false;
+}
+function validateSchemaValueMoonbit(value, schema, component, path, ctx) {
+  if (__ouiShape({ phase: "gate", bad: !schema || typeof schema !== "object" || Array.isArray(schema) }).op === "keep") return value;
+  if (__ouiShape({ phase: "value", nil: value == null }).op === "keep") return value;
+  if (__ouiShape({ phase: "ast", ast: isASTNode(value) }).op === "keep") return value;
+  if (__ouiShape({ phase: "element", element: isElementNode(value) }).op === "position") {
+    return validateElementPosition(value, schema, component, path, ctx) ? INVALID : value;
+  }
+  if (__ouiShape({ phase: "shape", composite: isCompositeSchema(schema) }).op === "slot") {
+    if (!isOnlyComponentSlot(schema, ctx)) return value;
+    pushValidationIssue(ctx, component, path, {
+      code: "type-mismatch",
+      expected: slotRefNames(schema).join(" | "),
+      actual: Array.isArray(value) ? "array" : typeof value === "object" ? "plain object" : typeof value
+    });
+    return INVALID;
+  }
+  const type = schema["type"];
+  const step = __ouiShape({ phase: "kind", object: type === "object", array: type === "array" });
+  if (step.op === "object") return validateObjectValue(value, schema, component, path, ctx);
+  if (step.op === "array") return validateArrayValue(value, schema, component, path, ctx);
+  return validateLeafValue(value, schema, component, path, ctx) ? INVALID : value;
+}
 `;
 
 function usage() {
@@ -1095,11 +1253,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg, shapeStep as __ouiShape } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg, shapeStep: __ouiShape } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -1112,7 +1270,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 57;
+  const expected = 63;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,
