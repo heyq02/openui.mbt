@@ -316,6 +316,10 @@ const REPLACEMENTS = [
     'function tokenize(src) {\n\tconst tokens = [];\n\tlet i = 0;\n\tconst n = src.length;\n\twhile (i < n) {\n\t\twhile (i < n && (src[i] === " " || src[i] === "\t" || src[i] === "\\r")) i++;\n\t\tif (i >= n) break;\n\t\tconst c = src[i];\n\t\tif (c === "\\n") {\n\t\t\ttokens.push({ t: 0 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "(") {\n\t\t\ttokens.push({ t: 1 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ")") {\n\t\t\ttokens.push({ t: 2 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "[") {\n\t\t\ttokens.push({ t: 3 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "]") {\n\t\t\ttokens.push({ t: 4 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "{") {\n\t\t\ttokens.push({ t: 5 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "}") {\n\t\t\ttokens.push({ t: 6 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ",") {\n\t\t\ttokens.push({ t: 7 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ":") {\n\t\t\ttokens.push({ t: 8 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "=") {\n\t\t\tif (i + 1 < n && src[i + 1] === "=") {\n\t\t\t\ttokens.push({ t: 25 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 9 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "!") {\n\t\t\tif (i + 1 < n && src[i + 1] === "=") {\n\t\t\t\ttokens.push({ t: 26 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 33 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ">") {\n\t\t\tif (i + 1 < n && src[i + 1] === "=") {\n\t\t\t\ttokens.push({ t: 29 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 27 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "<") {\n\t\t\tif (i + 1 < n && src[i + 1] === "=") {\n\t\t\t\ttokens.push({ t: 30 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 28 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "&") {\n\t\t\tif (i + 1 < n && src[i + 1] === "&") {\n\t\t\t\ttokens.push({ t: 31 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 31 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "|") {\n\t\t\tif (i + 1 < n && src[i + 1] === "|") {\n\t\t\t\ttokens.push({ t: 32 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 32 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ".") {\n\t\t\ttokens.push({ t: 19 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "?") {\n\t\t\ttokens.push({ t: 34 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "+") {\n\t\t\ttokens.push({ t: 20 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "*") {\n\t\t\ttokens.push({ t: 22 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "/") {\n\t\t\ttokens.push({ t: 23 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "%") {\n\t\t\ttokens.push({ t: 24 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "\\"") {\n\t\t\tconst start = i;\n\t\t\ti++;\n\t\t\tlet isClosed = false;\n\t\t\twhile (i < n) if (src[i] === "\\\\") i += 2;\n\t\t\telse if (src[i] === "\\"") {\n\t\t\t\ti++;\n\t\t\t\tisClosed = true;\n\t\t\t\tbreak;\n\t\t\t} else i++;\n\t\t\tconst rawString = src.slice(start, i);\n\t\t\ttry {\n\t\t\t\tconst validJsonString = isClosed ? rawString : rawString + "\\"";\n\t\t\t\ttokens.push({\n\t\t\t\t\tt: 14,\n\t\t\t\t\tv: JSON.parse(validJsonString)\n\t\t\t\t});\n\t\t\t} catch {\n\t\t\t\tconst stripped = rawString.replace(/^"|"$/g, "");\n\t\t\t\ttokens.push({\n\t\t\t\t\tt: 14,\n\t\t\t\t\tv: stripped\n\t\t\t\t});\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "\'") {\n\t\t\ti++;\n\t\t\tlet result = "";\n\t\t\twhile (i < n) if (src[i] === "\\\\") {\n\t\t\t\ti++;\n\t\t\t\tif (i < n) {\n\t\t\t\t\tconst esc = src[i];\n\t\t\t\t\tif (esc === "\'") result += "\'";\n\t\t\t\t\telse if (esc === "\\\\") result += "\\\\";\n\t\t\t\t\telse if (esc === "n") result += "\\n";\n\t\t\t\t\telse if (esc === "t") result += "\t";\n\t\t\t\t\telse result += esc;\n\t\t\t\t\ti++;\n\t\t\t\t}\n\t\t\t} else if (src[i] === "\'") {\n\t\t\t\ti++;\n\t\t\t\tbreak;\n\t\t\t} else {\n\t\t\t\tresult += src[i];\n\t\t\t\ti++;\n\t\t\t}\n\t\t\ttokens.push({\n\t\t\t\tt: 14,\n\t\t\t\tv: result\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "-") {\n\t\t\tconst prev = tokens.length > 0 ? tokens[tokens.length - 1] : null;\n\t\t\tif (!(prev != null && (prev.t === 15 || prev.t === 14 || prev.t === 16 || prev.t === 17 || prev.t === 2 || prev.t === 4 || prev.t === 10 || prev.t === 11 || prev.t === 12 || prev.t === 18 || prev.t === 35)) && i + 1 < n && src[i + 1] >= "0" && src[i + 1] <= "9") {} else {\n\t\t\t\ttokens.push({ t: 21 });\n\t\t\t\ti++;\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t}\n\t\tconst isDigit = c >= "0" && c <= "9";\n\t\tconst isNegDigit = c === "-" && i + 1 < n && src[i + 1] >= "0" && src[i + 1] <= "9";\n\t\tif (isDigit || isNegDigit) {\n\t\t\tconst start = i;\n\t\t\tif (src[i] === "-") i++;\n\t\t\twhile (i < n && src[i] >= "0" && src[i] <= "9") i++;\n\t\t\tif (i < n && src[i] === "." && i + 1 < n && src[i + 1] >= "0" && src[i + 1] <= "9") {\n\t\t\t\ti++;\n\t\t\t\twhile (i < n && src[i] >= "0" && src[i] <= "9") i++;\n\t\t\t}\n\t\t\tif (i < n && (src[i] === "e" || src[i] === "E")) {\n\t\t\t\ti++;\n\t\t\t\tif (i < n && (src[i] === "+" || src[i] === "-")) i++;\n\t\t\t\twhile (i < n && src[i] >= "0" && src[i] <= "9") i++;\n\t\t\t}\n\t\t\ttokens.push({\n\t\t\t\tt: 15,\n\t\t\t\tv: +src.slice(start, i)\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "$" && i + 1 < n && (src[i + 1] >= "a" && src[i + 1] <= "z" || src[i + 1] >= "A" && src[i + 1] <= "Z" || src[i + 1] === "_")) {\n\t\t\tconst start = i;\n\t\t\ti++;\n\t\t\twhile (i < n && (src[i] >= "a" && src[i] <= "z" || src[i] >= "A" && src[i] <= "Z" || src[i] >= "0" && src[i] <= "9" || src[i] === "_")) i++;\n\t\t\ttokens.push({\n\t\t\t\tt: 18,\n\t\t\t\tv: src.slice(start, i)\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\tif (c >= "a" && c <= "z" || c >= "A" && c <= "Z" || c === "_") {\n\t\t\tconst start = i;\n\t\t\twhile (i < n && (src[i] >= "a" && src[i] <= "z" || src[i] >= "A" && src[i] <= "Z" || src[i] >= "0" && src[i] <= "9" || src[i] === "_")) i++;\n\t\t\tconst word = src.slice(start, i);\n\t\t\tif (word === "true") {\n\t\t\t\ttokens.push({ t: 10 });\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tif (word === "false") {\n\t\t\t\ttokens.push({ t: 11 });\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tif (word === "null") {\n\t\t\t\ttokens.push({ t: 12 });\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tconst kind = c >= "A" && c <= "Z" ? 17 : 16;\n\t\t\ttokens.push({\n\t\t\t\tt: kind,\n\t\t\t\tv: word\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "@" && i + 1 < n && (src[i + 1] >= "a" && src[i + 1] <= "z" || src[i + 1] >= "A" && src[i + 1] <= "Z" || src[i + 1] === "_")) {\n\t\t\ti++;\n\t\t\tconst start = i;\n\t\t\twhile (i < n && (src[i] >= "a" && src[i] <= "z" || src[i] >= "A" && src[i] <= "Z" || src[i] >= "0" && src[i] <= "9" || src[i] === "_")) i++;\n\t\t\ttokens.push({\n\t\t\t\tt: 35,\n\t\t\t\tv: src.slice(start, i)\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\ti++;\n\t}\n\ttokens.push({ t: 13 });\n\treturn tokens;\n}\n',
     "function tokenize(src) {\n\treturn tokenizeMoonbit(src);\n}\n",
   ],
+  [
+    'function parseExpression(tokens) {\n\tlet pos = 0;\n\tconst cur = () => tokens[pos] ?? { t: 13 };\n\tconst adv = () => {\n\t\tconst tok = cur();\n\t\tpos++;\n\t\treturn tok;\n\t};\n\tconst eat = (kind) => {\n\t\tif (cur().t === kind) pos++;\n\t};\n\tfunction getInfixPrec(tok) {\n\t\tswitch (tok.t) {\n\t\t\tcase 34: return PREC_TERNARY;\n\t\t\tcase 32: return PREC_OR;\n\t\t\tcase 31: return PREC_AND;\n\t\t\tcase 25:\n\t\t\tcase 26: return PREC_EQ;\n\t\t\tcase 27:\n\t\t\tcase 28:\n\t\t\tcase 29:\n\t\t\tcase 30: return PREC_CMP;\n\t\t\tcase 20:\n\t\t\tcase 21: return PREC_ADD;\n\t\t\tcase 22:\n\t\t\tcase 23:\n\t\t\tcase 24: return PREC_MUL;\n\t\t\tcase 19:\n\t\t\tcase 3: return PREC_MEMBER;\n\t\t\tdefault: return 0;\n\t\t}\n\t}\n\tfunction parseExpr(minPrec = 0) {\n\t\tlet left = parsePrefix();\n\t\twhile (getInfixPrec(cur()) > minPrec) left = parseInfix(left);\n\t\treturn left;\n\t}\n\tfunction parsePrefix() {\n\t\tconst tok = cur();\n\t\tif (tok.t === 14) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "Str",\n\t\t\t\tv: tok.v\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 15) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "Num",\n\t\t\t\tv: tok.v\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 10) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "Bool",\n\t\t\t\tv: true\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 11) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "Bool",\n\t\t\t\tv: false\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 12) {\n\t\t\tadv();\n\t\t\treturn { k: "Null" };\n\t\t}\n\t\tif (tok.t === 3) return parseArr();\n\t\tif (tok.t === 5) return parseObj();\n\t\tif (tok.t === 18) {\n\t\t\tconst name = tok.v;\n\t\t\tadv();\n\t\t\tif (cur().t === 9) {\n\t\t\t\tadv();\n\t\t\t\treturn {\n\t\t\t\t\tk: "Assign",\n\t\t\t\t\ttarget: name,\n\t\t\t\t\tvalue: parseExpr(0)\n\t\t\t\t};\n\t\t\t}\n\t\t\treturn {\n\t\t\t\tk: "StateRef",\n\t\t\t\tn: name\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 17) {\n\t\t\tconst name = tok.v;\n\t\t\tif (tokens[pos + 1]?.t === 1 && (!isBuiltin(name) || name === "Action")) return parseComp();\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "Ref",\n\t\t\t\tn: name\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 35) {\n\t\t\tif (tokens[pos + 1]?.t === 1) {\n\t\t\t\tconst call = parseComp();\n\t\t\t\tif (call.k === "Comp" && !isBuiltin(call.name)) call.fn = true;\n\t\t\t\treturn call;\n\t\t\t}\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "Ref",\n\t\t\t\tn: tok.v\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 16) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "Ref",\n\t\t\t\tn: tok.v\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 33) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "UnaryOp",\n\t\t\t\top: "!",\n\t\t\t\toperand: parseExpr(PREC_UNARY)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 21) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "UnaryOp",\n\t\t\t\top: "-",\n\t\t\t\toperand: parseExpr(PREC_UNARY)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 1) {\n\t\t\tadv();\n\t\t\tconst inner = parseExpr(0);\n\t\t\teat(2);\n\t\t\treturn inner;\n\t\t}\n\t\tadv();\n\t\treturn { k: "Null" };\n\t}\n\tfunction parseInfix(left) {\n\t\tconst tok = cur();\n\t\tif (tok.t === 20) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "+",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_ADD)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 21) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "-",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_ADD)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 22) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "*",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_MUL)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 23) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "/",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_MUL)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 24) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "%",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_MUL)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 25) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "==",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_EQ)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 26) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "!=",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_EQ)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 27) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: ">",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_CMP)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 28) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "<",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_CMP)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 29) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: ">=",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_CMP)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 30) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "<=",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_CMP)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 31) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "&&",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_AND)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 32) {\n\t\t\tadv();\n\t\t\treturn {\n\t\t\t\tk: "BinOp",\n\t\t\t\top: "||",\n\t\t\t\tleft,\n\t\t\t\tright: parseExpr(PREC_OR)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 34) {\n\t\t\tadv();\n\t\t\tconst then = parseExpr(0);\n\t\t\teat(8);\n\t\t\treturn {\n\t\t\t\tk: "Ternary",\n\t\t\t\tcond: left,\n\t\t\t\tthen,\n\t\t\t\telse: parseExpr(0)\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 19) {\n\t\t\tadv();\n\t\t\tconst fieldTok = cur();\n\t\t\treturn {\n\t\t\t\tk: "Member",\n\t\t\t\tobj: left,\n\t\t\t\tfield: fieldTok.t === 16 || fieldTok.t === 17 || fieldTok.t === 14 || fieldTok.t === 15 ? (adv(), String(fieldTok.v)) : fieldTok.t === 18 ? (adv(), fieldTok.v.replace(/^\\$/, "")) : (adv(), "?")\n\t\t\t};\n\t\t}\n\t\tif (tok.t === 3) {\n\t\t\tadv();\n\t\t\tconst index = parseExpr(0);\n\t\t\teat(4);\n\t\t\treturn {\n\t\t\t\tk: "Index",\n\t\t\t\tobj: left,\n\t\t\t\tindex\n\t\t\t};\n\t\t}\n\t\treturn left;\n\t}\n\t/** Parse `TypeName(arg1, arg2, ...)` */\n\tfunction parseComp() {\n\t\tconst name = cur().v;\n\t\tadv();\n\t\teat(1);\n\t\tconst args = [];\n\t\twhile (cur().t !== 2 && cur().t !== 13) {\n\t\t\targs.push(parseExpr(0));\n\t\t\tif (cur().t === 7) adv();\n\t\t}\n\t\teat(2);\n\t\treturn {\n\t\t\tk: "Comp",\n\t\t\tname,\n\t\t\targs\n\t\t};\n\t}\n\t/** Parse `[elem1, elem2, ...]` */\n\tfunction parseArr() {\n\t\tadv();\n\t\tconst els = [];\n\t\twhile (cur().t !== 4 && cur().t !== 13) {\n\t\t\tels.push(parseExpr(0));\n\t\t\tif (cur().t === 7) adv();\n\t\t}\n\t\teat(4);\n\t\treturn {\n\t\t\tk: "Arr",\n\t\t\tels\n\t\t};\n\t}\n\t/** Parse `{ key: value, ... }` */\n\tfunction parseObj() {\n\t\tadv();\n\t\tconst entries = [];\n\t\twhile (cur().t !== 6 && cur().t !== 13) {\n\t\t\tconst kt = cur();\n\t\t\tconst key = kt.t === 16 || kt.t === 14 || kt.t === 17 || kt.t === 15 ? (adv(), String(kt.v)) : kt.t === 18 ? (adv(), kt.v.replace(/^\\$/, "")) : (adv(), "?");\n\t\t\teat(8);\n\t\t\tentries.push([key, parseExpr(0)]);\n\t\t\tif (cur().t === 7) adv();\n\t\t}\n\t\teat(6);\n\t\treturn {\n\t\t\tk: "Obj",\n\t\t\tentries\n\t\t};\n\t}\n\treturn parseExpr(0);\n}\n',
+    "function parseExpression(tokens) {\n\treturn parseExpressionMoonbit(tokens);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -1600,6 +1604,97 @@ function tokenizeMoonbit(src) {
   }
   return out;
 }
+
+function stripStateName(value) {
+  if (typeof value === "string") {
+    if (value.charCodeAt(0) === 36) return value.slice(1);
+    return value;
+  }
+  return value.replace(new RegExp("^" + String.fromCharCode(36)), "");
+}
+function expressionKey(spec, tokens) {
+  if (!spec || spec.op === "q") return "?";
+  const value = tokens[spec.at].v;
+  if (spec.op === "strip") return stripStateName(value);
+  return String(value);
+}
+function rehydrateExpression(node, tokens) {
+  if (!node || typeof node !== "object") return { k: "Null" };
+  if (node.k === "Str" || node.k === "Num") return { k: node.k, v: tokens[node.at].v };
+  if (node.k === "Bool") return { k: "Bool", v: node.v };
+  if (node.k === "Null") return { k: "Null" };
+  if (node.k === "Ref") return { k: "Ref", n: tokens[node.at].v };
+  if (node.k === "StateRef") return { k: "StateRef", n: tokens[node.at].v };
+  if (node.k === "Assign") {
+    return { k: "Assign", target: tokens[node.at].v, value: rehydrateExpression(node.value, tokens) };
+  }
+  if (node.k === "Comp") {
+    const call = {
+      k: "Comp",
+      name: tokens[node.at].v,
+      args: node.args.map((arg) => rehydrateExpression(arg, tokens)),
+    };
+    if (node.fn) call.fn = true;
+    return call;
+  }
+  if (node.k === "UnaryOp") {
+    return { k: "UnaryOp", op: node.op, operand: rehydrateExpression(node.operand, tokens) };
+  }
+  if (node.k === "BinOp") {
+    return {
+      k: "BinOp",
+      op: node.op,
+      left: rehydrateExpression(node.left, tokens),
+      right: rehydrateExpression(node.right, tokens),
+    };
+  }
+  if (node.k === "Ternary") {
+    return {
+      k: "Ternary",
+      cond: rehydrateExpression(node.cond, tokens),
+      then: rehydrateExpression(node.then, tokens),
+      else: rehydrateExpression(node.else, tokens),
+    };
+  }
+  if (node.k === "Member") {
+    return {
+      k: "Member",
+      obj: rehydrateExpression(node.obj, tokens),
+      field: expressionKey(node.field, tokens),
+    };
+  }
+  if (node.k === "Index") {
+    return {
+      k: "Index",
+      obj: rehydrateExpression(node.obj, tokens),
+      index: rehydrateExpression(node.index, tokens),
+    };
+  }
+  if (node.k === "Arr") return { k: "Arr", els: node.els.map((el) => rehydrateExpression(el, tokens)) };
+  if (node.k === "Obj") {
+    return {
+      k: "Obj",
+      entries: node.entries.map((entry) => [
+        expressionKey(entry.key, tokens),
+        rehydrateExpression(entry.value, tokens),
+      ]),
+    };
+  }
+  return { k: "Null" };
+}
+function parseExpressionMoonbit(tokens) {
+  const length = tokens.length;
+  const items = [];
+  if (typeof length === "number" && length >= 0) {
+    for (let index = 0; index < length; index += 1) {
+      const tok = tokens[index];
+      const item = { t: tok.t };
+      if (typeof tok.v === "string") item.s = tok.v;
+      items.push(item);
+    }
+  }
+  return rehydrateExpression(__ouiParseExpression(items), tokens);
+}
 `;
 
 function usage() {
@@ -1620,11 +1715,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg, shapeStep as __ouiShape, bindStep as __ouiBind, linkStep as __ouiLink, wrapStep as __ouiWrap, tokenize as __ouiTokenize } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg, shapeStep as __ouiShape, bindStep as __ouiBind, linkStep as __ouiLink, wrapStep as __ouiWrap, tokenize as __ouiTokenize, parseExpressionTokens as __ouiParseExpression } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg, shapeStep: __ouiShape, bindStep: __ouiBind, linkStep: __ouiLink, wrapStep: __ouiWrap, tokenize: __ouiTokenize } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg, shapeStep: __ouiShape, bindStep: __ouiBind, linkStep: __ouiLink, wrapStep: __ouiWrap, tokenize: __ouiTokenize, parseExpressionTokens: __ouiParseExpression } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -1637,7 +1732,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 84;
+  const expected = 85;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

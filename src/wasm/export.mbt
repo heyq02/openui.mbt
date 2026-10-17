@@ -524,3 +524,10 @@ pub fn link_step(payload_json : String) -> String {
 pub fn wrap_step(payload_json : String) -> String {
   @openui.wrap_step(payload_json)
 }
+
+///|
+/// Expression skeleton for official numeric tokens. The host copies `tok.v`.
+#export_name("parse_expression")
+pub fn parse_expression(tokens_json : String) -> String {
+  @openui.parse_expression_json(tokens_json)
+}

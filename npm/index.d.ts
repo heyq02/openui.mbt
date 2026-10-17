@@ -54,6 +54,7 @@ export interface MaterializeResult {
 
 export function parseProgram(source: string): MoonbitProgram;
 export function tokenize(source: string): MoonbitToken[];
+export function parseExpressionTokens(tokens: unknown[]): unknown;
 export function materializeProgram(
   source: string,
   schema: string,
