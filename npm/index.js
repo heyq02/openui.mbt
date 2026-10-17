@@ -68,6 +68,8 @@ const {
   to_number: toNumberOpenui,
   evaluate_root: evaluateRootOpenui,
   each_step: eachStepOpenui,
+  prop_step: propStepOpenui,
+  prop_error: propErrorOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1265,6 +1267,19 @@ export function rootStep(tag) {
 /** `Each` gate. The host still evaluates the list and the template. */
 export function eachStep(payload) {
   return JSON.parse(eachStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Next step for one prop value. The host evaluates, recurses, and reads state. */
+export function propStep(payload) {
+  return JSON.parse(propStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Runtime error object for a prop that throws. `statementId` stays null here. */
+export function propError(payload) {
+  const key = payload && typeof payload.key === "string" ? payload.key : "";
+  const typeName = payload && typeof payload.typeName === "string" ? payload.typeName : "";
+  const message = payload && typeof payload.message === "string" ? payload.message : "";
+  return JSON.parse(propErrorOpenui(JSON.stringify({ key, typeName, message })));
 }
 
 /** Official `toNumber`. An existing number is returned as itself. */

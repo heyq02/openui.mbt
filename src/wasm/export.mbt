@@ -377,3 +377,17 @@ pub fn evaluate_root(tag : String) -> String {
 pub fn each_step(payload_json : String) -> String {
   @openui.each_step(payload_json)
 }
+
+///|
+/// Next step for one prop value. The host evaluates and recurses.
+#export_name("prop_step")
+pub fn prop_step(payload_json : String) -> String {
+  @openui.prop_step(payload_json)
+}
+
+///|
+/// Runtime error text for a prop that throws. The host keeps the live component.
+#export_name("prop_error")
+pub fn prop_error(payload_json : String) -> String {
+  @openui.prop_error(payload_json)
+}

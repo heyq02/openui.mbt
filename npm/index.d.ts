@@ -157,6 +157,24 @@ export function eachStep(payload: {
   k?: string;
   ok?: boolean;
 }): { op: string };
+export function propStep(payload: {
+  phase?: string;
+  kind?: string;
+  k?: string;
+  reactive?: boolean;
+  element?: boolean;
+  array?: boolean;
+  assign?: boolean;
+  needs?: boolean;
+}): { op: string };
+export function propError(payload: { key?: string; typeName?: string; message?: string }): {
+  source: string;
+  code: string;
+  component: string;
+  statementId: null;
+  message: string;
+  hint: string;
+};
 export function stableStringify(value: unknown): string | undefined;
 export function buildCacheKey(toolName: unknown, args: unknown, deps: unknown): string;
 export function extractToolResult(payload: {

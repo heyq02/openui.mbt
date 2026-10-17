@@ -136,6 +136,14 @@ const REPLACEMENTS = [
     'function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\tif (name === "Each") {\n\t\tif (args.length < 3) return [];\n\t\tconst arr = evaluate(args[0], context);\n\t\tif (!Array.isArray(arr)) return [];\n\t\tconst varName = args[1].k === "Ref" ? args[1].n : args[1].k === "Str" ? args[1].v : null;\n\t\tif (!varName) return [];\n\t\tconst template = args[2];\n\t\treturn arr.map((item, _idx) => {\n\t\t\tconst substituted = substituteRef(template, varName, item);\n\t\t\tconst childCtx = {\n\t\t\t\t...context,\n\t\t\t\tresolveRef: (refName) => {\n\t\t\t\t\tif (refName === varName) return item;\n\t\t\t\t\treturn context.resolveRef(refName);\n\t\t\t\t}\n\t\t\t};\n\t\t\tconst result = evaluate(substituted, childCtx, schemaCtx);\n\t\t\tif (schemaCtx && isElementNode(result)) return evaluateElementInline(result, childCtx, schemaCtx);\n\t\t\treturn result;\n\t\t});\n\t}\n\treturn null;\n}\n',
     "function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\treturn evaluateLazyBuiltinMoonbit(name, args, context, schemaCtx);\n}\n",
   ],
+  [
+    'function evaluatePropValue$1(value, context, schemaCtx, reactiveSchema, callbacks) {\n\tif (value == null) return value;\n\tif (typeof value !== "object") return value;\n\tif (isASTNode(value)) {\n\t\tif (value.k === "StateRef" && reactiveSchema && isReactiveSchema(reactiveSchema)) return {\n\t\t\t__reactive: "assign",\n\t\t\ttarget: value.n,\n\t\t\texpr: {\n\t\t\t\tk: "StateRef",\n\t\t\t\tn: "$value"\n\t\t\t}\n\t\t};\n\t\tconst result = evaluate(value, context, schemaCtx);\n\t\tif (isElementNode(result)) return callbacks.recurseElement(result);\n\t\tif (Array.isArray(result)) return result.map((item) => isElementNode(item) ? callbacks.recurseElement(item) : item);\n\t\tif (isReactiveAssign(result) && !(reactiveSchema && isReactiveSchema(reactiveSchema))) return context.getState(result.target) ?? null;\n\t\treturn result;\n\t}\n\tif (typeof value === "string" && reactiveSchema && isReactiveSchema(reactiveSchema)) return value;\n\tif (Array.isArray(value)) return value.map((v) => callbacks.recurse(v, reactiveSchema));\n\tif (isElementNode(value)) return callbacks.recurseElement(value);\n\tif (isActionPlan(value)) return value;\n\tconst obj = value;\n\tlet needsEval = false;\n\tfor (const val of Object.values(obj)) if (typeof val === "object" && val !== null) {\n\t\tneedsEval = true;\n\t\tbreak;\n\t}\n\tif (needsEval) {\n\t\tconst result = {};\n\t\tfor (const [k, v] of Object.entries(obj)) result[k] = callbacks.recurse(v, reactiveSchema);\n\t\treturn result;\n\t}\n\treturn value;\n}\n',
+    'function evaluatePropValue$1(value, context, schemaCtx, reactiveSchema, callbacks) {\n\treturn evaluatePropValueMoonbit(value, context, schemaCtx, reactiveSchema, callbacks);\n}\n',
+  ],
+  [
+    'function evaluateElementProps(el, evalCtx) {\n\tif (el.hasDynamicProps === false) return el;\n\tconst schemaCtx = { library: evalCtx.library };\n\tconst def = evalCtx.library.components[el.typeName];\n\tconst evaluated = {};\n\tlet key = "";\n\tconst report = (msg) => {\n\t\tevalCtx.errors?.push({\n\t\t\tsource: "runtime",\n\t\t\tcode: "runtime-error",\n\t\t\tcomponent: el.typeName,\n\t\t\tstatementId: el.statementId,\n\t\t\tmessage: `Evaluating prop "${key}" on ${el.typeName} failed: ${msg}`,\n\t\t\thint: `Check the expression used for prop "${key}"`\n\t\t});\n\t};\n\tconst propCtx = evalCtx.ctx.functions || evalCtx.ctx.actions ? {\n\t\t...evalCtx,\n\t\tctx: {\n\t\t\t...evalCtx.ctx,\n\t\t\treportError: report\n\t\t}\n\t} : evalCtx;\n\tfor (const [propKey, value] of Object.entries(el.props)) {\n\t\tkey = propKey;\n\t\tconst propSchema = def?.props?.shape?.[key];\n\t\ttry {\n\t\t\tevaluated[key] = evaluatePropValue(value, propCtx, schemaCtx, propSchema);\n\t\t} catch (e) {\n\t\t\tevaluated[key] = value;\n\t\t\treport(e instanceof Error ? e.message : String(e));\n\t\t}\n\t}\n\treturn {\n\t\t...el,\n\t\tprops: evaluated\n\t};\n}\n',
+    'function evaluateElementProps(el, evalCtx) {\n\treturn evaluateElementPropsMoonbit(el, evalCtx);\n}\n',
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -406,6 +414,100 @@ function evaluateLazyBuiltinMoonbit(name, args, context, schemaCtx) {
     return result;
   });
 }
+function evaluatePropValueMoonbit(value, context, schemaCtx, reactiveSchema, callbacks) {
+  if (value == null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    const step = __ouiPropStep({ phase: "start", kind: "array" });
+    if (step.op === "arr") return value.map((item) => callbacks.recurse(item, reactiveSchema));
+    return value;
+  }
+  const seen = value.k;
+  const probe = __ouiPropStep({ phase: "kind", k: typeof seen === "string" ? seen : "" });
+  if (probe.op === "ast") {
+    const again = value.k;
+    const stateRef = again === "StateRef";
+    const reactive = stateRef && Boolean(reactiveSchema && isReactiveSchema(reactiveSchema));
+    const step = __ouiPropStep({
+      phase: "start",
+      kind: "ast",
+      k: stateRef ? "StateRef" : typeof again === "string" ? again : "",
+      reactive,
+    });
+    if (step.op === "assign") return {
+      __reactive: "assign",
+      target: value.n,
+      expr: { k: "StateRef", n: "$value" },
+    };
+    const result = evaluate(value, context, schemaCtx);
+    if (isElementNode(result)) {
+      const after = __ouiPropStep({ phase: "eval", element: true });
+      if (after.op === "el") return callbacks.recurseElement(result);
+      return result;
+    }
+    if (Array.isArray(result)) {
+      const after = __ouiPropStep({ phase: "eval", array: true });
+      if (after.op === "items") return result.map((item) => isElementNode(item) ? callbacks.recurseElement(item) : item);
+      return result;
+    }
+    if (isReactiveAssign(result)) {
+      const live = Boolean(reactiveSchema && isReactiveSchema(reactiveSchema));
+      const after = __ouiPropStep({ phase: "eval", assign: true, reactive: live });
+      if (after.op === "state") return context.getState(result.target) ?? null;
+      return result;
+    }
+    __ouiPropStep({ phase: "eval" });
+    return result;
+  }
+  if (isElementNode(value)) {
+    const step = __ouiPropStep({ phase: "start", kind: "el" });
+    if (step.op === "el") return callbacks.recurseElement(value);
+    return value;
+  }
+  if (isActionPlan(value)) {
+    __ouiPropStep({ phase: "start", kind: "plan" });
+    return value;
+  }
+  let needs = false;
+  for (const val of Object.values(value)) if (typeof val === "object" && val !== null) {
+    needs = true;
+    break;
+  }
+  const scanned = __ouiPropStep({ phase: "scan", needs });
+  if (scanned.op !== "obj") return value;
+  const result = {};
+  for (const [key, item] of Object.entries(value)) result[key] = callbacks.recurse(item, reactiveSchema);
+  return result;
+}
+function evaluateElementPropsMoonbit(el, evalCtx) {
+  if (el.hasDynamicProps === false) return el;
+  const schemaCtx = { library: evalCtx.library };
+  const def = evalCtx.library.components[el.typeName];
+  const evaluated = {};
+  let key = "";
+  const report = (msg) => {
+    const component = el.typeName;
+    const statementId = el.statementId;
+    const error = __ouiPropError({ key, typeName: String(el.typeName), message: String(msg) });
+    error.component = component;
+    error.statementId = statementId;
+    evalCtx.errors?.push(error);
+  };
+  const propCtx = evalCtx.ctx.functions || evalCtx.ctx.actions ? {
+    ...evalCtx,
+    ctx: { ...evalCtx.ctx, reportError: report },
+  } : evalCtx;
+  for (const [propKey, value] of Object.entries(el.props)) {
+    key = propKey;
+    const propSchema = def?.props?.shape?.[key];
+    try {
+      evaluated[key] = evaluatePropValue(value, propCtx, schemaCtx, propSchema);
+    } catch (e) {
+      evaluated[key] = value;
+      report(e instanceof Error ? e.message : String(e));
+    }
+  }
+  return { ...el, props: evaluated };
+}
 `;
 
 function usage() {
@@ -426,11 +528,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -443,7 +545,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 39;
+  const expected = 41;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,
