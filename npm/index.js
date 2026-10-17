@@ -55,6 +55,7 @@ const {
   eager_step: eagerStepOpenui,
   generate_prompt: generatePromptOpenui,
   cloud_config: cloudConfigOpenui,
+  substitute_ref: substituteRefOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -952,6 +953,107 @@ function encodeAstLiteral(node) {
 /** Convert a JavaScript value into a literal AST node. */
 export function toLiteralAST(value) {
   return reviveAst(JSON.parse(toLiteralAstOpenui(JSON.stringify(encodeLiteralInput(value)))));
+}
+
+function encodeTree(value, pool, seen) {
+  if (value === null) return { t: "z" };
+  if (value === undefined) return { t: "u" };
+  if (typeof value === "string") return { t: "s", v: value };
+  if (typeof value === "number") {
+    if (Number.isNaN(value)) return { t: "nan" };
+    if (value === Infinity) return { t: "inf" };
+    if (value === -Infinity) return { t: "-inf" };
+    if (Object.is(value, -0)) return { t: "n0" };
+    return { t: "n", v: value };
+  }
+  if (typeof value === "boolean") return { t: "b", v: value };
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      const items = [];
+      for (let index = 0; index < value.length; index += 1) {
+        items.push(index in value ? encodeTree(value[index], pool, seen) : { t: "h" });
+      }
+      return { t: "a", v: items };
+    }
+    const proto = Object.getPrototypeOf(value);
+    if (proto === Object.prototype || proto === null) {
+      return {
+        t: "o",
+        v: Object.entries(value).map(([key, item]) => [key, encodeTree(item, pool, seen)]),
+      };
+    }
+  }
+  if (seen.has(value)) return { t: "x", i: seen.get(value) };
+  const id = pool.length;
+  pool.push(value);
+  seen.set(value, id);
+  const type = typeof value;
+  const label = type === "function" || type === "symbol" || type === "bigint" ? type : "object";
+  return { t: "x", i: id, j: label };
+}
+
+function decodeTree(node, pool) {
+  if (!node || typeof node !== "object") return undefined;
+  if (node.t === "z") return null;
+  if (node.t === "u") return undefined;
+  if (node.t === "s" || node.t === "b" || node.t === "n") return node.v;
+  if (node.t === "nan") return NaN;
+  if (node.t === "inf") return Infinity;
+  if (node.t === "-inf") return -Infinity;
+  if (node.t === "n0") return -0;
+  if (node.t === "x") return pool[node.i];
+  if (node.t === "a") {
+    const out = [];
+    for (const item of node.v ?? []) {
+      if (item && item.t === "h") out.length += 1;
+      else out.push(decodeTree(item, pool));
+    }
+    return out;
+  }
+  if (node.t === "o") {
+    const out = {};
+    for (const pair of node.v ?? []) {
+      if (Array.isArray(pair)) out[pair[0]] = decodeTree(pair[1], pool);
+    }
+    return out;
+  }
+  return undefined;
+}
+
+function substThrow(why) {
+  if (why === "null") throw new TypeError("Cannot read properties of null (reading 'k')");
+  if (why === "undef") throw new TypeError("Cannot read properties of undefined (reading 'k')");
+  if (why === "map") throw new TypeError("Cannot read properties of undefined (reading 'map')");
+  if (why === "map-null") throw new TypeError("Cannot read properties of null (reading 'map')");
+  if (why === "map-fn") throw new TypeError("node.els.map is not a function");
+  if (why === "find") throw new TypeError("Cannot read properties of undefined (reading 'find')");
+  if (why === "find-null") throw new TypeError("Cannot read properties of null (reading 'find')");
+  if (why === "find-fn") throw new TypeError("entries.find is not a function");
+  throw new TypeError("is not iterable (cannot read property Symbol(Symbol.iterator))");
+}
+
+/** Replace `Ref(varName)` with the literal AST of `value`. */
+export function substituteRef(node, varName, value) {
+  void node.k;
+  const literal = toLiteralAST(value);
+  const pool = [];
+  const seen = new Map();
+  const encoded = JSON.parse(
+    substituteRefOpenui(
+      JSON.stringify(encodeTree(node, pool, seen)),
+      JSON.stringify(encodeTree(varName, pool, seen)),
+      JSON.stringify(encodeTree(literal, pool, seen)),
+    ),
+  );
+  if (encoded && encoded.t === "throw") {
+    if (encoded.why === "iter") {
+      throw new TypeError(
+        `${encoded.j} is not iterable (cannot read property Symbol(Symbol.iterator))`,
+      );
+    }
+    substThrow(encoded.why);
+  }
+  return decodeTree(encoded, pool);
 }
 
 /** Read a literal AST node. Returns `{ v }` or `undefined`. */

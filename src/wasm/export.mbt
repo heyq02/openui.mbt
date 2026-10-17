@@ -282,3 +282,14 @@ pub fn generate_prompt(spec_json : String) -> String {
 pub fn cloud_config(spec_json : String) -> String {
   @openui.cloud_config(spec_json)
 }
+
+///|
+/// Replace `Ref` nodes with an encoded literal. The host builds that literal.
+#export_name("substitute_ref")
+pub fn substitute_ref(
+  node_json : String,
+  var_name_json : String,
+  literal_json : String,
+) -> String {
+  @openui.substitute_ref(node_json, var_name_json, literal_json)
+}

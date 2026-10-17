@@ -130,6 +130,7 @@ export function toLiteralAST(value: unknown): {
   entries?: unknown[];
 };
 export function literalValue(node: { k?: unknown }): { v: unknown } | undefined;
+export function substituteRef(node: { k?: unknown }, varName: unknown, value: unknown): unknown;
 export function walkAST(node: { k?: unknown }, visit: (node: { k?: unknown }) => void): void;
 export function generatePrompt(spec: {
   root?: unknown;

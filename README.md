@@ -14,7 +14,7 @@ npm install @heyq02/openui.mbt @openuidev/lang-core@1.0.1
 npx oui.mbt patch
 ```
 
-`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse`、`createStreamingParser()`、`parseMessage()`、`buildMessage()`、`parseRules()`、`parseStructuredRules()`、`enrichErrors()`、`mergeStatements()`、`jsonToOpenUI()`、`evaluate()` 和内置字段校验换成 Wasm。`evaluate()` 的求值顺序在 MoonBit 里，`&&`、`||` 和 `?:` 只算会用到的一侧。`Count`、`First`、`Last`、`Sum`、`Avg`、`Min`、`Max`、`Abs`、`Floor`、`Ceil`、`Round` 在 MoonBit 里计算。`Run`、`Set`、`Reset` 的判定在 MoonBit 里，步骤对象仍由宿主按原来的节点组装。`generatePrompt()` 的正文在 MoonBit 里拼装。`generateCloudConfig()` 的库校验在 MoonBit 里，配置块仍由宿主序列化。`generateSystemPrompt()` 的遥测仍走官方 JavaScript。`walkAST()`、`isASTNode()`、`toLiteralAST()` 和 `literalValue()` 也在 MoonBit 里；`walkAST()` 仍把原来的节点交给访问函数。`OpenUrl` 和 `ToAssistant` 的步骤在 MoonBit 里组装，`context` 仍是宿主上的原值。`Sort`、`Filter`、`Each`、`Action`、用户函数和自定义动作仍走官方 JavaScript，值运算留在宿主，以保持 `==` 和对象身份。`url` 与 `pattern` 仍调用宿主的 `URL` 和 `RegExp`。预处理、自动补全、物化、state、query、mutation 的提取，以及 `]]>openui:` 消息的切分和写回都在 MoonBit 里完成。Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
+`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse`、`createStreamingParser()`、`parseMessage()`、`buildMessage()`、`parseRules()`、`parseStructuredRules()`、`enrichErrors()`、`mergeStatements()`、`jsonToOpenUI()`、`evaluate()` 和内置字段校验换成 Wasm。`evaluate()` 的求值顺序在 MoonBit 里，`&&`、`||` 和 `?:` 只算会用到的一侧。`Count`、`First`、`Last`、`Sum`、`Avg`、`Min`、`Max`、`Abs`、`Floor`、`Ceil`、`Round` 在 MoonBit 里计算。`Run`、`Set`、`Reset` 的判定在 MoonBit 里，步骤对象仍由宿主按原来的节点组装。`generatePrompt()` 的正文在 MoonBit 里拼装。`generateCloudConfig()` 的库校验在 MoonBit 里，配置块仍由宿主序列化。`generateSystemPrompt()` 的遥测仍走官方 JavaScript。`walkAST()`、`isASTNode()`、`toLiteralAST()` 和 `literalValue()` 也在 MoonBit 里；`walkAST()` 仍把原来的节点交给访问函数。`OpenUrl` 和 `ToAssistant` 的步骤在 MoonBit 里组装，`context` 仍是宿主上的原值。`substituteRef()` 在 MoonBit 里替换 `Each` 的循环引用，模板求值仍在宿主。`Sort`、`Filter`、`Action`、用户函数和自定义动作仍走官方 JavaScript，值运算留在宿主，以保持 `==` 和对象身份。`url` 与 `pattern` 仍调用宿主的 `URL` 和 `RegExp`。预处理、自动补全、物化、state、query、mutation 的提取，以及 `]]>openui:` 消息的切分和写回都在 MoonBit 里完成。Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
 
 ```js
 import { parseProgram } from "@heyq02/openui.mbt/parser";
@@ -52,7 +52,7 @@ const program = parseProgram('root = TextContent("Hello", "large")');
 
 注册表单的一次解析与官方持平，流式更快。50 个标量字段、嵌套字段、400 与 4000 个标量字段的一次解析和流式都更慢。整页时间仍由官方 Renderer 主导。
 
-Wasm 二进制 168179 字节，gzip 74284。demo 页面代码 gzip 从 1341307 到 1431667。注册表单整页一次解析的中位数是 229.1 ms 和 235.7 ms。同一页按行流式再绘制的中位数是 228.3 ms 和 232.3 ms。语法树遍历合入后的 Wasm 是 197145 字节，gzip 84428。内置数值调用合入后的 Wasm 是 205419 字节，gzip 87551。提示词拼装合入后的 Wasm 是 230100 字节，gzip 98583。云配置校验合入后的 Wasm 是 236475 字节，gzip 100982。动作步骤合入后的 Wasm 是 237680 字节，gzip 101366。上面的解析和整页时间没有重跑。
+Wasm 二进制 168179 字节，gzip 74284。demo 页面代码 gzip 从 1341307 到 1431667。注册表单整页一次解析的中位数是 229.1 ms 和 235.7 ms。同一页按行流式再绘制的中位数是 228.3 ms 和 232.3 ms。语法树遍历合入后的 Wasm 是 197145 字节，gzip 84428。内置数值调用合入后的 Wasm 是 205419 字节，gzip 87551。提示词拼装合入后的 Wasm 是 230100 字节，gzip 98583。云配置校验合入后的 Wasm 是 236475 字节，gzip 100982。动作步骤合入后的 Wasm 是 237680 字节，gzip 101366。引用替换合入后的 Wasm 是 244881 字节，gzip 104112。上面的解析和整页时间没有重跑。
 
 ```bash
 npm ci --prefix web

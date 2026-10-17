@@ -80,6 +80,10 @@ const REPLACEMENTS = [
     'function generateCloudConfig(spec) {\n\tlet config;\n\tif (spec.library) {\n\t\tconst issues = validateChatLibrary(spec.library);\n\t\tif (issues.length > 0) throw new Error(`[generateSystemPrompt] Invalid library: ${issues.map((i) => i.message).join(" ")}`);\n\t\tconst { components: _components, ...chatLibrary } = spec.library;\n\t\tconst promptOptions = pickCloudPromptOptions(spec.promptOptions);\n\t\tconfig = {\n\t\t\tchatLibrary,\n\t\t\t...promptOptions ? { systemPromptOptions: promptOptions } : {}\n\t\t};\n\t} else {\n\t\tif (spec.promptOptions && pickCloudPromptOptions(spec.promptOptions)) throw new Error("[generateSystemPrompt] promptOptions requires a library — the built-in library ignores it.");\n\t\tconfig = { libraryVersion: CLOUD_CHAT_LIBRARY_VERSION };\n\t}\n\tconst block = `${CLOUD_CONFIG_MARKER}${JSON.stringify(config)}`;\n\treturn spec.instructions ? `${block}\\n${spec.instructions}` : block;\n}\n',
     "function generateCloudConfig(spec) {\n\treturn generateCloudConfigMoonbit(spec);\n}\n",
   ],
+  [
+    'function substituteRef(node, varName, value) {\n\tswitch (node.k) {\n\t\tcase "Ref": return node.n === varName ? toLiteralAST(value) : node;\n\t\tcase "Member":\n\t\t\tif (isASTNode(node.obj)) {\n\t\t\t\tconst subObj = substituteRef(node.obj, varName, value);\n\t\t\t\tif (subObj.k === "Obj") {\n\t\t\t\t\tconst entry = subObj.entries.find(([k]) => k === node.field);\n\t\t\t\t\tif (entry) return entry[1];\n\t\t\t\t}\n\t\t\t\treturn {\n\t\t\t\t\t...node,\n\t\t\t\t\tobj: subObj\n\t\t\t\t};\n\t\t\t}\n\t\t\treturn node;\n\t\tcase "Index": return {\n\t\t\t...node,\n\t\t\tobj: isASTNode(node.obj) ? substituteRef(node.obj, varName, value) : node.obj,\n\t\t\tindex: isASTNode(node.index) ? substituteRef(node.index, varName, value) : node.index\n\t\t};\n\t\tcase "BinOp": return {\n\t\t\t...node,\n\t\t\tleft: substituteRef(node.left, varName, value),\n\t\t\tright: substituteRef(node.right, varName, value)\n\t\t};\n\t\tcase "UnaryOp": return {\n\t\t\t...node,\n\t\t\toperand: substituteRef(node.operand, varName, value)\n\t\t};\n\t\tcase "Ternary": return {\n\t\t\t...node,\n\t\t\tcond: substituteRef(node.cond, varName, value),\n\t\t\tthen: substituteRef(node.then, varName, value),\n\t\t\telse: substituteRef(node.else, varName, value)\n\t\t};\n\t\tcase "Arr": return {\n\t\t\t...node,\n\t\t\tels: node.els.map((e) => substituteRef(e, varName, value))\n\t\t};\n\t\tcase "Obj": return {\n\t\t\t...node,\n\t\t\tentries: node.entries.map(([k, v]) => [k, substituteRef(v, varName, value)])\n\t\t};\n\t\tcase "Comp": {\n\t\t\tconst sub = (a) => substituteRef(a, varName, value);\n\t\t\tconst result = {\n\t\t\t\t...node,\n\t\t\t\targs: node.args.map(sub)\n\t\t\t};\n\t\t\tif (node.mappedProps) result.mappedProps = mapValues(node.mappedProps, sub);\n\t\t\treturn result;\n\t\t}\n\t\tcase "Assign": return {\n\t\t\t...node,\n\t\t\tvalue: substituteRef(node.value, varName, value)\n\t\t};\n\t\tdefault: return node;\n\t}\n}\n',
+    "function substituteRef(node, varName, value) {\n\treturn substituteRefMoonbit(node, varName, value);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -182,6 +186,9 @@ function lazyStepMoonbit(node) {
   }
   return { steps: [] };
 }
+function substituteRefMoonbit(node, varName, value) {
+  return __ouiSubstituteRef(node, varName, value);
+}
 `;
 
 function usage() {
@@ -202,11 +209,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -219,7 +226,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 25;
+  const expected = 26;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,
