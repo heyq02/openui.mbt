@@ -46,6 +46,10 @@ const {
   eval_start: evalStartOpenui,
   eval_answer: evalAnswerOpenui,
   eval_cancel: evalCancelOpenui,
+  walk_plan: walkPlanOpenui,
+  is_ast_kind: isAstKindOpenui,
+  to_literal_ast: toLiteralAstOpenui,
+  literal_value: literalValueOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -268,26 +272,6 @@ export function enrichErrors(validationErrors, schema, componentNames) {
   });
 }
 
-const AST_KINDS = new Set([
-  "Comp",
-  "Ref",
-  "StateRef",
-  "RuntimeRef",
-  "BinOp",
-  "UnaryOp",
-  "Ternary",
-  "Member",
-  "Index",
-  "Assign",
-  "Str",
-  "Num",
-  "Bool",
-  "Null",
-  "Arr",
-  "Obj",
-  "Ph",
-]);
-
 function isElementNode(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   return (
@@ -299,9 +283,10 @@ function isElementNode(value) {
   );
 }
 
-function isASTNode(value) {
+/** True when `value` is an OpenUI AST node. */
+export function isASTNode(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  return AST_KINDS.has(value.k);
+  return typeof value.k === "string" && isAstKindOpenui(value.k) !== 0;
 }
 
 function sourceText(value) {
@@ -557,6 +542,127 @@ export function evaluatePure(node, context, schemaCtx, evalNode) {
     evalCancelOpenui();
     throw error;
   }
+}
+
+function encodeLiteralInput(value) {
+  if (value === null) return ["z"];
+  if (value === undefined) return ["u"];
+  if (typeof value === "string") return ["s", value];
+  if (typeof value === "number") {
+    if (Number.isNaN(value)) return ["n", ["nan"]];
+    if (value === Infinity) return ["n", ["inf"]];
+    if (value === -Infinity) return ["n", ["-inf"]];
+    if (Object.is(value, -0)) return ["n", ["-0"]];
+    return ["n", ["n", value]];
+  }
+  if (typeof value === "boolean") return ["b", value];
+  if (Array.isArray(value)) {
+    const items = [];
+    for (let i = 0; i < value.length; i++)
+      items.push(i in value ? encodeLiteralInput(value[i]) : ["h"]);
+    return ["a", items];
+  }
+  if (typeof value === "object") {
+    return ["o", Object.entries(value).map(([key, item]) => [key, encodeLiteralInput(item)])];
+  }
+  return ["x"];
+}
+
+function reviveNum(tag) {
+  if (tag[0] === "nan") return NaN;
+  if (tag[0] === "inf") return Infinity;
+  if (tag[0] === "-inf") return -Infinity;
+  if (tag[0] === "-0") return -0;
+  return tag[1];
+}
+
+function reviveValue(tag) {
+  if (tag[0] === "u") return undefined;
+  if (tag[0] === "z" || tag[0] === "x") return null;
+  if (tag[0] === "s" || tag[0] === "b") return tag[1];
+  if (tag[0] === "n") return reviveNum(tag[1]);
+  if (tag[0] === "a") return reviveList(tag[1], reviveValue);
+  if (tag[0] === "o")
+    return Object.fromEntries(tag[1].map(([key, item]) => [key, reviveValue(item)]));
+  return null;
+}
+
+function reviveList(items, revive) {
+  const out = [];
+  for (const item of items) {
+    if (item === null) out.length += 1;
+    else out.push(revive(item));
+  }
+  return out;
+}
+
+function reviveAst(node) {
+  if (node === null) return { k: "Null" };
+  if (node[0] === "Null") return { k: "Null" };
+  if (node[0] === "Str") return { k: "Str", v: node[1] };
+  if (node[0] === "Num") return { k: "Num", v: reviveNum(node[1]) };
+  if (node[0] === "Bool") return { k: "Bool", v: node[1] };
+  if (node[0] === "Arr") return { k: "Arr", els: reviveList(node[1], reviveAst) };
+  if (node[0] === "Obj")
+    return { k: "Obj", entries: node[1].map(([key, item]) => [key, reviveAst(item)]) };
+  return { k: "Null" };
+}
+
+function encodeAstLiteral(node) {
+  switch (node.k) {
+    case "Str":
+    case "Num":
+    case "Bool":
+      return [node.k, encodeLiteralInput(node.v)];
+    case "Null":
+      return ["Null"];
+    case "Arr":
+      return ["Arr", node.els.map((item) => encodeAstLiteral(item))];
+    case "Obj":
+      return ["Obj", node.entries.map(([key, item]) => [key, encodeAstLiteral(item)])];
+    default:
+      return ["Other"];
+  }
+}
+
+/** Convert a JavaScript value into a literal AST node. */
+export function toLiteralAST(value) {
+  return reviveAst(JSON.parse(toLiteralAstOpenui(JSON.stringify(encodeLiteralInput(value)))));
+}
+
+/** Read a literal AST node. Returns `{ v }` or `undefined`. */
+export function literalValue(node) {
+  const encoded = JSON.parse(literalValueOpenui(JSON.stringify(encodeAstLiteral(node))));
+  if (encoded[0] !== "ok") return undefined;
+  return { v: reviveValue(encoded[1]) };
+}
+
+function walkEdge(current, step, walk) {
+  if (step === "args" || step === "els" || step === "entries") {
+    const items = step === "args" ? current.args : step === "els" ? current.els : current.entries;
+    const count = items.length;
+    for (let i = 0; i < count; i++) {
+      if (!(i in items)) continue;
+      walk(step === "entries" ? items[i][1] : items[i]);
+    }
+    return;
+  }
+  if (step === "props") {
+    for (const value of Object.values(current.mappedProps ?? {})) walk(value);
+    return;
+  }
+  walk(current[step]);
+}
+
+/** Visit `node`, then each child in official order. `visit` receives the live node. */
+export function walkAST(node, visit) {
+  const walk = (current) => {
+    visit(current);
+    const kind = current.k;
+    const steps = typeof kind === "string" ? JSON.parse(walkPlanOpenui(kind)) : [];
+    for (const step of steps) walkEdge(current, step, walk);
+  };
+  walk(node);
 }
 
 /** Merge a patch onto an existing program. Unreachable statements are dropped. */

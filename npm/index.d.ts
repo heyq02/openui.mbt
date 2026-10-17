@@ -122,6 +122,15 @@ export interface EnrichedError {
 
 export function mergeStatements(existing: string, patch: string, rootId?: string): string;
 
+export function isASTNode(value: unknown): boolean;
+export function toLiteralAST(value: unknown): {
+  k: string;
+  v?: unknown;
+  els?: unknown[];
+  entries?: unknown[];
+};
+export function literalValue(node: { k?: unknown }): { v: unknown } | undefined;
+export function walkAST(node: { k?: unknown }, visit: (node: { k?: unknown }) => void): void;
 export function evaluatePure(
   node: { k?: unknown },
   context?: {

@@ -219,3 +219,31 @@ pub fn eval_answer(answer_json : String) -> String {
 pub fn eval_cancel() -> String {
   @openui.eval_cancel()
 }
+
+///|
+/// Child edges visited after the current AST node.
+#export_name("walk_plan")
+pub fn walk_plan(kind : String) -> String {
+  @openui.walk_plan(kind)
+}
+
+///|
+/// `1` when `kind` is an AST discriminant.
+#export_name("is_ast_kind")
+pub fn is_ast_kind(kind : String) -> Int32 {
+  @openui.is_ast_kind(kind)
+}
+
+///|
+/// Encode a tagged JavaScript value as a literal AST.
+#export_name("to_literal_ast")
+pub fn to_literal_ast(value_json : String) -> String {
+  @openui.to_literal_ast(value_json)
+}
+
+///|
+/// Read a literal AST. `["no"]` means it is not a literal.
+#export_name("literal_value")
+pub fn literal_value(node_json : String) -> String {
+  @openui.literal_value(node_json)
+}
