@@ -321,6 +321,10 @@ export function wrapStep(payload: {
   present?: boolean;
   own?: boolean;
 }): { op: string };
+export function closeSource(source: string): {
+  text: string;
+  incomplete: boolean;
+};
 export function queryError(payload: {
   source?: string;
   kind?: string;

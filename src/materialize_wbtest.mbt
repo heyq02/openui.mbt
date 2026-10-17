@@ -323,6 +323,18 @@ test "preprocess and state stay in the parse result" {
   inspect(auto_close("()[]{}").incomplete, content="false")
   inspect(auto_close("\"\\x").incomplete, content="true")
   inspect(
+    auto_close_json("root = Stack(["),
+    content="{\"text\":\"root = Stack([])\",\"incomplete\":true}",
+  )
+  inspect(
+    auto_close_json("()[]{}"),
+    content="{\"text\":\"()[]{}\",\"incomplete\":false}",
+  )
+  inspect(
+    auto_close_json("say \"hi\""),
+    content="{\"text\":\"say \\\"hi\\\"\",\"incomplete\":false}",
+  )
+  inspect(
     preprocess("\"a\\\\\" ```\nroot = A\n```").contains("root = A"),
     content="true",
   )
