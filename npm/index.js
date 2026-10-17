@@ -56,6 +56,10 @@ const {
   generate_prompt: generatePromptOpenui,
   cloud_config: cloudConfigOpenui,
   substitute_ref: substituteRefOpenui,
+  system_prompt_kind: systemPromptKindOpenui,
+  is_element_node: isElementNodeOpenui,
+  is_reactive_assign: isReactiveAssignOpenui,
+  is_runtime_expr: isRuntimeExprOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -278,14 +282,18 @@ export function enrichErrors(validationErrors, schema, componentNames) {
   });
 }
 
-function isElementNode(value) {
+/** Element node guard. Non-objects return false before Wasm. */
+export function isElementNode(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   return (
-    value.type === "element" &&
-    typeof value.typeName === "string" &&
-    typeof value.props === "object" &&
-    value.props !== null &&
-    typeof value.partial === "boolean"
+    isElementNodeOpenui(
+      JSON.stringify({
+        type: typeof value.type === "string" ? value.type : "",
+        typeName: valueTag(value.typeName),
+        props: valueTag(value.props),
+        partial: valueTag(value.partial),
+      }),
+    ) === 1
   );
 }
 
@@ -1030,6 +1038,52 @@ function substThrow(why) {
   if (why === "find-null") throw new TypeError("Cannot read properties of null (reading 'find')");
   if (why === "find-fn") throw new TypeError("entries.find is not a function");
   throw new TypeError("is not iterable (cannot read property Symbol(Symbol.iterator))");
+}
+
+function valueTag(value) {
+  if (value === null) return "z";
+  if (value === undefined) return "u";
+  if (typeof value === "string") return "s";
+  if (typeof value === "number") return "n";
+  if (typeof value === "boolean") return "b";
+  if (typeof value === "function") return "f";
+  if (Array.isArray(value)) return "a";
+  if (typeof value === "object") return "o";
+  return "x";
+}
+
+/** `cloud`, `library`, or `legacy`. The host still records telemetry and spreads the library. */
+export function systemPromptKind(spec) {
+  if (spec == null || (typeof spec !== "object" && typeof spec !== "function")) {
+    return "cloud" in spec;
+  }
+  return systemPromptKindOpenui(
+    JSON.stringify({
+      cloudIn: "cloud" in spec,
+      cloudTrue: spec.cloud === true,
+      libraryIn: "library" in spec,
+      libraryObject: typeof spec.library === "object",
+    }),
+  );
+}
+
+/** `__reactive: "assign"` on a non-null object, including arrays. */
+export function isReactiveAssign(value) {
+  const object = value !== null && typeof value === "object";
+  return (
+    isReactiveAssignOpenui(
+      JSON.stringify({
+        object,
+        text: object && typeof value.__reactive === "string" ? value.__reactive : "",
+      }),
+    ) === 1
+  );
+}
+
+/** Runtime expression discriminant. Reading `node.k` still throws for null. */
+export function isRuntimeExpr(node) {
+  const kind = node.k;
+  return isRuntimeExprOpenui(typeof kind === "string" ? kind : "") === 1;
 }
 
 /** Replace `Ref(varName)` with the literal AST of `value`. */

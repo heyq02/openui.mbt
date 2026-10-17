@@ -131,6 +131,10 @@ export function toLiteralAST(value: unknown): {
 };
 export function literalValue(node: { k?: unknown }): { v: unknown } | undefined;
 export function substituteRef(node: { k?: unknown }, varName: unknown, value: unknown): unknown;
+export function systemPromptKind(spec: object): "cloud" | "legacy" | "library";
+export function isElementNode(value: unknown): boolean;
+export function isReactiveAssign(value: unknown): boolean;
+export function isRuntimeExpr(node: { k?: unknown }): boolean;
 export function walkAST(node: { k?: unknown }, visit: (node: { k?: unknown }) => void): void;
 export function generatePrompt(spec: {
   root?: unknown;

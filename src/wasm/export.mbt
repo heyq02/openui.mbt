@@ -293,3 +293,31 @@ pub fn substitute_ref(
 ) -> String {
   @openui.substitute_ref(node_json, var_name_json, literal_json)
 }
+
+///|
+/// `cloud`, `library`, or `legacy` for `generateSystemPrompt`.
+#export_name("system_prompt_kind")
+pub fn system_prompt_kind(spec_json : String) -> String {
+  @openui.system_prompt_kind(spec_json)
+}
+
+///|
+/// `1` when the tagged fields are an element node.
+#export_name("is_element_node")
+pub fn is_element_node(node_json : String) -> Int32 {
+  @openui.is_element_node(node_json)
+}
+
+///|
+/// `1` when `__reactive` is `"assign"` on a non-null object.
+#export_name("is_reactive_assign")
+pub fn is_reactive_assign(node_json : String) -> Int32 {
+  @openui.is_reactive_assign(node_json)
+}
+
+///|
+/// `1` for a runtime expression discriminant.
+#export_name("is_runtime_expr")
+pub fn is_runtime_expr(kind : String) -> Int32 {
+  @openui.is_runtime_expr(kind)
+}
