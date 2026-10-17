@@ -54,6 +54,7 @@ export interface MaterializeResult {
 
 export function parseProgram(source: string): MoonbitProgram;
 export function tokenize(source: string): MoonbitToken[];
+export function splitStatements(types: unknown[]): { idAt: number; t: number; ix: number[] }[];
 export function materializeProgram(
   source: string,
   schema: string,

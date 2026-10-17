@@ -524,3 +524,10 @@ pub fn link_step(payload_json : String) -> String {
 pub fn wrap_step(payload_json : String) -> String {
   @openui.wrap_step(payload_json)
 }
+
+///|
+/// Statement ranges for official numeric tokens. The host keeps the token objects.
+#export_name("split_statements")
+pub fn split_statements(types_json : String) -> String {
+  @openui.split_ranges(types_json)
+}
