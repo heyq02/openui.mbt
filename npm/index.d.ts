@@ -122,7 +122,10 @@ export interface EnrichedError {
 
 export function enrichErrors(
   validationErrors: Array<Record<string, unknown>>,
-  schema: { $defs?: Record<string, { properties?: object; required?: unknown[] }> } | null | undefined,
+  schema:
+    | { $defs?: Record<string, { properties?: object; required?: unknown[] }> }
+    | null
+    | undefined,
   componentNames: string[],
 ): EnrichedError[];
 

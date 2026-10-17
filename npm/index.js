@@ -136,7 +136,8 @@ export function parseRules(rules) {
   return parsed.map((item) => {
     if (item.inf === 1) return { type: item.type, arg: Infinity };
     if (item.inf === -1) return { type: item.type, arg: -Infinity };
-    if (Object.prototype.hasOwnProperty.call(item, "arg")) return { type: item.type, arg: item.arg };
+    if (Object.prototype.hasOwnProperty.call(item, "arg"))
+      return { type: item.type, arg: item.arg };
     return { type: item.type };
   });
 }
@@ -152,7 +153,8 @@ export function parseStructuredRules(rules) {
   const plan = JSON.parse(parseStructuredRulesOpenui(JSON.stringify(tagged)));
   const result = [];
   for (const item of plan) {
-    if (Object.prototype.hasOwnProperty.call(item, "i")) result.push({ type: item.type, arg: entries[item.i][1] });
+    if (Object.prototype.hasOwnProperty.call(item, "i"))
+      result.push({ type: item.type, arg: entries[item.i][1] });
     else result.push({ type: item.type });
   }
   return result;
@@ -175,7 +177,11 @@ function tagValue(value) {
   if (kind === "boolean") return { t: "b", v: value };
   if (kind !== "object") return { t: "other", host: encodeBound(parseFloat(String(value))) };
   if (Array.isArray(value)) {
-    return { t: "a", v: value.map(tagValue), host: encodeBound(parseFloat(String(value))) };
+    return {
+      t: "a",
+      v: value.map(tagValue),
+      host: encodeBound(parseFloat(String(value))),
+    };
   }
   const tagged = {
     t: "o",
@@ -195,7 +201,11 @@ const builtinMessages = {
 
 /** Run one built-in rule. `url` and `pattern` stay in the host because they use `URL` and `RegExp`. */
 export function checkBuiltin(kind, value, arg) {
-  const code = builtinCheckOpenui(kind, JSON.stringify(tagValue(value)), JSON.stringify(encodeBound(arg)));
+  const code = builtinCheckOpenui(
+    kind,
+    JSON.stringify(tagValue(value)),
+    JSON.stringify(encodeBound(arg)),
+  );
   if (!code) return undefined;
   if (builtinMessages[code]) return builtinMessages[code];
   const number = Number(arg);
