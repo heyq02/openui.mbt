@@ -418,3 +418,132 @@ fn json_text(text : String) -> Bool {
     _ => false
   }
 }
+
+///|
+/// Write an OpenUI message. `context` is already JSON text when it is not a string.
+/// `pairs_json` is `[[key, value], ...]` in attribute order.
+pub fn build_message(
+  content : String,
+  context : String,
+  has_context : Bool,
+  pairs_json : String,
+  end : Bool,
+) -> String {
+  let query = encode_attributes(pairs_json)
+  let buf = StringBuilder()
+  buf.write_string("]]>openui:content")
+  if query.length() > 0 {
+    buf.write_char('?')
+    buf.write_string(query)
+  }
+  buf.write_char('\n')
+  buf.write_string(content)
+  if has_context {
+    buf.write_string("\n]]>openui:context\n")
+    buf.write_string(context)
+  }
+  if end {
+    buf.write_string("\n]]>openui:end")
+  }
+  buf.to_string()
+}
+
+///|
+fn encode_attributes(pairs_json : String) -> String {
+  let buf = StringBuilder()
+  let mut count = 0
+  try {
+    match @json.parse(pairs_json) {
+      Array(items) =>
+        for item in items {
+          match item {
+            Array(cells) =>
+              if cells.length() >= 2 {
+                match (cells[0], cells[1]) {
+                  (String(key), String(value)) => {
+                    if count > 0 {
+                      buf.write_char('&')
+                    }
+                    buf.write_string(percent_encode(key))
+                    buf.write_char('=')
+                    buf.write_string(percent_encode(value))
+                    count = count + 1
+                  }
+                  _ => ()
+                }
+              }
+            _ => ()
+          }
+        }
+      _ => ()
+    }
+  } catch {
+    _ => ()
+  }
+  buf.to_string()
+}
+
+///|
+fn percent_encode(src : String) -> String {
+  let buf = StringBuilder()
+  let mut index = 0
+  let limit = src.length()
+  while index < limit {
+    let unit = src.at(index).to_int()
+    let mut point = unit
+    if unit >= 0xD800 && unit <= 0xDBFF && index + 1 < limit {
+      let next = src.at(index + 1).to_int()
+      if next >= 0xDC00 && next <= 0xDFFF {
+        point = 0x10000 + ((unit - 0xD800) << 10) + (next - 0xDC00)
+        index = index + 1
+      }
+    }
+    if is_encode_plain(point) {
+      buf.write_char(point.unsafe_to_char())
+    } else if point == code(' ') {
+      buf.write_char('+')
+    } else {
+      write_utf8_percent(buf, point)
+    }
+    index = index + 1
+  }
+  buf.to_string()
+}
+
+///|
+fn is_encode_plain(point : Int32) -> Bool {
+  (point >= code('A') && point <= code('Z')) ||
+  (point >= code('a') && point <= code('z')) ||
+  (point >= code('0') && point <= code('9')) ||
+  point == code('-') ||
+  point == code('_') ||
+  point == code('.') ||
+  point == code('*')
+}
+
+///|
+fn write_utf8_percent(buf : StringBuilder, point : Int32) -> Unit {
+  if point < 0x80 {
+    write_percent_byte(buf, point)
+  } else if point < 0x800 {
+    write_percent_byte(buf, 0xC0 | (point >> 6))
+    write_percent_byte(buf, 0x80 | (point & 0x3F))
+  } else if point < 0x10000 {
+    write_percent_byte(buf, 0xE0 | (point >> 12))
+    write_percent_byte(buf, 0x80 | ((point >> 6) & 0x3F))
+    write_percent_byte(buf, 0x80 | (point & 0x3F))
+  } else {
+    write_percent_byte(buf, 0xF0 | (point >> 18))
+    write_percent_byte(buf, 0x80 | ((point >> 12) & 0x3F))
+    write_percent_byte(buf, 0x80 | ((point >> 6) & 0x3F))
+    write_percent_byte(buf, 0x80 | (point & 0x3F))
+  }
+}
+
+///|
+fn write_percent_byte(buf : StringBuilder, byte : Int32) -> Unit {
+  let digits = "0123456789ABCDEF"
+  buf.write_char('%')
+  buf.write_char(digits.at((byte >> 4) & 0xF).to_int().unsafe_to_char())
+  buf.write_char(digits.at(byte & 0xF).to_int().unsafe_to_char())
+}

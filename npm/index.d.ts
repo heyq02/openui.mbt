@@ -91,4 +91,11 @@ export interface OpenUiMessage {
 
 export function parseMessage(raw: string, options?: { streaming?: boolean }): OpenUiMessage;
 
+export function buildMessage(message: {
+  content?: string;
+  context?: unknown;
+  attributes?: Record<string, unknown>;
+  end?: boolean;
+}): string;
+
 export function createStream(schema: string, rootName?: string): OpenUiStream;

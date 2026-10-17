@@ -270,3 +270,89 @@ test "openui message markers follow the official split" {
     ),
   )
 }
+
+///|
+test "openui buildMessage writes the official marker text" {
+  inspect(
+    build_message(
+      "root = Card([title])\ntitle = TextContent(\"a ]]>openui:end\")", "[{\"note\":\"rush\"}]",
+      true, "[[\"library\",\"@acme/support@1.2.0\"],[\"note\",\"a b!\"]]", true,
+    ),
+    content=(
+      #|]]>openui:content?library=%40acme%2Fsupport%401.2.0&note=a+b%21
+      #|root = Card([title])
+      #|title = TextContent("a ]]>openui:end")
+      #|]]>openui:context
+      #|[{"note":"rush"}]
+      #|]]>openui:end
+    ),
+  )
+  inspect(
+    build_message("root", "", false, "[]", false),
+    content=(
+      #|]]>openui:content
+      #|root
+    ),
+  )
+  inspect(
+    build_message("root", "raw", true, "[]", false),
+    content=(
+      #|]]>openui:content
+      #|root
+      #|]]>openui:context
+      #|raw
+    ),
+  )
+  inspect(
+    build_message("hi", "", false, "[[\"q\",\"中\"]]", false),
+    content=(
+      #|]]>openui:content?q=%E4%B8%AD
+      #|hi
+    ),
+  )
+  inspect(
+    build_message("hi", "", false, "[[\"q\",\"😀\"]]", true),
+    content=(
+      #|]]>openui:content?q=%F0%9F%98%80
+      #|hi
+      #|]]>openui:end
+    ),
+  )
+  inspect(
+    build_message(
+      "hi", "", false, "[[\"a b\",\"x y\"],[\"note\",\"!'()~*\"]]", false,
+    ),
+    content=(
+      #|]]>openui:content?a+b=x+y&note=%21%27%28%29%7E*
+      #|hi
+    ),
+  )
+  inspect(
+    build_message("hi", "", false, "not-json", false),
+    content=(
+      #|]]>openui:content
+      #|hi
+    ),
+  )
+  inspect(
+    build_message("hi", "", false, "[[\"q\",\"©\"]]", false),
+    content=(
+      #|]]>openui:content?q=%C2%A9
+      #|hi
+    ),
+  )
+  inspect(
+    build_message("hi", "", false, "{}", false),
+    content=(
+      #|]]>openui:content
+      #|hi
+    ),
+  )
+  inspect(
+    build_message("hi", "", false, "[\"x\",[1,\"a\"],[\"only\"]]", false),
+    content=(
+      #|]]>openui:content
+      #|hi
+    ),
+  )
+}

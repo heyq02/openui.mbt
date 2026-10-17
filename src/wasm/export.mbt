@@ -124,3 +124,22 @@ pub fn stream_close(id : Int32) -> Int32 {
 pub fn parse_message(raw : String, streaming : Int32) -> String {
   @openui.parse_message(raw, streaming != 0)
 }
+
+///|
+/// Write an OpenUI message. `has_context` 1 embeds `context`. `end` 1 writes the end marker.
+#export_name("build_message")
+pub fn build_message(
+  content : String,
+  context : String,
+  has_context : Int32,
+  pairs_json : String,
+  end : Int32,
+) -> String {
+  @openui.build_message(
+    content,
+    context,
+    has_context != 0,
+    pairs_json,
+    end != 0,
+  )
+}
