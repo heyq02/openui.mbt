@@ -468,3 +468,10 @@ pub fn check_value(payload_json : String) -> String {
 pub fn user_call(payload_json : String) -> String {
   @openui.user_call(payload_json)
 }
+
+///|
+/// Custom-action branch. The host still builds the step and records it.
+#export_name("custom_call")
+pub fn custom_call(payload_json : String) -> String {
+  @openui.custom_call(payload_json)
+}

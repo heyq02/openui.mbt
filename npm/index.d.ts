@@ -229,6 +229,12 @@ export function userCall(payload: {
   returns?: boolean;
   nil?: boolean;
 }): { op: string };
+export function customCall(payload: {
+  phase?: string;
+  named?: boolean;
+  miss?: boolean;
+  bad?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;

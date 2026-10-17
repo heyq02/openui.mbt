@@ -81,6 +81,7 @@ const {
   inline_step: inlineStepOpenui,
   check_value: checkValueOpenui,
   user_call: userCallOpenui,
+  custom_call: customCallOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1333,6 +1334,11 @@ export function checkValue(payload) {
 /** `callFunction` branch. `null` stops the call. `keep` returns the checked value. */
 export function userCall(payload) {
   return JSON.parse(userCallOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Custom-action branch. `build` means the host records one step. */
+export function customCall(payload) {
+  return JSON.parse(customCallOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */
