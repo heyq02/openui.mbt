@@ -524,3 +524,10 @@ pub fn link_step(payload_json : String) -> String {
 pub fn wrap_step(payload_json : String) -> String {
   @openui.wrap_step(payload_json)
 }
+
+///|
+/// Fences, comments, and the same trim `preprocess()` uses.
+#export_name("preprocess_openui")
+pub fn preprocess_openui(src : String) -> String {
+  @openui.preprocess(src)
+}
