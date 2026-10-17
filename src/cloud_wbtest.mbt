@@ -160,7 +160,7 @@ test "openui cloud config decides library issues" {
     ),
   )
   let props = "{\"t\":\"o\",\"v\":[[\"properties\",{\"t\":\"z\"}],[\"required\",{\"t\":\"a\",\"v\":[{\"t\":\"h\"},{\"t\":\"s\",\"v\":\"missing\"},{\"t\":\"s\",\"v\":\"title\"},{\"t\":\"s\"}]}]]}"
-  let refs = "{\"t\":\"o\",\"v\":[[\"properties\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Nope\"}],[\"title\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Card\"}]]}],[\"body\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Foo\\n\"}]]}],[\"cr\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Foo\\r\"}]]}],[\"ls\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Foo\\u2028\"}]]}],[\"ps\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Foo\\u2029\"}]]}],[\"short\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/\"}]]}],[\"bad\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/defs/Card\"}]]}],[\"list\",{\"t\":\"a\",\"v\":[{\"t\":\"h\"},{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Missing\"}]]}]}],[\"skip\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Nope\"}]]}]]}],[\"num\",{\"t\":\"n\",\"v\":1}],[\"ok\",{\"t\":\"s\",\"v\":\"plain\"}]]}],[\"required\",{\"t\":\"a\",\"v\":[{\"t\":\"s\",\"v\":\"title\"}]}]]}"
+  let refs = "{\"t\":\"o\",\"v\":[[\"properties\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Nope\"}],[\"title\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Card\"}]]}],[\"body\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Foo\\n\"}]]}],[\"cr\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Foo\\r\"}]]}],[\"ls\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Foo\\u2028\"}]]}],[\"ps\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Foo\\u2029\"}]]}],[\"short\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/\"}]]}],[\"bad\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/defs/Card\"}]]}],[\"list\",{\"t\":\"a\",\"v\":[{\"t\":\"h\"},{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Missing\"}]]}]}],[\"skip\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Nope\"}]]}]]}],[\"num\",{\"t\":\"n\",\"v\":1}],[\"ok\",{\"t\":\"s\",\"v\":\"plain\"}],[1,{\"t\":\"o\",\"v\":[]}],\"junk\"]}],[\"required\",{\"t\":\"a\",\"v\":[{\"t\":\"s\",\"v\":\"title\"}]}]]}"
   let arr = "{\"t\":\"o\",\"v\":[[\"properties\",{\"t\":\"a\",\"v\":[{\"t\":\"h\"},{\"t\":\"o\",\"v\":[[\"$ref\",{\"t\":\"s\",\"v\":\"#/$defs/Nope\"}]]}]}],[\"required\",{\"t\":\"n\",\"v\":1}]]}"
   let good = "{\"t\":\"o\",\"v\":[[\"properties\",{\"t\":\"o\",\"v\":[[\"title\",{\"t\":\"o\",\"v\":[]}]]}],[\"required\",{\"t\":\"a\",\"v\":[{\"t\":\"s\",\"v\":\"title\"}]}]]}"
   let undef = "{\"t\":\"o\",\"v\":[[\"properties\",{\"t\":\"u\"}],[\"required\",{\"t\":\"u\"}]]}"
@@ -506,5 +506,35 @@ test "openui cloud config decides library issues" {
       invalid +
       "Root component \"X\" was not found in schema.$defs. Available components: .",
     ),
+  )
+  inspect(
+    cloud_config(
+      cloud_spec(
+        cloud_lib(
+          "[\"schema\",{\"t\":\"o\",\"v\":[[\"$defs\",{\"t\":\"o\",\"v\":[[\"Req\",{\"t\":\"o\",\"v\":[[\"required\",{\"t\":\"a\",\"v\":[{\"t\":\"n\",\"v\":1}]}]]}],[\"Need\",{\"t\":\"o\",\"v\":[[\"required\",{\"t\":\"a\",\"v\":[{\"t\":\"s\",\"v\":\"title\"}]}]]}]]}]]}]",
+        ),
+        false,
+        false,
+        false,
+      ),
+    ),
+    content=cloud_err(
+      invalid +
+      "$defs/Req/required must be an array of property names. " +
+      "$defs/Need lists required property \"title\" that is not in properties.",
+    ),
+  )
+  inspect(
+    cloud_config(
+      cloud_spec(
+        cloud_lib(
+          "[\"root\",{\"t\":\"n\",\"v\":1}],[\"schema\"," + card_defs + "]",
+        ),
+        false,
+        false,
+        false,
+      ),
+    ),
+    content=cloud_err(invalid + root_shape),
   )
 }
