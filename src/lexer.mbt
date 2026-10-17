@@ -190,13 +190,42 @@ fn Lexer::write_escape(
 }
 
 ///|
+fn strip_json_quotes(raw : String) -> String {
+  let mut start = 0
+  let mut end = raw.length()
+  if end > start && raw.unsafe_get(start).to_int() == code('"') {
+    start += 1
+  }
+  if end > start && raw.unsafe_get(end - 1).to_int() == code('"') {
+    end -= 1
+  }
+  raw[start:end].to_owned()
+}
+
+///|
+/// Official double quotes use `JSON.parse`, and keep the raw text when that fails.
+fn json_string_value(raw : String, closed : Bool) -> String {
+  let candidate = if closed { raw } else { raw + "\"" }
+  try {
+    match @json.parse(candidate) {
+      String(text) => text
+      _ => strip_json_quotes(raw)
+    }
+  } catch {
+    _ => strip_json_quotes(raw)
+  }
+}
+
+///|
 fn Lexer::scan_string(
   self : Lexer,
   quote : Int32,
   json_escapes : Bool,
 ) -> String {
+  let start = self.index
   self.advance()
   let buf = StringBuilder()
+  let mut closed = false
   while !self.ended() {
     let current = self.peek()
     if current == code('\\') {
@@ -221,6 +250,7 @@ fn Lexer::scan_string(
       }
     } else if current == quote {
       self.advance()
+      closed = true
       break
     } else {
       let start = self.index
@@ -234,7 +264,11 @@ fn Lexer::scan_string(
       buf.write_string(self.src[start:self.index].to_owned())
     }
   }
-  buf.to_string()
+  if json_escapes {
+    json_string_value(self.src[start:self.index].to_owned(), closed)
+  } else {
+    buf.to_string()
+  }
 }
 
 ///|

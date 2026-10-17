@@ -312,6 +312,10 @@ const REPLACEMENTS = [
     "function getCallDefs(cat) {\n\treturn cat?.callDefs ?? BUILTIN_CALLS;\n}\n",
     "function getCallDefs(cat) {\n\treturn getCallDefsMoonbit(cat);\n}\n",
   ],
+  [
+    'function tokenize(src) {\n\tconst tokens = [];\n\tlet i = 0;\n\tconst n = src.length;\n\twhile (i < n) {\n\t\twhile (i < n && (src[i] === " " || src[i] === "\t" || src[i] === "\\r")) i++;\n\t\tif (i >= n) break;\n\t\tconst c = src[i];\n\t\tif (c === "\\n") {\n\t\t\ttokens.push({ t: 0 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "(") {\n\t\t\ttokens.push({ t: 1 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ")") {\n\t\t\ttokens.push({ t: 2 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "[") {\n\t\t\ttokens.push({ t: 3 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "]") {\n\t\t\ttokens.push({ t: 4 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "{") {\n\t\t\ttokens.push({ t: 5 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "}") {\n\t\t\ttokens.push({ t: 6 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ",") {\n\t\t\ttokens.push({ t: 7 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ":") {\n\t\t\ttokens.push({ t: 8 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "=") {\n\t\t\tif (i + 1 < n && src[i + 1] === "=") {\n\t\t\t\ttokens.push({ t: 25 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 9 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "!") {\n\t\t\tif (i + 1 < n && src[i + 1] === "=") {\n\t\t\t\ttokens.push({ t: 26 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 33 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ">") {\n\t\t\tif (i + 1 < n && src[i + 1] === "=") {\n\t\t\t\ttokens.push({ t: 29 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 27 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "<") {\n\t\t\tif (i + 1 < n && src[i + 1] === "=") {\n\t\t\t\ttokens.push({ t: 30 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 28 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "&") {\n\t\t\tif (i + 1 < n && src[i + 1] === "&") {\n\t\t\t\ttokens.push({ t: 31 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 31 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "|") {\n\t\t\tif (i + 1 < n && src[i + 1] === "|") {\n\t\t\t\ttokens.push({ t: 32 });\n\t\t\t\ti += 2;\n\t\t\t} else {\n\t\t\t\ttokens.push({ t: 32 });\n\t\t\t\ti++;\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === ".") {\n\t\t\ttokens.push({ t: 19 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "?") {\n\t\t\ttokens.push({ t: 34 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "+") {\n\t\t\ttokens.push({ t: 20 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "*") {\n\t\t\ttokens.push({ t: 22 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "/") {\n\t\t\ttokens.push({ t: 23 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "%") {\n\t\t\ttokens.push({ t: 24 });\n\t\t\ti++;\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "\\"") {\n\t\t\tconst start = i;\n\t\t\ti++;\n\t\t\tlet isClosed = false;\n\t\t\twhile (i < n) if (src[i] === "\\\\") i += 2;\n\t\t\telse if (src[i] === "\\"") {\n\t\t\t\ti++;\n\t\t\t\tisClosed = true;\n\t\t\t\tbreak;\n\t\t\t} else i++;\n\t\t\tconst rawString = src.slice(start, i);\n\t\t\ttry {\n\t\t\t\tconst validJsonString = isClosed ? rawString : rawString + "\\"";\n\t\t\t\ttokens.push({\n\t\t\t\t\tt: 14,\n\t\t\t\t\tv: JSON.parse(validJsonString)\n\t\t\t\t});\n\t\t\t} catch {\n\t\t\t\tconst stripped = rawString.replace(/^"|"$/g, "");\n\t\t\t\ttokens.push({\n\t\t\t\t\tt: 14,\n\t\t\t\t\tv: stripped\n\t\t\t\t});\n\t\t\t}\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "\'") {\n\t\t\ti++;\n\t\t\tlet result = "";\n\t\t\twhile (i < n) if (src[i] === "\\\\") {\n\t\t\t\ti++;\n\t\t\t\tif (i < n) {\n\t\t\t\t\tconst esc = src[i];\n\t\t\t\t\tif (esc === "\'") result += "\'";\n\t\t\t\t\telse if (esc === "\\\\") result += "\\\\";\n\t\t\t\t\telse if (esc === "n") result += "\\n";\n\t\t\t\t\telse if (esc === "t") result += "\t";\n\t\t\t\t\telse result += esc;\n\t\t\t\t\ti++;\n\t\t\t\t}\n\t\t\t} else if (src[i] === "\'") {\n\t\t\t\ti++;\n\t\t\t\tbreak;\n\t\t\t} else {\n\t\t\t\tresult += src[i];\n\t\t\t\ti++;\n\t\t\t}\n\t\t\ttokens.push({\n\t\t\t\tt: 14,\n\t\t\t\tv: result\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "-") {\n\t\t\tconst prev = tokens.length > 0 ? tokens[tokens.length - 1] : null;\n\t\t\tif (!(prev != null && (prev.t === 15 || prev.t === 14 || prev.t === 16 || prev.t === 17 || prev.t === 2 || prev.t === 4 || prev.t === 10 || prev.t === 11 || prev.t === 12 || prev.t === 18 || prev.t === 35)) && i + 1 < n && src[i + 1] >= "0" && src[i + 1] <= "9") {} else {\n\t\t\t\ttokens.push({ t: 21 });\n\t\t\t\ti++;\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t}\n\t\tconst isDigit = c >= "0" && c <= "9";\n\t\tconst isNegDigit = c === "-" && i + 1 < n && src[i + 1] >= "0" && src[i + 1] <= "9";\n\t\tif (isDigit || isNegDigit) {\n\t\t\tconst start = i;\n\t\t\tif (src[i] === "-") i++;\n\t\t\twhile (i < n && src[i] >= "0" && src[i] <= "9") i++;\n\t\t\tif (i < n && src[i] === "." && i + 1 < n && src[i + 1] >= "0" && src[i + 1] <= "9") {\n\t\t\t\ti++;\n\t\t\t\twhile (i < n && src[i] >= "0" && src[i] <= "9") i++;\n\t\t\t}\n\t\t\tif (i < n && (src[i] === "e" || src[i] === "E")) {\n\t\t\t\ti++;\n\t\t\t\tif (i < n && (src[i] === "+" || src[i] === "-")) i++;\n\t\t\t\twhile (i < n && src[i] >= "0" && src[i] <= "9") i++;\n\t\t\t}\n\t\t\ttokens.push({\n\t\t\t\tt: 15,\n\t\t\t\tv: +src.slice(start, i)\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "$" && i + 1 < n && (src[i + 1] >= "a" && src[i + 1] <= "z" || src[i + 1] >= "A" && src[i + 1] <= "Z" || src[i + 1] === "_")) {\n\t\t\tconst start = i;\n\t\t\ti++;\n\t\t\twhile (i < n && (src[i] >= "a" && src[i] <= "z" || src[i] >= "A" && src[i] <= "Z" || src[i] >= "0" && src[i] <= "9" || src[i] === "_")) i++;\n\t\t\ttokens.push({\n\t\t\t\tt: 18,\n\t\t\t\tv: src.slice(start, i)\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\tif (c >= "a" && c <= "z" || c >= "A" && c <= "Z" || c === "_") {\n\t\t\tconst start = i;\n\t\t\twhile (i < n && (src[i] >= "a" && src[i] <= "z" || src[i] >= "A" && src[i] <= "Z" || src[i] >= "0" && src[i] <= "9" || src[i] === "_")) i++;\n\t\t\tconst word = src.slice(start, i);\n\t\t\tif (word === "true") {\n\t\t\t\ttokens.push({ t: 10 });\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tif (word === "false") {\n\t\t\t\ttokens.push({ t: 11 });\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tif (word === "null") {\n\t\t\t\ttokens.push({ t: 12 });\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tconst kind = c >= "A" && c <= "Z" ? 17 : 16;\n\t\t\ttokens.push({\n\t\t\t\tt: kind,\n\t\t\t\tv: word\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\tif (c === "@" && i + 1 < n && (src[i + 1] >= "a" && src[i + 1] <= "z" || src[i + 1] >= "A" && src[i + 1] <= "Z" || src[i + 1] === "_")) {\n\t\t\ti++;\n\t\t\tconst start = i;\n\t\t\twhile (i < n && (src[i] >= "a" && src[i] <= "z" || src[i] >= "A" && src[i] <= "Z" || src[i] >= "0" && src[i] <= "9" || src[i] === "_")) i++;\n\t\t\ttokens.push({\n\t\t\t\tt: 35,\n\t\t\t\tv: src.slice(start, i)\n\t\t\t});\n\t\t\tcontinue;\n\t\t}\n\t\ti++;\n\t}\n\ttokens.push({ t: 13 });\n\treturn tokens;\n}\n',
+    "function tokenize(src) {\n\treturn tokenizeMoonbit(src);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -1481,6 +1485,121 @@ function getCallDefsMoonbit(cat) {
   if (__ouiWrap({ phase: "defs", present: defs != null }).op === "local") return defs;
   return BUILTIN_CALLS;
 }
+const LEGACY_TOKEN = {
+  Newline: 0,
+  LParen: 1,
+  RParen: 2,
+  LBrack: 3,
+  RBrack: 4,
+  LBrace: 5,
+  RBrace: 6,
+  Comma: 7,
+  Colon: 8,
+  Equals: 9,
+  True: 10,
+  False: 11,
+  Null: 12,
+  EOF: 13,
+  Str: 14,
+  Num: 15,
+  Ident: 16,
+  Type: 17,
+  StateVar: 18,
+  Dot: 19,
+  Plus: 20,
+  Minus: 21,
+  Star: 22,
+  Slash: 23,
+  Percent: 24,
+  EqEq: 25,
+  NotEq: 26,
+  Greater: 27,
+  Less: 28,
+  GreaterEq: 29,
+  LessEq: 30,
+  And: 31,
+  Or: 32,
+  Not: 33,
+  Question: 34,
+  BuiltinCall: 35
+};
+function legacyString(src, line, column) {
+  let index = 0;
+  let lineNow = 1;
+  let col = 1;
+  while (index < src.length && (lineNow < line || col < column)) {
+    if (src.charCodeAt(index) === 10) {
+      lineNow += 1;
+      col = 1;
+    } else {
+      col += 1;
+    }
+    index += 1;
+  }
+  const quote = src.charCodeAt(index);
+  const start = index;
+  index += 1;
+  let closed = false;
+  if (quote === 34) {
+    while (index < src.length) {
+      const code = src.charCodeAt(index);
+      if (code === 92) index += 2;
+      else if (code === 34) {
+        index += 1;
+        closed = true;
+        break;
+      } else index += 1;
+    }
+    const raw = src.slice(start, index);
+    const valid = closed ? raw : raw + String.fromCharCode(34);
+    try {
+      return JSON.parse(valid);
+    } catch (error) {
+      return raw.replace(/^"|"$/g, "");
+    }
+  }
+  let result = "";
+  while (index < src.length) {
+    const code = src.charCodeAt(index);
+    if (code === 92) {
+      index += 1;
+      if (index < src.length) {
+        const esc = src.charCodeAt(index);
+        if (esc === 39) result += "'";
+        else if (esc === 92) result += String.fromCharCode(92);
+        else if (esc === 110) result += String.fromCharCode(10);
+        else if (esc === 116) result += String.fromCharCode(9);
+        else result += src.charAt(index);
+        index += 1;
+      }
+    } else if (code === 39) {
+      break;
+    } else {
+      result += src.charAt(index);
+      index += 1;
+    }
+  }
+  return result;
+}
+function tokenizeMoonbit(src) {
+  if (typeof src !== "string") {
+    const length = src.length;
+    if (!(typeof length === "number" && length > 0)) return [{ t: 13 }];
+    let text = "";
+    for (let index = 0; index < length; index += 1) text += src[index];
+    src = text;
+  }
+  const tokens = __ouiTokenize(src);
+  const out = [];
+  for (const tok of tokens) {
+    const item = { t: LEGACY_TOKEN[tok.t] };
+    if (tok.t === "Str") item.v = legacyString(src, tok.line, tok.column);
+    else if (tok.t === "Num") item.v = +tok.v;
+    else if (tok.v !== undefined) item.v = tok.v;
+    out.push(item);
+  }
+  return out;
+}
 `;
 
 function usage() {
@@ -1501,11 +1620,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg, shapeStep as __ouiShape, bindStep as __ouiBind, linkStep as __ouiLink, wrapStep as __ouiWrap } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg, shapeStep as __ouiShape, bindStep as __ouiBind, linkStep as __ouiLink, wrapStep as __ouiWrap, tokenize as __ouiTokenize } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg, shapeStep: __ouiShape, bindStep: __ouiBind, linkStep: __ouiLink, wrapStep: __ouiWrap } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg, shapeStep: __ouiShape, bindStep: __ouiBind, linkStep: __ouiLink, wrapStep: __ouiWrap, tokenize: __ouiTokenize } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -1518,7 +1637,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 83;
+  const expected = 84;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,
