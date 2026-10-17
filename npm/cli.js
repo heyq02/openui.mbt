@@ -48,6 +48,10 @@ const REPLACEMENTS = [
     'function mergeStatements(existing, patch, rootId = "root") {\n\tconst existingStmts = parseStatements(existing);\n\tconst patchStmts = parseStatements(stripFences(patch));\n\tif (!existingStmts.length) return patchStmts.map((stmt) => stmt.raw).join("\\n");\n\tif (!patchStmts.length) return existing;\n\tconst merged = /* @__PURE__ */ new Map();\n\tconst asts = /* @__PURE__ */ new Map();\n\tconst order = [];\n\tfor (const stmt of existingStmts) {\n\t\tmerged.set(stmt.id, stmt.raw);\n\t\tasts.set(stmt.id, stmt.ast);\n\t\torder.push(stmt.id);\n\t}\n\tfor (const stmt of patchStmts) {\n\t\tif (stmt.ast.k === "Null") {\n\t\t\tmerged.delete(stmt.id);\n\t\t\tasts.delete(stmt.id);\n\t\t\tconst idx = order.indexOf(stmt.id);\n\t\t\tif (idx !== -1) order.splice(idx, 1);\n\t\t\tcontinue;\n\t\t}\n\t\tif (!merged.has(stmt.id)) order.push(stmt.id);\n\t\tmerged.set(stmt.id, stmt.raw);\n\t\tasts.set(stmt.id, stmt.ast);\n\t}\n\tgcUnreachable(order, merged, asts, rootId);\n\treturn order.filter((id) => merged.has(id)).map((id) => merged.get(id)).join("\\n");\n}\n',
     'function mergeStatements(existing, patch, rootId = "root") {\n\treturn mergeMoonbitStatements(existing, patch, rootId);\n}\n',
   ],
+  [
+    "function jsonToOpenUI(json, library, options) {\n\tconst paramMap = compileSchema(library.toJSONSchema());\n\tconst collector = new StatementCollector();\n\tconst rootExpr = serializeElementExpr(json, paramMap, collector);\n\tconst rootId = json.statementId || \"root\";\n\tconst lines = [];\n\tlines.push(`${rootId} = ${rootExpr}`);\n\tfor (const stmt of collector.getStatements()) {\n\t\tif (stmt.id === rootId) continue;\n\t\tlines.push(stmt.text);\n\t}\n\tif (options?.stateDeclarations) {\n\t\tconst stateLines = serializeStateDeclarations(options.stateDeclarations, paramMap, collector);\n\t\tlines.push(...stateLines);\n\t}\n\treturn lines.join(\"\\n\");\n}\n",
+    "function jsonToOpenUI(json, library, options) {\n\treturn jsonToOpenUIMoonbit(json, library, options);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -102,6 +106,9 @@ function enrichMoonbitErrors(validationErrors, schema, componentNames) {
 function mergeMoonbitStatements(existing, patch, rootId) {
   return __ouiMergeStatements(existing, patch, rootId);
 }
+function jsonToOpenUIMoonbit(json, library, options) {
+  return __ouiJsonToOpenUI(json, library, options);
+}
 `;
 
 function usage() {
@@ -122,11 +129,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -139,7 +146,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 17;
+  const expected = 18;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

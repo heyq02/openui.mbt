@@ -42,6 +42,7 @@ const {
   builtin_check: builtinCheckOpenui,
   enrich_hints: enrichHintsOpenui,
   merge_statements: mergeStatementsOpenui,
+  json_to_openui: jsonToOpenUIOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -262,6 +263,140 @@ export function enrichErrors(validationErrors, schema, componentNames) {
     }
     return error;
   });
+}
+
+const AST_KINDS = new Set([
+  "Comp",
+  "Ref",
+  "StateRef",
+  "RuntimeRef",
+  "BinOp",
+  "UnaryOp",
+  "Ternary",
+  "Member",
+  "Index",
+  "Assign",
+  "Str",
+  "Num",
+  "Bool",
+  "Null",
+  "Arr",
+  "Obj",
+  "Ph",
+]);
+
+function isElementNode(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return (
+    value.type === "element" &&
+    typeof value.typeName === "string" &&
+    typeof value.props === "object" &&
+    value.props !== null &&
+    typeof value.partial === "boolean"
+  );
+}
+
+function isASTNode(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return AST_KINDS.has(value.k);
+}
+
+function sourceText(value) {
+  if (value === undefined) return "undefined";
+  if (value === null) return "null";
+  return String(value);
+}
+
+function encodeValue(value) {
+  if (value === null || value === undefined) return ["z"];
+  if (typeof value === "string") return ["s", JSON.stringify(value)];
+  if (typeof value === "number") return ["n", String(value)];
+  if (typeof value === "boolean") return ["b", value ? "true" : "false"];
+  if (isElementNode(value)) return encodeElement(value);
+  if (isASTNode(value)) return ["ast", encodeAst(value)];
+  if (Array.isArray(value)) return ["a", value.map(encodeValue)];
+  if (typeof value === "object") {
+    return ["o", Object.entries(value).map(([key, item]) => [key, encodeValue(item)])];
+  }
+  return ["x"];
+}
+
+function encodeElement(node) {
+  const id = node.statementId ? sourceText(node.statementId) : "";
+  return [
+    "el",
+    node.typeName,
+    id,
+    Object.entries(node.props).map(([key, item]) => [key, encodeValue(item)]),
+  ];
+}
+
+function encodeAst(node) {
+  const kind = node.k;
+  switch (kind) {
+    case "Str":
+      return ["Str", JSON.stringify(node.v)];
+    case "Num":
+      return ["Num", String(node.v)];
+    case "Bool":
+      return ["Bool", node.v ? "true" : "false"];
+    case "Null":
+      return ["Null"];
+    case "Ph":
+    case "Ref":
+    case "StateRef":
+    case "RuntimeRef":
+      return [kind, sourceText(node.n)];
+    case "Arr":
+      return ["Arr", node.els.map(encodeAst)];
+    case "Obj":
+      return ["Obj", node.entries.map(([key, item]) => [key, encodeAst(item)])];
+    case "BinOp":
+      return ["BinOp", sourceText(node.op), encodeAst(node.left), encodeAst(node.right)];
+    case "UnaryOp":
+      return ["UnaryOp", sourceText(node.op), encodeAst(node.operand)];
+    case "Ternary":
+      return ["Ternary", encodeAst(node.cond), encodeAst(node.then), encodeAst(node.else)];
+    case "Member":
+      return ["Member", encodeAst(node.obj), sourceText(node.field)];
+    case "Index":
+      return ["Index", encodeAst(node.obj), encodeAst(node.index)];
+    case "Assign":
+      return ["Assign", sourceText(node.target), encodeAst(node.value)];
+    case "Comp":
+      return ["Comp", sourceText(node.name), node.args.map(encodeAst)];
+    default:
+      return ["Other"];
+  }
+}
+
+function encodeRoot(json) {
+  const typeName = json.typeName;
+  const props = Object.entries(json.props);
+  const id = json.statementId ? sourceText(json.statementId) : "";
+  return [
+    "root",
+    typeof typeName === "string" ? typeName : null,
+    sourceText(typeName),
+    id,
+    props.map(([key, item]) => [key, encodeValue(item)]),
+  ];
+}
+
+/** Serialize an element tree to OpenUI Lang source. */
+export function jsonToOpenUI(json, library, options) {
+  const schema = library.toJSONSchema();
+  if (schema == null) schema.properties;
+  const state = options?.stateDeclarations;
+  const stateJson = state
+    ? JSON.stringify(
+        Object.entries(state).map(([name, value]) => [
+          name,
+          value === null ? ["skip"] : encodeValue(value),
+        ]),
+      )
+    : "null";
+  return jsonToOpenUIOpenui(JSON.stringify(schema), JSON.stringify(encodeRoot(json)), stateJson);
 }
 
 /** Merge a patch onto an existing program. Unreachable statements are dropped. */

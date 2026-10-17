@@ -187,3 +187,14 @@ pub fn merge_statements(
 ) -> String {
   @openui.merge_statements(existing, patch, root_id, has_root=use_root != 0)
 }
+
+///|
+/// Serialize a tagged element tree to OpenUI Lang source.
+#export_name("json_to_openui")
+pub fn json_to_openui(
+  schema_json : String,
+  root_json : String,
+  state_json : String,
+) -> String {
+  @openui.json_to_openui(schema_json, root_json, state_json)
+}
