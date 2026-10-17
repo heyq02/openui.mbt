@@ -204,6 +204,10 @@ const REPLACEMENTS = [
     'function checkTypeMismatch(value, info) {\n\tconst actual = typeof value;\n\tif (info.enumValues) {\n\t\tif (!SCALAR_TYPEOFS.includes(actual)) return null;\n\t\tif (info.enumValues.includes(value)) return null;\n\t\treturn {\n\t\t\texpected: `one of [${info.enumValues.map((v) => JSON.stringify(v)).join(", ")}]`,\n\t\t\tactual: JSON.stringify(value)\n\t\t};\n\t}\n\tif (info.expectedType && info.expectedType !== actual) return {\n\t\texpected: info.expectedType,\n\t\tactual: jsType(value)\n\t};\n\treturn null;\n}\n',
     "function checkTypeMismatch(value, info) {\n\treturn checkTypeMismatchMoonbit(value, info);\n}\n",
   ],
+  [
+    'function validationMessage(component, path, issue) {\n\tswitch (issue.code) {\n\t\tcase "type-mismatch": return `field "${path}" expects ${issue.expected} but got ${issue.actual}`;\n\t\tcase "missing-required": return `missing required field "${path}"${issue.signature ? ` — signature: ${issue.signature}` : ""}`;\n\t\tcase "null-required": return `required field "${path}" cannot be null${issue.signature ? ` — signature: ${issue.signature}` : ""}`;\n\t\tcase "unknown-component": return `Unknown component "${component}" — not found in catalog or builtins${issue.available?.length ? `. Available components: ${issue.available.join(", ")}` : ""}`;\n\t\tcase "inline-reserved": return `${component}() must be declared as a top-level statement, not used inline as a value`;\n\t\tcase "excess-args": return `${component} takes ${issue.declared} arg(s), got ${issue.got} (${issue.got - issue.declared} excess dropped)`;\n\t\tcase "unknown-function": return `Unknown function "@${component}": not a built-in or action step. The call evaluates to null`;\n\t\tcase "no-root":\n\t\t\tif (issue.reason === "not-component") return "root does not evaluate to a component";\n\t\t\tif (issue.reason === "fallback") return `No root statement. Rendering the first statement that calls the root component ${component}`;\n\t\t\treturn component ? `No root statement, and no statement calls the root component ${component}` : "No root statement";\n\t}\n}\n',
+    "function validationMessage(component, path, issue) {\n\treturn validationMessageMoonbit(component, path, issue);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -1008,6 +1012,69 @@ function checkTypeMismatchMoonbit(value, info) {
   }
   return null;
 }
+function validationMessageMoonbit(component, path, issue) {
+  const code = issue.code;
+  const open = __ouiMsg({ phase: "open", code: typeof code === "string" ? code : "" });
+  if (open.op === "type") {
+    return 'field "' + path + '" expects ' + issue.expected + " but got " + issue.actual;
+  }
+  if (open.op === "missing" || open.op === "null") {
+    const head =
+      open.op === "missing"
+        ? 'missing required field "' + path + '"'
+        : 'required field "' + path + '" cannot be null';
+    const marked = Boolean(issue.signature);
+    if (__ouiMsg({ phase: "sign", marked }).op === "with") {
+      return head + " — signature: " + issue.signature;
+    }
+    return head;
+  }
+  if (open.op === "component") {
+    const head = 'Unknown component "' + component + '" — not found in catalog or builtins';
+    const show = Boolean(issue.available?.length);
+    if (__ouiMsg({ phase: "list", show }).op === "join") {
+      return head + ". Available components: " + issue.available.join(", ");
+    }
+    return head;
+  }
+  if (open.op === "inline") {
+    return component + "() must be declared as a top-level statement, not used inline as a value";
+  }
+  if (open.op === "excess") {
+    return (
+      component +
+      " takes " +
+      issue.declared +
+      " arg(s), got " +
+      issue.got +
+      " (" +
+      (issue.got - issue.declared) +
+      " excess dropped)"
+    );
+  }
+  if (open.op === "function") {
+    return (
+      'Unknown function "@' +
+      component +
+      '": not a built-in or action step. The call evaluates to null'
+    );
+  }
+  if (open.op === "root") {
+    const first = issue.reason === "not-component";
+    const fallback = !first && issue.reason === "fallback";
+    const kind = first ? "not-component" : fallback ? "fallback" : "";
+    const root = __ouiMsg({ phase: "root", kind, named: Boolean(component) });
+    if (root.op === "not-component") return "root does not evaluate to a component";
+    if (root.op === "fallback") {
+      return "No root statement. Rendering the first statement that calls the root component " + component;
+    }
+    if (root.op === "named") {
+      return "No root statement, and no statement calls the root component " + component;
+    }
+    return "No root statement";
+  }
+  return undefined;
+}
 `;
 
 function usage() {
@@ -1028,11 +1095,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -1045,7 +1112,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 56;
+  const expected = 57;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

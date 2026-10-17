@@ -1,0 +1,94 @@
+///|
+test "validation messages choose type, signature, component list, and root" {
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"type-mismatch\"}"),
+    content="{\"op\":\"type\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"missing-required\"}"),
+    content="{\"op\":\"missing\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"null-required\"}"),
+    content="{\"op\":\"null\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"unknown-component\"}"),
+    content="{\"op\":\"component\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"inline-reserved\"}"),
+    content="{\"op\":\"inline\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"excess-args\"}"),
+    content="{\"op\":\"excess\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"unknown-function\"}"),
+    content="{\"op\":\"function\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"no-root\"}"),
+    content="{\"op\":\"root\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":\"other\"}"),
+    content="{\"op\":\"none\"}",
+  )
+  inspect(msg_step("{\"phase\":\"open\"}"), content="{\"op\":\"none\"}")
+  inspect(
+    msg_step("{\"phase\":\"open\",\"code\":1}"),
+    content="{\"op\":\"none\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"sign\",\"marked\":true}"),
+    content="{\"op\":\"with\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"sign\",\"marked\":false}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"sign\",\"marked\":1}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(msg_step("{\"phase\":\"sign\"}"), content="{\"op\":\"skip\"}")
+  inspect(
+    msg_step("{\"phase\":\"list\",\"show\":true}"),
+    content="{\"op\":\"join\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"list\",\"show\":false}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"list\",\"show\":\"yes\"}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"root\",\"kind\":\"not-component\",\"named\":true}"),
+    content="{\"op\":\"not-component\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"root\",\"kind\":\"fallback\",\"named\":false}"),
+    content="{\"op\":\"fallback\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"root\",\"kind\":\"\",\"named\":true}"),
+    content="{\"op\":\"named\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"root\",\"kind\":\"missing\",\"named\":false}"),
+    content="{\"op\":\"bare\"}",
+  )
+  inspect(
+    msg_step("{\"phase\":\"root\",\"kind\":1,\"named\":1}"),
+    content="{\"op\":\"bare\"}",
+  )
+  inspect(msg_step("{\"phase\":\"root\"}"), content="{\"op\":\"bare\"}")
+  inspect(msg_step("{\"phase\":\"other\"}"), content="{\"op\":\"none\"}")
+  inspect(msg_step("{\"phase\":1}"), content="{\"op\":\"none\"}")
+  inspect(msg_step("[]"), content="{\"op\":\"none\"}")
+  inspect(msg_step("{"), content="{\"op\":\"none\"}")
+}

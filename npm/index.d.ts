@@ -253,6 +253,14 @@ export function leafStep(payload: {
   typed?: boolean;
   match?: boolean;
 }): { op: string };
+export function msgStep(payload: {
+  phase?: string;
+  code?: string;
+  marked?: boolean;
+  show?: boolean;
+  kind?: string;
+  named?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;

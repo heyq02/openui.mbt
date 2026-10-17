@@ -84,6 +84,7 @@ const {
   custom_call: customCallOpenui,
   mapped_comp: mappedCompOpenui,
   leaf_step: leafStepOpenui,
+  msg_step: msgStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1351,6 +1352,11 @@ export function mappedComp(payload) {
 /** Schema leaf branch. `fail` is an enum or scalar type miss. */
 export function leafStep(payload) {
   return JSON.parse(leafStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Validation message branch. `none` leaves the official message undefined. */
+export function msgStep(payload) {
+  return JSON.parse(msgStepOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */

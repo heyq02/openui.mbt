@@ -489,3 +489,10 @@ pub fn mapped_comp(payload_json : String) -> String {
 pub fn leaf_step(payload_json : String) -> String {
   @openui.leaf_step(payload_json)
 }
+
+///|
+/// Validation message branch. The host still reads issue fields and joins text.
+#export_name("msg_step")
+pub fn msg_step(payload_json : String) -> String {
+  @openui.msg_step(payload_json)
+}
