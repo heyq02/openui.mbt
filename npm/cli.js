@@ -100,6 +100,18 @@ const REPLACEMENTS = [
     'function isReactiveAssign(value) {\n\treturn typeof value === "object" && value !== null && value.__reactive === "assign";\n}\n',
     "function isReactiveAssign(value) {\n\treturn isReactiveAssignMoonbit(value);\n}\n",
   ],
+  [
+    'function isActionPlan(value) {\n\treturn typeof value === "object" && value !== null && Array.isArray(value.steps);\n}\n',
+    "function isActionPlan(value) {\n\treturn isActionPlanMoonbit(value);\n}\n",
+  ],
+  [
+    'function flattenPlans(values) {\n\treturn ownSteps({ steps: values.flatMap((v) => {\n\t\tif (isActionPlan(v)) return v.steps;\n\t\treturn v != null && typeof v === "object" && "type" in v ? [v] : [];\n\t}) });\n}\n',
+    "function flattenPlans(values) {\n\treturn flattenPlansMoonbit(values);\n}\n",
+  ],
+  [
+    'function extractToolResult(result) {\n\tif (result.isError) {\n\t\tconst errorText = result.content?.filter((c) => c.type === "text").map((c) => c.text).join("\\n");\n\t\tthrow new McpToolError(errorText || "Unknown error");\n\t}\n\tif (result.structuredContent != null) return result.structuredContent;\n\tconst textParts = result.content?.filter((c) => c.type === "text").map((c) => c.text ?? "");\n\tif (textParts?.length) {\n\t\tconst text = textParts.join("");\n\t\ttry {\n\t\t\treturn JSON.parse(text);\n\t\t} catch {\n\t\t\treturn text;\n\t\t}\n\t}\n\treturn null;\n}\n',
+    "function extractToolResult(result) {\n\treturn extractToolResultMoonbit(result);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -233,6 +245,75 @@ function isReactiveAssignMoonbit(value) {
 function isRuntimeExprMoonbit(node) {
   return __ouiIsRuntimeExpr(node);
 }
+function isActionPlanMoonbit(value) {
+  return __ouiIsActionPlan(value);
+}
+function flattenPlansMoonbit(values) {
+  return ownSteps(__ouiFlattenPlans(values));
+}
+function toolContentItems(content) {
+  const items = [];
+  for (let i = 0; i < content.length; i++) {
+    if (!(i in content)) {
+      items.push("h");
+      continue;
+    }
+    if (content[i] == null) {
+      items.push("bad");
+      break;
+    }
+    items.push(content[i].type === "text" ? "text" : "skip");
+  }
+  return items;
+}
+function extractToolResultMoonbit(result) {
+  if (result.isError) {
+    const content = result.content;
+    if (content != null && !Array.isArray(content)) {
+      const errorText = result.content?.filter((c) => c.type === "text").map((c) => c.text).join("\\n");
+      throw new McpToolError(errorText || "Unknown error");
+    }
+    const decision = __ouiExtractToolResult({
+      error: true,
+      structured: false,
+      content: content == null ? "missing" : "array",
+      items: content == null ? [] : toolContentItems(content)
+    });
+    if (decision.op === "throw") void content[decision.i].type;
+    const errorText = decision.at.map((i) => content[i].text).join("\\n");
+    throw new McpToolError(errorText || "Unknown error");
+  }
+  if (result.structuredContent != null) return result.structuredContent;
+  const content = result.content;
+  if (content != null && !Array.isArray(content)) {
+    const textParts = result.content?.filter((c) => c.type === "text").map((c) => c.text ?? "");
+    if (textParts?.length) {
+      const text = textParts.join("");
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text;
+      }
+    }
+    return null;
+  }
+  const decision = __ouiExtractToolResult({
+    error: false,
+    structured: false,
+    content: content == null ? "missing" : "array",
+    items: content == null ? [] : toolContentItems(content)
+  });
+  if (decision.op === "throw") void content[decision.i].type;
+  if (decision.op === "parse") {
+    const text = decision.at.map((i) => content[i].text ?? "").join("");
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+  return null;
+}
 `;
 
 function usage() {
@@ -253,11 +334,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -270,7 +351,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 30;
+  const expected = 33;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

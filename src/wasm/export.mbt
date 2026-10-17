@@ -321,3 +321,24 @@ pub fn is_reactive_assign(node_json : String) -> Int32 {
 pub fn is_runtime_expr(kind : String) -> Int32 {
   @openui.is_runtime_expr(kind)
 }
+
+///|
+/// `1` when `steps` is an array on a non-null object.
+#export_name("is_action_plan")
+pub fn is_action_plan(node_json : String) -> Int32 {
+  @openui.is_action_plan(node_json)
+}
+
+///|
+/// Indices `flattenPlans` keeps. The host copies the original steps.
+#export_name("flatten_plans")
+pub fn flatten_plans(tags_json : String) -> String {
+  @openui.flatten_plans(tags_json)
+}
+
+///|
+/// MCP tool-result decision. The host returns `structuredContent` and parses text.
+#export_name("extract_tool_result")
+pub fn extract_tool_result(payload_json : String) -> String {
+  @openui.extract_tool_result(payload_json)
+}

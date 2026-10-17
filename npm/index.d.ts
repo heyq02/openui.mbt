@@ -135,6 +135,14 @@ export function systemPromptKind(spec: object): "cloud" | "legacy" | "library";
 export function isElementNode(value: unknown): boolean;
 export function isReactiveAssign(value: unknown): boolean;
 export function isRuntimeExpr(node: { k?: unknown }): boolean;
+export function isActionPlan(value: unknown): boolean;
+export function flattenPlans(values: unknown): { steps: unknown[] } | unknown;
+export function extractToolResult(payload: {
+  error?: boolean;
+  structured?: boolean;
+  content?: string;
+  items?: string[];
+}): { op: string; at?: number[]; i?: number };
 export function walkAST(node: { k?: unknown }, visit: (node: { k?: unknown }) => void): void;
 export function generatePrompt(spec: {
   root?: unknown;

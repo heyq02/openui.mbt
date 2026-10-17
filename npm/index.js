@@ -60,6 +60,9 @@ const {
   is_element_node: isElementNodeOpenui,
   is_reactive_assign: isReactiveAssignOpenui,
   is_runtime_expr: isRuntimeExprOpenui,
+  is_action_plan: isActionPlanOpenui,
+  flatten_plans: flattenPlansOpenui,
+  extract_tool_result: extractToolOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1084,6 +1087,83 @@ export function isReactiveAssign(value) {
 export function isRuntimeExpr(node) {
   const kind = node.k;
   return isRuntimeExprOpenui(typeof kind === "string" ? kind : "") === 1;
+}
+
+/** `{ steps: [...] }` on a non-null object, including arrays. */
+export function isActionPlan(value) {
+  const object = value !== null && typeof value === "object";
+  return (
+    isActionPlanOpenui(
+      JSON.stringify({
+        object,
+        steps: object && Array.isArray(value.steps) ? "a" : "x",
+      }),
+    ) === 1
+  );
+}
+
+function appendFlat(steps, inner) {
+  if (Array.isArray(inner)) {
+    for (let i = 0; i < inner.length; i += 1) {
+      if (i in inner) steps.push(inner[i]);
+    }
+    return;
+  }
+  steps.push(inner);
+}
+
+/** Flatten plans and stray steps. The dist shim still applies `ownSteps`. */
+export function flattenPlans(values) {
+  if (!Array.isArray(values)) return values.flatMap(() => []);
+  const tags = [];
+  const inners = [];
+  for (let i = 0; i < values.length; i += 1) {
+    if (!(i in values)) {
+      tags.push("h");
+      continue;
+    }
+    const value = values[i];
+    if (isActionPlan(value)) {
+      inners.push(value.steps);
+      tags.push("plan");
+      continue;
+    }
+    if (value !== null && typeof value === "object" && "type" in value) {
+      tags.push("step");
+      continue;
+    }
+    tags.push("drop");
+  }
+  const ops = JSON.parse(flattenPlansOpenui(JSON.stringify(tags)));
+  const steps = [];
+  let planAt = 0;
+  for (const item of ops) {
+    if (item.op === "steps") {
+      appendFlat(steps, inners[planAt]);
+      planAt += 1;
+    } else if (item.op === "step") {
+      steps.push(values[item.i]);
+    }
+  }
+  return { steps };
+}
+
+/** Decide an MCP `callTool` result from tags. The host throws, returns, and parses. */
+export function extractToolResult(payload) {
+  const items = [];
+  if (Array.isArray(payload.items)) {
+    for (const item of payload.items) items.push(item);
+  }
+  return JSON.parse(
+    extractToolOpenui(
+      JSON.stringify({
+        error: payload.error === true,
+        structured: payload.structured === true,
+        content: typeof payload.content === "string" ? payload.content : "",
+        items,
+      }),
+    ),
+  );
 }
 
 /** Replace `Ref(varName)` with the literal AST of `value`. */
