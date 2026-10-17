@@ -72,6 +72,10 @@ const REPLACEMENTS = [
     'function literalValue(node) {\n\tswitch (node.k) {\n\t\tcase "Str":\n\t\tcase "Num":\n\t\tcase "Bool": return { v: node.v };\n\t\tcase "Null": return { v: null };\n\t\tcase "Arr": {\n\t\t\tconst v = [];\n\t\t\tfor (const e of node.els) {\n\t\t\t\tconst lit = literalValue(e);\n\t\t\t\tif (!lit) return void 0;\n\t\t\t\tv.push(lit.v);\n\t\t\t}\n\t\t\treturn { v };\n\t\t}\n\t\tcase "Obj": {\n\t\t\tconst v = {};\n\t\t\tfor (const [k, e] of node.entries) {\n\t\t\t\tconst lit = literalValue(e);\n\t\t\t\tif (!lit) return void 0;\n\t\t\t\tv[k] = lit.v;\n\t\t\t}\n\t\t\treturn { v };\n\t\t}\n\t\tdefault: return;\n\t}\n}\n',
     "function literalValue(node) {\n\treturn literalValueMoonbit(node);\n}\n",
   ],
+  [
+    'function generatePrompt(spec) {\n\tconst rootName = spec.root ?? "Root";\n\tconst hasTools = !!spec.tools?.length;\n\tconst toolCalls = spec.toolCalls ?? hasTools;\n\tconst bindings = spec.bindings ?? toolCalls;\n\tconst supportsExpressions = toolCalls || bindings;\n\tconst usesActionExpression = Object.values(spec.components).some((c) => c.signature?.includes("ActionExpression") || RESTRICTED_SLOT.test(c.signature ?? ""));\n\tconst parts = [];\n\tparts.push(spec.preamble ?? PREAMBLE);\n\tparts.push("");\n\tparts.push(syntaxRules(rootName, {\n\t\tsupportsExpressions,\n\t\tbindings\n\t}));\n\tparts.push("");\n\tparts.push(generateComponentSignatures(spec, {\n\t\ttoolCalls,\n\t\tbindings,\n\t\tusesActionExpression\n\t}));\n\tconst customFunctions = Object.values(spec.functions ?? {}).map(functionLine);\n\tif (spec.builtinFunctions ?? supportsExpressions) {\n\t\tparts.push("");\n\t\tparts.push(builtinFunctionsSection(customFunctions, toolCalls));\n\t} else if (customFunctions.length) {\n\t\tparts.push("");\n\t\tparts.push(`## Built-in Functions\\n\\n${customFunctions.join("\\n")}`);\n\t}\n\tif (toolCalls) {\n\t\tparts.push("");\n\t\tparts.push(querySection());\n\t\tparts.push("");\n\t\tparts.push(mutationSection());\n\t}\n\tconst customActions = Object.values(spec.actions ?? {}).map((a) => `- ${functionLine(a)}`);\n\tif (usesActionExpression) {\n\t\tparts.push("");\n\t\tparts.push(actionSection({\n\t\t\ttoolCalls,\n\t\t\tbindings\n\t\t}, customActions));\n\t} else if (customActions.length) {\n\t\tparts.push("");\n\t\tparts.push(`${ACTION_HEADER}\\n\\nPass one step, or Action([...]) with several steps, as a button\'s action.\\n\\nAvailable steps:\\n${customActions.join("\\n")}`);\n\t}\n\tif (toolCalls && bindings) {\n\t\tparts.push("");\n\t\tparts.push(interactiveFiltersSection());\n\t}\n\tif (toolCalls) {\n\t\tparts.push("");\n\t\tparts.push(toolWorkflowSection());\n\t}\n\tif (spec.tools?.length) {\n\t\tparts.push("");\n\t\tparts.push(renderToolsSection(spec.tools));\n\t}\n\tparts.push("");\n\tparts.push(streamingRules(rootName, {\n\t\tsupportsExpressions,\n\t\ttoolCalls\n\t}));\n\tconst allExamples = [...spec.examples ?? [], ...spec.toolExamples ?? []];\n\tif (allExamples.length) {\n\t\tparts.push("");\n\t\tparts.push("## Examples");\n\t\tparts.push("");\n\t\tfor (const ex of allExamples) {\n\t\t\tparts.push(ex);\n\t\t\tparts.push("");\n\t\t}\n\t}\n\tif (spec.editMode) {\n\t\tparts.push("");\n\t\tparts.push(editModeSection());\n\t}\n\tif (spec.inlineMode) {\n\t\tparts.push("");\n\t\tparts.push(inlineModeSection());\n\t}\n\tparts.push(importantRules(rootName, {\n\t\ttoolCalls,\n\t\tbindings\n\t}));\n\tif (spec.additionalRules?.length) {\n\t\tparts.push("");\n\t\tfor (const rule of spec.additionalRules) parts.push(`- ${rule}`);\n\t}\n\treturn parts.join("\\n");\n}\n',
+    "function generatePrompt(spec) {\n\treturn generatePromptMoonbit(spec);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -144,6 +148,9 @@ function toLiteralASTMoonbit(value) {
 function literalValueMoonbit(node) {
   return __ouiLiteralValue(node);
 }
+function generatePromptMoonbit(spec) {
+  return __ouiGeneratePrompt(spec);
+}
 function callBuiltinMoonbit(name, args) {
   return __ouiCallBuiltin(name, args);
 }
@@ -185,11 +192,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, generatePrompt as __ouiGeneratePrompt } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, generatePrompt: __ouiGeneratePrompt } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -202,7 +209,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 23;
+  const expected = 24;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

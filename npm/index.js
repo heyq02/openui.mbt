@@ -52,6 +52,7 @@ const {
   literal_value: literalValueOpenui,
   call_builtin: callBuiltinOpenui,
   lazy_step: lazyStepOpenui,
+  generate_prompt: generatePromptOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -521,6 +522,94 @@ export function callBuiltin(name, args) {
     JSON.parse(callBuiltinOpenui(String(name ?? ""), JSON.stringify(encoded))),
     args,
   );
+}
+
+function textOf(value) {
+  if (value === undefined) return "undefined";
+  if (value === null) return "null";
+  return String(value);
+}
+
+function joinText(value) {
+  if (value == null) return "";
+  return String(value);
+}
+
+function encodeSchema(schema) {
+  const encoded = {
+    type: typeof schema?.type === "string" ? schema.type : "",
+    required: Array.isArray(schema?.required) ? schema.required : [],
+    properties: schema?.properties
+      ? Object.entries(schema.properties).map(([key, value]) => [key, encodeSchema(value)])
+      : [],
+  };
+  if (Array.isArray(schema?.enum)) encoded.enum = schema.enum;
+  if (schema?.items && typeof schema.items === "object") encoded.items = encodeSchema(schema.items);
+  return encoded;
+}
+
+function encodeComponent(name, comp) {
+  const signature = comp.signature;
+  return {
+    name: String(name),
+    sig: signature === undefined ? "u" : signature === null ? "n" : "s",
+    signature: typeof signature === "string" ? signature : "",
+    description: comp.description ? String(comp.description) : null,
+  };
+}
+
+function encodeCall(name, value) {
+  return {
+    name,
+    signature: textOf(value.signature),
+    description: value.description ? String(value.description) : null,
+  };
+}
+
+function encodeTool(tool) {
+  if (typeof tool === "string") return { k: "s", name: tool };
+  const encoded = {
+    k: "t",
+    name: textOf(tool?.name),
+    description: tool?.description ? String(tool.description) : null,
+  };
+  if (tool?.inputSchema) encoded.input = encodeSchema(tool.inputSchema);
+  if (tool?.outputSchema) encoded.output = encodeSchema(tool.outputSchema);
+  return encoded;
+}
+
+/** Official `generatePrompt` text. Cloud config and telemetry stay outside this call. */
+export function generatePrompt(spec) {
+  const components = spec.components;
+  Object.values(components);
+  const tools = spec.tools ?? [];
+  const hasTools = tools.length > 0;
+  const toolCalls = Boolean(spec.toolCalls ?? hasTools);
+  const bindings = Boolean(spec.bindings ?? toolCalls);
+  const builtin = Boolean(spec.builtinFunctions ?? (toolCalls || bindings));
+  const encoded = {
+    root: String(spec.root ?? "Root"),
+    components: Object.entries(components).map(([name, comp]) => encodeComponent(name, comp)),
+    groups: (spec.componentGroups ?? []).map((group) => ({
+      name: textOf(group.name),
+      components: group.components.map((name) => String(name)),
+      notes: (group.notes ?? []).map((note) => joinText(note)),
+    })),
+    functions: Object.values(spec.functions ?? {}).map((value) => encodeCall("", value)),
+    actions: Object.entries(spec.actions ?? {}).map(([name, value]) => encodeCall(name, value)),
+    builtin,
+    toolCalls,
+    bindings,
+    tools: tools.map(encodeTool),
+    examples: [...(spec.examples ?? []), ...(spec.toolExamples ?? [])].map((item) =>
+      joinText(item),
+    ),
+    edit: Boolean(spec.editMode),
+    inline: Boolean(spec.inlineMode),
+    rules: (spec.additionalRules ?? []).map((rule) => textOf(rule)),
+  };
+  if (spec.preamble != null) encoded.preamble = String(spec.preamble);
+  return generatePromptOpenui(JSON.stringify(encoded));
 }
 
 /** `Run`, `Set`, and `Reset` decision. `op` is `run`, `set`, `reset`, or `none`. */

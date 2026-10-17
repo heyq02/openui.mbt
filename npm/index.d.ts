@@ -131,6 +131,23 @@ export function toLiteralAST(value: unknown): {
 };
 export function literalValue(node: { k?: unknown }): { v: unknown } | undefined;
 export function walkAST(node: { k?: unknown }, visit: (node: { k?: unknown }) => void): void;
+export function generatePrompt(spec: {
+  root?: unknown;
+  preamble?: unknown;
+  components: Record<string, { signature?: unknown; description?: unknown }>;
+  componentGroups?: { name?: unknown; components: unknown[]; notes?: unknown[] }[];
+  functions?: Record<string, { signature?: unknown; description?: unknown }>;
+  actions?: Record<string, { signature?: unknown; description?: unknown }>;
+  builtinFunctions?: unknown;
+  toolCalls?: unknown;
+  bindings?: unknown;
+  tools?: unknown[];
+  examples?: unknown[];
+  toolExamples?: unknown[];
+  editMode?: unknown;
+  inlineMode?: unknown;
+  additionalRules?: unknown[];
+}): string;
 export function callBuiltin(name: string, args: Record<string, unknown>): unknown;
 export function lazyStep(
   name: string,

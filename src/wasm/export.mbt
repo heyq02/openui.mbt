@@ -261,3 +261,10 @@ pub fn call_builtin(name : String, args_json : String) -> String {
 pub fn lazy_step(name : String, kinds_json : String) -> String {
   @openui.lazy_step(name, kinds_json)
 }
+
+///|
+/// Render the ordered `generatePrompt` spec.
+#export_name("generate_prompt")
+pub fn generate_prompt(spec_json : String) -> String {
+  @openui.generate_prompt(spec_json)
+}
