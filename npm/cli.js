@@ -28,6 +28,22 @@ const REPLACEMENTS = [
     'function buildMessage({ content, context, attributes, end }) {\n\tconst query = Object.entries(attributes ?? {}).map(([key, value]) => `${encode(key)}=${encode(value)}`).join("&");\n\tlet out = `${PREFIX}content${query ? `?${query}` : ""}\\n${content}`;\n\tif (context != null) out += `\\n${PREFIX}context\\n${typeof context === "string" ? context : JSON.stringify(context)}`;\n\treturn end ? `${out}\\n${PREFIX}end` : out;\n}\n',
     "function buildMessage(message) {\n\treturn buildMoonbitMessage(message);\n}\n",
   ],
+  [
+    "function parseRules(rules) {\n\tif (!Array.isArray(rules)) return [];\n\treturn rules.filter((r) => typeof r === \"string\").map(parseRule);\n}\n",
+    "function parseRules(rules) {\n\treturn parseMoonbitRules(rules);\n}\n",
+  ],
+  [
+    "function parseStructuredRules(rules) {\n\tif (!rules || typeof rules !== \"object\" || Array.isArray(rules)) return [];\n\tconst obj = rules;\n\tconst result = [];\n\tfor (const [key, val] of Object.entries(obj)) {\n\t\tif (val === false || val === void 0 || val === null) continue;\n\t\tif (val === true) result.push({ type: key });\n\t\telse result.push({\n\t\t\ttype: key,\n\t\t\targ: val\n\t\t});\n\t}\n\treturn result;\n}\n",
+    "function parseStructuredRules(rules) {\n\treturn parseMoonbitStructuredRules(rules);\n}\n",
+  ],
+  [
+    "const builtInValidators = {\n\trequired: (value) => {\n\t\tif (isEmpty(value)) return \"This field is required\";\n\t\tif (typeof value === \"object\" && !Array.isArray(value) && value !== null) {\n\t\t\tconst vals = Object.values(value);\n\t\t\tif (vals.length > 0 && vals.every((v) => typeof v === \"boolean\") && !vals.some(Boolean)) return \"At least one option is required\";\n\t\t}\n\t},\n\temail: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== \"string\") return \"Please enter a valid email\";\n\t\treturn /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value) ? void 0 : \"Please enter a valid email\";\n\t},\n\turl: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== \"string\") return \"Please enter a valid URL\";\n\t\ttry {\n\t\t\tnew URL(value);\n\t\t\treturn;\n\t\t} catch {\n\t\t\treturn \"Please enter a valid URL\";\n\t\t}\n\t},\n\tnumeric: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value === \"number\" && !isNaN(value)) return void 0;\n\t\tif (typeof value === \"string\" && !isNaN(parseFloat(value)) && value.trim() !== \"\") return void 0;\n\t\treturn \"Must be a number\";\n\t},\n\tmin: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tconst n = typeof value === \"number\" ? value : parseFloat(String(value));\n\t\tif (isNaN(n)) return void 0;\n\t\tconst min = Number(arg);\n\t\treturn n >= min ? void 0 : `Must be at least ${min}`;\n\t},\n\tmax: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tconst n = typeof value === \"number\" ? value : parseFloat(String(value));\n\t\tif (isNaN(n)) return void 0;\n\t\tconst max = Number(arg);\n\t\treturn n <= max ? void 0 : `Must be no more than ${max}`;\n\t},\n\tminLength: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== \"string\") return void 0;\n\t\tconst min = Number(arg);\n\t\treturn value.length >= min ? void 0 : `Must be at least ${min} characters`;\n\t},\n\tmaxLength: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== \"string\") return void 0;\n\t\tconst max = Number(arg);\n\t\treturn value.length <= max ? void 0 : `Must be no more than ${max} characters`;\n\t},\n\tpattern: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== \"string\" || typeof arg !== \"string\") return void 0;\n\t\ttry {\n\t\t\treturn new RegExp(arg).test(value) ? void 0 : \"Invalid format\";\n\t\t} catch {\n\t\t\treturn;\n\t\t}\n\t}\n};\n",
+    "const builtInValidators = {\n\trequired: (value) => builtinMoonbit(\"required\", value),\n\temail: (value) => builtinMoonbit(\"email\", value),\n\turl: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== \"string\") return \"Please enter a valid URL\";\n\t\ttry {\n\t\t\tnew URL(value);\n\t\t\treturn;\n\t\t} catch {\n\t\t\treturn \"Please enter a valid URL\";\n\t\t}\n\t},\n\tnumeric: (value) => builtinMoonbit(\"numeric\", value),\n\tmin: (value, arg) => builtinMoonbit(\"min\", value, arg),\n\tmax: (value, arg) => builtinMoonbit(\"max\", value, arg),\n\tminLength: (value, arg) => builtinMoonbit(\"minLength\", value, arg),\n\tmaxLength: (value, arg) => builtinMoonbit(\"maxLength\", value, arg),\n\tpattern: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== \"string\" || typeof arg !== \"string\") return void 0;\n\t\ttry {\n\t\t\treturn new RegExp(arg).test(value) ? void 0 : \"Invalid format\";\n\t\t} catch {\n\t\t\treturn;\n\t\t}\n\t}\n};\n",
+  ],
+  [
+    "function enrichErrors(validationErrors, schema, componentNames) {\n\treturn validationErrors.map((ve) => {\n\t\tconst error = {\n\t\t\tsource: \"parser\",\n\t\t\tcode: ve.code,\n\t\t\tmessage: ve.message,\n\t\t\tcomponent: ve.component,\n\t\t\tpath: ve.path || void 0,\n\t\t\tstatementId: ve.statementId,\n\t\t\t...ve.severity && { severity: ve.severity }\n\t\t};\n\t\tif (ve.code === \"unknown-component\" && componentNames.length) error.hint = `Available components: ${componentNames.join(\", \")}`;\n\t\telse if (ve.code === \"missing-required\" || ve.code === \"null-required\") error.hint = buildSignatureHint(ve.component, schema.$defs?.[ve.component]);\n\t\telse if (ve.code === \"inline-reserved\") error.hint = `Declare as a top-level statement: myVar = ${ve.component}(...)`;\n\t\treturn error;\n\t});\n}\n",
+    "function enrichErrors(validationErrors, schema, componentNames) {\n\treturn enrichMoonbitErrors(validationErrors, schema, componentNames);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -67,6 +83,18 @@ function parseMoonbitMessage(raw, options) {
 function buildMoonbitMessage(message) {
   return __ouiBuildMessage(message);
 }
+function parseMoonbitRules(rules) {
+  return __ouiParseRules(rules);
+}
+function parseMoonbitStructuredRules(rules) {
+  return __ouiParseStructuredRules(rules);
+}
+function builtinMoonbit(kind, value, arg) {
+  return __ouiCheckBuiltin(kind, value, arg);
+}
+function enrichMoonbitErrors(validationErrors, schema, componentNames) {
+  return __ouiEnrichErrors(validationErrors, schema, componentNames);
+}
 `;
 
 function usage() {
@@ -87,11 +115,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -104,7 +132,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 12;
+  const expected = 16;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,
