@@ -3,12 +3,12 @@
   "version": "0.3.0",
   "private": true,
   "description": "MoonBit parser for OpenUI Lang",
+  "license": "MIT",
+  "author": "Ari <mail@heyq02.cn>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/heyq02/openui.mbt.git"
   },
-  "license": "MIT",
-  "author": "Ari <mail@heyq02.cn>",
   "type": "module",
   "scripts": {
     "automd": "automd",
@@ -32,15 +32,15 @@
     "rstack": "^0.8.3",
     "vite-plus": "^1.2.0"
   },
-  "packageManager": "pnpm@12.10.1",
-  "engines": {
-    "node": "^20.19.0 || >=22.12.0"
-  },
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
       "version": "12.10.1",
       "onFail": "download"
     }
-  }
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "packageManager": "pnpm@12.10.1"
 }
