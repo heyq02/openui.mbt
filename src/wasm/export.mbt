@@ -517,3 +517,10 @@ pub fn bind_step(payload_json : String) -> String {
 pub fn link_step(payload_json : String) -> String {
   @openui.link_step(payload_json)
 }
+
+///|
+/// Prop wrapping, action calls, and builtin gates. The host still reads nodes.
+#export_name("wrap_step")
+pub fn wrap_step(payload_json : String) -> String {
+  @openui.wrap_step(payload_json)
+}
