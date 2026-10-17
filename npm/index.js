@@ -27,6 +27,7 @@ const instance = new WebAssembly.Instance(
 const {
   parse_openui: parseOpenui,
   tokenize_openui: tokenizeOpenui,
+  preprocess_openui: preprocessOpenui,
   materialize_openui: materializeOpenui,
   parse_result: parseResultOpenui,
   stream_open: streamOpen,
@@ -99,6 +100,11 @@ export function parseProgram(source) {
 /** Tokenize OpenUI Lang source. */
 export function tokenize(source) {
   return JSON.parse(tokenizeOpenui(source ?? ""));
+}
+
+/** Strip fences and comments the way official `preprocess()` does. */
+export function preprocessSource(source) {
+  return preprocessOpenui(source.trim()).trim();
 }
 
 /**

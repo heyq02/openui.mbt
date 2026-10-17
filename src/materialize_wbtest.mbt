@@ -314,6 +314,10 @@ test "preprocess and state stay in the parse result" {
   inspect(missing.contains("\"$ghost\":null"), content="true")
   inspect(needs_normalize("a // b"), content="true")
   inspect(preprocess("# only"), content="")
+  inspect(preprocess("a\u{00A0}// c"), content="a")
+  inspect(preprocess("\u{00A0}a\u{00A0}"), content="a")
+  inspect(preprocess("a\u{000B}// c"), content="a")
+  inspect(preprocess("code  \r// note"), content="code")
   inspect(normalize_source("# only").empty, content="true")
   inspect(
     materialize_result("   ", schema, "").contains("\"root\":null"),

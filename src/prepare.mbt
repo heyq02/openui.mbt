@@ -8,7 +8,21 @@ pub struct Prepared {
 
 ///|
 fn is_space(ch : Int32) -> Bool {
-  ch == code(' ') || ch == code('\t') || ch == code('\n') || ch == code('\r')
+  ch == 0x0009 ||
+  ch == 0x000A ||
+  ch == 0x000B ||
+  ch == 0x000C ||
+  ch == 0x000D ||
+  ch == 0x0020 ||
+  ch == 0x00A0 ||
+  ch == 0x1680 ||
+  ch == 0x2028 ||
+  ch == 0x2029 ||
+  ch == 0x202F ||
+  ch == 0x205F ||
+  ch == 0x3000 ||
+  ch == 0xFEFF ||
+  (ch >= 0x2000 && ch <= 0x200A)
 }
 
 ///|
@@ -164,11 +178,7 @@ fn join_blocks(blocks : Array[String]) -> String {
 ///|
 fn trim_end_line(src : String) -> String {
   let mut end = src.length()
-  while end > 0 &&
-        (
-          src.at(end - 1).to_int() == code(' ') ||
-          src.at(end - 1).to_int() == code('\t')
-        ) {
+  while end > 0 && is_space(src.at(end - 1).to_int()) {
     end = end - 1
   }
   if end == src.length() {
