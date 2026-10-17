@@ -99,6 +99,27 @@ test "lexer covers numbers, escapes, and operators" {
 }
 
 ///|
+test "double quotes follow the official JSON string fallback" {
+  fn string_text(src : String) -> String {
+    let mut found = ""
+    for tok in tokenize(src) {
+      if tok.kind is Str {
+        found = tok.text
+      }
+    }
+    found
+  }
+
+  inspect(string_text("\"\\q\""), content="\\q")
+  inspect(string_text("\"\\"), content="\\")
+  inspect(string_text("\""), content="")
+  inspect(string_text("\"\\n\""), content="\n")
+  inspect(string_text("\"\\n"), content="\n")
+  inspect(string_text("'\\q'"), content="q")
+  inspect(json_string_value("1", true), content="1")
+}
+
+///|
 test "parser and json cover every expression form" {
   let src =
     #|root = (a + b - c) * d / e % f == g != h > i < j >= k <= m && n || p
