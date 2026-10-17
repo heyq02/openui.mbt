@@ -6,7 +6,10 @@ const MARKER = "/* oui.mbt-parser */";
 const SUPPORTED = "1.0.1";
 
 const REPLACEMENTS = [
-  ["split(tokenize(text))", "parseMoonbitStatements(text)"],
+  [
+    "function parse(input, cat, rootName) {\n\tconst trimmed = preprocess(input);\n\tif (!trimmed) return emptyResult();\n\tconst { text, wasIncomplete } = autoClose(trimmed);\n\tconst stmts = split(tokenize(text));\n\tif (!stmts.length) return emptyResult(wasIncomplete);\n\tconst stmtMap = /* @__PURE__ */ new Map();\n\tfor (const s of stmts) {\n\t\tconst stmt = classifyStatement(s, parseExpression(s.tokens));\n\t\tstmtMap.set(s.id, stmt);\n\t}\n\treturn buildResult(stmtMap, [...stmtMap.values()], wasIncomplete, stmtMap.size, cat, rootName);\n}\n",
+    "function parse(input, cat, rootName) {\n\treturn parseCatalogMoonbit(input, cat, rootName);\n}\n",
+  ],
   ["split(tokenize(closed))", "parseMoonbitStatements(closed)"],
   ["split(tokenize(raw))[0]", "parseMoonbitStatements(raw)[0]"],
   ["split(tokenize(t))", "parseMoonbitStatements(t)"],
@@ -318,7 +321,59 @@ const REPLACEMENTS = [
   ],
 ];
 
-const SHIM = `function parseMoonbitStatements(text) {
+const SHIM = `function copyParamSchema(param) {
+  const schema = param && param.schema && typeof param.schema === "object" && !Array.isArray(param.schema) ? Object.assign({}, param.schema) : {};
+  if (param && Object.prototype.hasOwnProperty.call(param, "defaultValue") && schema.default === undefined) schema.default = param.defaultValue;
+  return schema;
+}
+function catalogText(cat) {
+  const properties = {};
+  const defs = {};
+  const functions = {};
+  const actions = {};
+  if (cat && typeof cat.forEach === "function") {
+    cat.forEach(function (def, name) {
+      properties[name] = {};
+      const props = {};
+      const required = [];
+      const params = def && def.params;
+      if (params && typeof params.length === "number") {
+        for (let index = 0; index < params.length; index += 1) {
+          const param = params[index];
+          if (!param || typeof param.name !== "string") continue;
+          props[param.name] = copyParamSchema(param);
+          if (param.required) required.push(param.name);
+        }
+      }
+      defs[name] = { properties: props, required: required };
+    });
+  }
+  const calls = cat && cat.callDefs;
+  if (calls && typeof calls.forEach === "function") {
+    calls.forEach(function (def, name) {
+      if (!def || def.builtin) return;
+      const props = {};
+      const required = [];
+      const params = def.params;
+      if (params && typeof params.length === "number") {
+        for (let index = 0; index < params.length; index += 1) {
+          const param = params[index];
+          if (!param || typeof param.name !== "string") continue;
+          props[param.name] = copyParamSchema(param);
+          if (param.required) required.push(param.name);
+        }
+      }
+      const body = { params: { properties: props, required: required } };
+      if (def.kind === "action") actions[name] = body;
+      else functions[name] = body;
+    });
+  }
+  return JSON.stringify({ properties: properties, $defs: defs, functions: functions, actions: actions });
+}
+function parseCatalogMoonbit(input, cat, rootName) {
+  return __ouiParseResult(input.trim(), catalogText(cat), rootName == null ? "" : rootName);
+}
+function parseMoonbitStatements(text) {
   const program = __ouiParseProgram(text);
   const statements = [];
   for (const stmt of program.statements ?? []) {
@@ -1637,7 +1692,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 84;
+  const expected = 83;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

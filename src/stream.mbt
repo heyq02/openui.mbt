@@ -360,6 +360,7 @@ fn schema_issues(catalog : SchemaCatalog) -> Array[Issue] {
       line: 0,
       column: 0,
       statement_id: "",
+      warning: false,
     })
   }
   issues
@@ -706,23 +707,6 @@ fn flat_orphans(
 }
 
 ///|
-fn rooted_issues(items : Array[Issue], root_id : String) -> Array[Issue] {
-  let next : Array[Issue] = []
-  for issue in items {
-    next.push({
-      code: issue.code,
-      component: issue.component,
-      path: issue.path,
-      message: issue.message,
-      line: issue.line,
-      column: issue.column,
-      statement_id: root_id,
-    })
-  }
-  next
-}
-
-///|
 fn push_issues(target : Array[Issue], items : Array[Issue]) -> Unit {
   for issue in items {
     target.push(issue)
@@ -746,6 +730,7 @@ fn flat_errors(
       line: err.line,
       column: err.column,
       statement_id: "",
+      warning: false,
     })
   }
   push_issues(errors, session.flat.schema_issues.val)
@@ -755,15 +740,10 @@ fn flat_errors(
     if !seen.contains(name) && name_defined(session, defined_extra, name) {
       seen[name] = true
       match extra_issues.get(name) {
-        Some(items) =>
-          push_issues(errors, rooted_issues(items, session.flat.root_id.val))
+        Some(items) => push_issues(errors, items)
         None =>
           match session.flat.issues.val.get(name) {
-            Some(items) =>
-              push_issues(
-                errors,
-                rooted_issues(items, session.flat.root_id.val),
-              )
+            Some(items) => push_issues(errors, items)
             None => ()
           }
       }
@@ -1110,11 +1090,13 @@ fn closed_issue() -> Issue {
     line: 0,
     column: 0,
     statement_id: "",
+    warning: false,
   }
 }
 
 ///|
 fn closed_json() -> String {
+  root_expression.val = None
   encode_parse_result(None, true, [], [], [closed_issue()], 0, empty_tail())
 }
 

@@ -20,6 +20,7 @@ priv struct Issue {
   line : Int32
   column : Int32
   statement_id : String
+  warning : Bool
 }
 
 ///|
@@ -45,6 +46,10 @@ let cached_schema : Ref[String] = Ref("")
 ///|
 /// JSON for stream leaves. Empty while a one-shot parse is encoding.
 let encoded_elements : Ref[Map[String, String]] = Ref(Map([]))
+
+///|
+/// Runtime entry (`root = $t ? A : B`). Cleared at the start of each run.
+let root_expression : Ref[Expr?] = Ref(None)
 
 ///|
 let cached_catalog : Ref[SchemaCatalog] = Ref({
@@ -200,6 +205,19 @@ fn push_issue(
   message : String,
   line : Int32,
 ) -> Unit {
+  push_marked(mat, code, component, path, message, line, false)
+}
+
+///|
+fn push_marked(
+  mat : Mat,
+  code : String,
+  component : String,
+  path : String,
+  message : String,
+  line : Int32,
+  warning : Bool,
+) -> Unit {
   mat.errors.push({
     code,
     component,
@@ -208,7 +226,49 @@ fn push_issue(
     line,
     column: 0,
     statement_id: mat.current_statement,
+    warning,
   })
+}
+
+///|
+fn param_signature(name : String, params : Array[ParamDef]) -> String {
+  let labels : Array[String] = []
+  for param in params {
+    labels.push(param.label())
+  }
+  name + "(" + join_labels(labels, ", ") + ")"
+}
+
+///|
+fn required_message(code : String, path : String, signature : String) -> String {
+  let base = if code == "null-required" {
+    "required field \"" + path + "\" cannot be null"
+  } else {
+    "missing required field \"" + path + "\""
+  }
+  base + " — signature: " + signature
+}
+
+///|
+fn catalog_names(catalog : SchemaCatalog) -> String {
+  let names : Array[String] = []
+  for component in catalog.components {
+    names.push(component.name)
+  }
+  join_labels(names, ", ")
+}
+
+///|
+fn unknown_component_message(name : String, catalog : SchemaCatalog) -> String {
+  let base = "Unknown component \"" +
+    name +
+    "\" — not found in catalog or builtins"
+  let available = catalog_names(catalog)
+  if available == "" {
+    base
+  } else {
+    base + ". Available components: " + available
+  }
 }
 
 ///|
@@ -321,7 +381,153 @@ fn materialize_expr(mat : Mat, expr : Expr, line : Int32) -> Val {
     }
     Comp(name, is_function, args) =>
       materialize_call(mat, name, is_function, args, "", line)
-    other => Runtime(other)
+    other => Runtime(fold_runtime(mat, other, line))
+  }
+}
+
+///|
+fn fold_args(mat : Mat, args : Array[Expr], line : Int32) -> Array[Expr] {
+  let folded : Array[Expr] = []
+  for arg in args {
+    folded.push(fold_runtime(mat, arg, line))
+  }
+  folded
+}
+
+///|
+fn contains_component(expr : Expr) -> Bool {
+  match expr {
+    Comp(name, false, args) =>
+      if !is_builtin(name) && name != "Query" && name != "Mutation" {
+        true
+      } else {
+        args_contain_component(args)
+      }
+    Comp(_, _, args) => args_contain_component(args)
+    Arr(items) => args_contain_component(items)
+    Obj(entries) => {
+      for entry in entries {
+        let (_, value) = entry
+        if contains_component(value) {
+          return true
+        }
+      }
+      false
+    }
+    UnaryOp(_, value) => contains_component(value)
+    BinOp(_, left, right) =>
+      contains_component(left) || contains_component(right)
+    Ternary(cond, yes, no) =>
+      contains_component(cond) ||
+      contains_component(yes) ||
+      contains_component(no)
+    Member(value, _) => contains_component(value)
+    Index(value, index) =>
+      contains_component(value) || contains_component(index)
+    Assign(_, value) => contains_component(value)
+    _ => false
+  }
+}
+
+///|
+fn args_contain_component(args : Array[Expr]) -> Bool {
+  for arg in args {
+    if contains_component(arg) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn fold_ref(mat : Mat, name : String, line : Int32) -> Expr {
+  if list_has(mat.visiting, name) {
+    push_unique(mat.unresolved, name)
+    return Ref(name)
+  }
+  match last_statement(mat.program, mat.defs, name) {
+    None => {
+      push_unique(mat.unresolved, name)
+      Ref(name)
+    }
+    Some(stmt) => {
+      mat.visited[name] = true
+      mat.visiting.push(name)
+      let saved = mat.current_statement
+      mat.current_statement = name
+      let value = fold_runtime(mat, stmt.expr, stmt.line)
+      mat.current_statement = saved
+      let next : Array[String] = []
+      for item in mat.visiting {
+        if item != name {
+          next.push(item)
+        }
+      }
+      mat.visiting = next
+      let _line = line
+      value
+    }
+  }
+}
+
+///|
+/// Rewrite a runtime expression: resolve refs, null unknown `@` calls.
+fn fold_runtime(mat : Mat, expr : Expr, line : Int32) -> Expr {
+  match expr {
+    Ref(name) => fold_ref(mat, name, line)
+    Comp(name, is_function, args) =>
+      if is_function && !is_runtime_name(mat.catalog, name) {
+        push_issue(
+          mat,
+          "unknown-function",
+          name,
+          "",
+          "Unknown function \"@" +
+          name +
+          "\": not a built-in or action step. The call evaluates to null",
+          line,
+        )
+        Null
+      } else {
+        let folded = fold_args(mat, args, line)
+        if !is_function &&
+          !is_runtime_name(mat.catalog, name) &&
+          component_params(mat.catalog, name) is None &&
+          !is_builtin(name) {
+          push_issue(
+            mat,
+            "unknown-component",
+            name,
+            "",
+            unknown_component_message(name, mat.catalog),
+            line,
+          )
+        }
+        Comp(name, is_function, folded)
+      }
+    Arr(items) => Arr(fold_args(mat, items, line))
+    Obj(entries) => {
+      let folded : Array[(String, Expr)] = []
+      for entry in entries {
+        let (key, value) = entry
+        folded.push((key, fold_runtime(mat, value, line)))
+      }
+      Obj(folded)
+    }
+    UnaryOp(op, operand) => UnaryOp(op, fold_runtime(mat, operand, line))
+    BinOp(op, left, right) =>
+      BinOp(op, fold_runtime(mat, left, line), fold_runtime(mat, right, line))
+    Ternary(cond, yes, no) =>
+      Ternary(
+        fold_runtime(mat, cond, line),
+        fold_runtime(mat, yes, line),
+        fold_runtime(mat, no, line),
+      )
+    Member(obj, field) => Member(fold_runtime(mat, obj, line), field)
+    Index(obj, index) =>
+      Index(fold_runtime(mat, obj, line), fold_runtime(mat, index, line))
+    Assign(target, value) => Assign(target, fold_runtime(mat, value, line))
+    other => other
   }
 }
 
@@ -388,11 +594,14 @@ fn materialize_ref(mat : Mat, name : String, line : Int32) -> Val {
     Some(stmt) => {
       mat.visited[name] = true
       mat.visiting.push(name)
+      let saved_statement = mat.current_statement
+      mat.current_statement = name
       let value = match stmt.expr {
         Comp(comp_name, is_function, args) =>
           materialize_call(mat, comp_name, is_function, args, name, stmt.line)
         other => materialize_expr(mat, other, stmt.line)
       }
+      mat.current_statement = saved_statement
       let next : Array[String] = []
       for item in mat.visiting {
         if item != name {
@@ -460,7 +669,7 @@ fn materialize_call(
         "unknown-component",
         name,
         "",
-        "Unknown component \"" + name + "\"",
+        unknown_component_message(name, mat.catalog),
         line,
       )
       Null
@@ -473,8 +682,32 @@ fn materialize_call(
       while index < params.length() && index < args.length() {
         let param = params[index]
         let value = materialize_expr(mat, args[index], line)
-        if value is Null && (param.node is Fields(_) || param.node is Items(_)) {
-          ()
+        if value is Null {
+          if param.required {
+            match lit_val(node_default(param.node)) {
+              Some(fallback) => props.push((param.name, fallback))
+              None => {
+                drop_component = true
+                mismatched.push(param.name)
+                push_issue(
+                  mat,
+                  "null-required",
+                  name,
+                  "/" + param.name,
+                  required_message(
+                    "null-required",
+                    "/" + param.name,
+                    param_signature(name, params),
+                  ),
+                  line,
+                )
+              }
+            }
+          } else {
+            props.push((param.name, Null))
+          }
+          index += 1
+          continue
         } else if param.node is Open {
           let _kept = refine(
             mat,
@@ -574,7 +807,11 @@ fn materialize_call(
                   "missing-required",
                   name,
                   "/" + param.name,
-                  "missing required field \"/" + param.name + "\"",
+                  required_message(
+                    "missing-required",
+                    "/" + param.name,
+                    param_signature(name, params),
+                  ),
                   line,
                 )
               }
@@ -585,7 +822,13 @@ fn materialize_call(
       if drop_component {
         Null
       } else {
-        Element(name, statement_id, props, false, props_have_dynamic(props))
+        Element(
+          name,
+          statement_id,
+          props,
+          mat.partial,
+          props_have_dynamic(props),
+        )
       }
     }
   }
@@ -648,6 +891,7 @@ fn orphan_ids(
 
 ///|
 fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
+  root_expression.val = None
   self.partial = incomplete
   for err in self.program.errors {
     self.errors.push({
@@ -658,6 +902,7 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       line: err.line,
       column: err.column,
       statement_id: "",
+      warning: false,
     })
   }
   for err in self.catalog.errors {
@@ -669,12 +914,19 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       line: 0,
       column: 0,
       statement_id: "",
+      warning: false,
     })
   }
   match pick_root(self.program, self.defs, root_name) {
     None => {
       let component = if root_name == "" { "" } else { root_name }
-      push_issue(self, "no-root", component, "", "No root statement", 0)
+      let message = if root_name == "" {
+        "No root statement"
+      } else {
+        "No root statement, and no statement calls the root component " +
+        root_name
+      }
+      push_issue(self, "no-root", component, "", message, 0)
       None
     }
     Some((id, fallback)) => {
@@ -703,13 +955,23 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
       match root {
         Some(Element(_)) =>
           if fallback {
-            push_issue(
+            push_marked(
               self,
               "no-root",
               root_name,
               "",
               "No root statement. Rendering the first statement that calls the root component " +
               root_name,
+              0,
+              true,
+            )
+          }
+        Some(Runtime(expr)) =>
+          if contains_component(expr) {
+            root_expression.val = Some(expr)
+          } else {
+            push_issue(
+              self, "no-root", root_name, "", "root does not evaluate to a component",
               0,
             )
           }
@@ -718,7 +980,18 @@ fn Mat::run(self : Mat, root_name : String, incomplete : Bool) -> Val? {
             self, "no-root", root_name, "", "root does not evaluate to a component",
             0,
           )
-        None => ()
+        None =>
+          if fallback {
+            push_issue(
+              self,
+              "no-root",
+              root_name,
+              "",
+              "No root statement, and no statement calls the root component " +
+              root_name,
+              0,
+            )
+          }
       }
       self.reached = orphan_ids(self.program, id, self.visited)
       match root {
@@ -957,16 +1230,18 @@ fn result_json(
   }
   let error_json : Array[Json] = []
   for err in errors {
-    error_json.push(
-      json_object([
-        ("code", Json::string(err.code)),
-        ("component", Json::string(err.component)),
-        ("path", Json::string(err.path)),
-        ("message", Json::string(err.message)),
-        ("line", Json::number(Double::from_int(err.line))),
-        ("column", Json::number(Double::from_int(err.column))),
-      ]),
-    )
+    let fields : Array[(String, Json)] = [
+      ("code", Json::string(err.code)),
+      ("component", Json::string(err.component)),
+      ("path", Json::string(err.path)),
+      ("message", Json::string(err.message)),
+      ("line", Json::number(Double::from_int(err.line))),
+      ("column", Json::number(Double::from_int(err.column))),
+    ]
+    if err.warning {
+      fields.push(("severity", Json::string("warning")))
+    }
+    error_json.push(json_object(fields))
   }
   let root_json = match root {
     Some(value) => val_json(value)
@@ -1069,6 +1344,7 @@ fn materialize_statement(
     cache: Ref(Map([])),
     cache_limit: 0,
   }
+  mat.current_statement = stmt.id
   let value = match stmt.expr {
     Comp(name, is_function, args) =>
       materialize_call(mat, name, is_function, args, stmt.id, stmt.line)
@@ -1168,7 +1444,7 @@ fn literal_component(
   }
   let mut index = 0
   while index < args.length() {
-    if scalar_json(args[index]) is None {
+    if args[index] is Null || scalar_json(args[index]) is None {
       return None
     }
     index = index + 1
@@ -1180,10 +1456,11 @@ fn literal_component(
         code: "unknown-component",
         component: name,
         path: "",
-        message: "Unknown component \"" + name + "\"",
+        message: unknown_component_message(name, catalog),
         line,
         column: 0,
         statement_id,
+        warning: false,
       })
       Some(("", issues))
     }
@@ -1233,6 +1510,7 @@ fn literal_component(
             line,
             column: 0,
             statement_id,
+            warning: false,
           })
           if param.required {
             drop_component = true
@@ -1258,6 +1536,7 @@ fn literal_component(
           line,
           column: 0,
           statement_id,
+          warning: false,
         })
       }
       for param in params {
@@ -1280,10 +1559,15 @@ fn literal_component(
               code: "missing-required",
               component: name,
               path: "/" + param.name,
-              message: "missing required field \"/" + param.name + "\"",
+              message: required_message(
+                "missing-required",
+                "/" + param.name,
+                param_signature(name, params),
+              ),
               line,
               column: 0,
               statement_id,
+              warning: false,
             })
           }
         }
@@ -1521,8 +1805,13 @@ fn write_issues(buf : StringBuilder, errors : Array[Issue]) -> Unit {
     buf.write_string(err.line.to_string())
     buf.write_string(",\"column\":")
     buf.write_string(err.column.to_string())
-    buf.write_string(",\"statementId\":")
-    write_json_string(buf, err.statement_id)
+    if err.statement_id != "" {
+      buf.write_string(",\"statementId\":")
+      write_json_string(buf, err.statement_id)
+    }
+    if err.warning {
+      buf.write_string(",\"severity\":\"warning\"")
+    }
     buf.write_char('}')
     index += 1
   }
@@ -1812,6 +2101,13 @@ fn encode_parse_result(
   match root {
     Some(value) => write_val(buf, value, true)
     None => buf.write_string("null")
+  }
+  match root_expression.val {
+    Some(expr) => {
+      buf.write_string(",\"rootExpression\":")
+      write_expr_json(buf, expr)
+    }
+    None => ()
   }
   buf.write_string(",\"meta\":{\"incomplete\":")
   write_json_bool(buf, incomplete)

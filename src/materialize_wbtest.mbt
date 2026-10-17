@@ -140,7 +140,7 @@ test "materialize reports missing props, orphans, and unresolved refs" {
       #|orphaned: extra
       #|errors: 2
       #|2:0 type-mismatch field "/size" expects "small"|"large" but got "tiny"
-      #|3:0 type-mismatch field "/title" expects string but got null
+      #|3:0 null-required required field "/title" cannot be null — signature: Card(title*: string)
       #|Stack
       #|  children:
       #|    - TextContent
@@ -167,10 +167,114 @@ test "unknown components and missing required props are reported" {
       #|unresolved:
       #|orphaned: title
       #|errors: 1
-      #|1:0 unknown-component Unknown component "Nope"
+      #|1:0 unknown-component Unknown component "Nope" — not found in catalog or builtins. Available components: TextContent
       #|root: null
     ),
   )
+  let bare = materialize_result("root = Nope(\"x\")", "{}", "")
+  inspect(
+    bare.contains(
+      "Unknown component \\\"Nope\\\" — not found in catalog or builtins\"",
+    ),
+    content="true",
+  )
+  inspect(bare.contains("Available components"), content="false")
+  let stack =
+    #|{
+    #|  "properties": { "Stack": {}, "Title": {}, "Table": {} },
+    #|  "$defs": {
+    #|    "Stack": { "properties": { "children": {} }, "required": ["children"] },
+    #|    "Title": { "properties": { "text": { "type": "string" } }, "required": ["text"] },
+    #|    "Table": { "properties": { "columns": {}, "rows": {} }, "required": ["columns", "rows"] }
+    #|  }
+    #|}
+  let absent = materialize_result("root = Stack()", stack, "")
+  inspect(absent.contains("\"code\":\"missing-required\""), content="true")
+  inspect(
+    absent.contains(
+      "missing required field \\\"/children\\\" — signature: Stack(children*)",
+    ),
+    content="true",
+  )
+  inspect(absent.contains("\"statementId\":\"root\""), content="true")
+  let nulled = materialize_result("root = Stack(null)", stack, "")
+  inspect(nulled.contains("\"code\":\"null-required\""), content="true")
+  inspect(
+    nulled.contains(
+      "required field \\\"/children\\\" cannot be null — signature: Stack(children*)",
+    ),
+    content="true",
+  )
+  let nested = materialize_result(
+    "root = Stack([bad, good])\nbad = Title()\ngood = Title(\"ok\")", stack, "",
+  )
+  inspect(nested.contains("\"statementId\":\"bad\""), content="true")
+  inspect(nested.contains("\"statementId\":\"good\""), content="true")
+  inspect(
+    nested.contains(
+      "missing required field \\\"/text\\\" — signature: Title(text*: string)",
+    ),
+    content="true",
+  )
+  let ghost = materialize_result(
+    "root = Stack([u, t1])\nu = Ghost(\"x\")\nt1 = Title(\"ok\")", stack, "",
+  )
+  inspect(ghost.contains("\"statementId\":\"u\""), content="true")
+  inspect(
+    ghost.contains("Available components: Stack, Title, Table"),
+    content="true",
+  )
+  let open = materialize_result("root = Stack([a])\na = Title(\"y\"", stack, "")
+  inspect(
+    open.contains(
+      "\"partial\":true,\"hasDynamicProps\":false,\"statementId\":\"a\"",
+    ),
+    content="true",
+  )
+  inspect(
+    open.contains(
+      "\"partial\":true,\"hasDynamicProps\":false,\"statementId\":\"root\"",
+    ),
+    content="true",
+  )
+  let optional =
+    #|{
+    #|  "properties": { "Card": {} },
+    #|  "$defs": {
+    #|    "Card": {
+    #|      "properties": {
+    #|        "theme": { "type": "string", "default": "dark" },
+    #|        "title": {}
+    #|      },
+    #|      "required": ["title"]
+    #|    }
+    #|  }
+    #|}
+  let kept = materialize_result("root = Card(null, \"hi\")", optional, "")
+  inspect(kept.contains("\"theme\":null"), content="true")
+  inspect(kept.contains("\"title\":\"hi\""), content="true")
+  inspect(kept.contains("\"errors\":[]"), content="true")
+  let entry = materialize_result(
+    "$t = true\nroot = $t ? a : b\na = Title(\"A\")\nb = Title(\"B\")", stack, "",
+  )
+  inspect(
+    entry.contains("\"root\":null,\"rootExpression\":{\"k\":\"Ternary\""),
+    content="true",
+  )
+  inspect(
+    entry.contains("\"mappedProps\":{\"text\":{\"k\":\"Str\",\"v\":\"A\"}}"),
+    content="true",
+  )
+  inspect(entry.contains("\"errors\":[]"), content="true")
+  inspect(entry.contains("\"orphaned\":[]"), content="true")
+  let loose =
+    #|{
+    #|  "properties": { "Title": {} },
+    #|  "$defs": { "Title": { "properties": { "text": {} }, "required": ["text"] } }
+    #|}
+  let unknown = materialize_result("root = Title(\"p\" + @Foo(1))", loose, "")
+  inspect(unknown.contains("\"code\":\"unknown-function\""), content="true")
+  inspect(unknown.contains("\"right\":{\"k\":\"Null\"}"), content="true")
 }
 
 ///|
@@ -184,6 +288,18 @@ test "a named root is used when there is no root statement" {
     #|    }
     #|  }
     #|}
+  inspect(
+    materialize_result("card = Card(\"Hi\")", schema, "Card").contains(
+      "\"severity\":\"warning\"",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result("t = Title(\"x\")", schema, "Card").contains(
+      "no statement calls the root component Card",
+    ),
+    content="true",
+  )
   inspect(
     materialize_dump("card = Card(\"Hi\")\n", schema, "Card"),
     content=(
@@ -505,6 +621,9 @@ test "nested schema validation follows the official edge rule" {
   let silent = materialize_result("root = DefBox()", schema, "")
   inspect(silent.contains("\"theme\":\"dark\""), content="true")
   inspect(silent.contains("\"errors\":[]"), content="true")
+  let blank = materialize_result("root = DefBox(null)", schema, "")
+  inspect(blank.contains("\"theme\":\"dark\""), content="true")
+  inspect(blank.contains("\"errors\":[]"), content="true")
   let flag = materialize_result("root = FlagBox()", schema, "")
   inspect(flag.contains("\"flag\":true"), content="true")
   inspect(flag.contains("\"errors\":[]"), content="true")
