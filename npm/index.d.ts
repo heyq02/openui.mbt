@@ -167,6 +167,19 @@ export function propStep(payload: {
   assign?: boolean;
   needs?: boolean;
 }): { op: string };
+export function storeKeep(payload: {
+  same?: boolean;
+  plain?: boolean;
+  n?: number;
+  o?: number;
+  eq?: boolean[];
+}): { op: string };
+export function storeInit(payload: {
+  phase?: string;
+  has?: boolean;
+  same?: boolean;
+  pristine?: boolean;
+}): { op: string };
 export function propError(payload: { key?: string; typeName?: string; message?: string }): {
   source: string;
   code: string;

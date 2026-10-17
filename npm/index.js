@@ -70,6 +70,8 @@ const {
   each_step: eachStepOpenui,
   prop_step: propStepOpenui,
   prop_error: propErrorOpenui,
+  store_keep: storeKeepOpenui,
+  store_init: storeInitOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1272,6 +1274,16 @@ export function eachStep(payload) {
 /** Next step for one prop value. The host evaluates, recurses, and reads state. */
 export function propStep(payload) {
   return JSON.parse(propStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** `createStore().set` keeps the value when this returns `keep`. */
+export function storeKeep(payload) {
+  return JSON.parse(storeKeepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** One `createStore().initialize` key. */
+export function storeInit(payload) {
+  return JSON.parse(storeInitOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Runtime error object for a prop that throws. `statementId` stays null here. */

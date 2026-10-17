@@ -391,3 +391,17 @@ pub fn prop_step(payload_json : String) -> String {
 pub fn prop_error(payload_json : String) -> String {
   @openui.prop_error(payload_json)
 }
+
+///|
+/// Whether `createStore().set` keeps the stored value.
+#export_name("store_keep")
+pub fn store_keep(payload_json : String) -> String {
+  @openui.store_keep(payload_json)
+}
+
+///|
+/// One `createStore().initialize` key.
+#export_name("store_init")
+pub fn store_init(payload_json : String) -> String {
+  @openui.store_init(payload_json)
+}

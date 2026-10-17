@@ -144,6 +144,10 @@ const REPLACEMENTS = [
     'function evaluateElementProps(el, evalCtx) {\n\tif (el.hasDynamicProps === false) return el;\n\tconst schemaCtx = { library: evalCtx.library };\n\tconst def = evalCtx.library.components[el.typeName];\n\tconst evaluated = {};\n\tlet key = "";\n\tconst report = (msg) => {\n\t\tevalCtx.errors?.push({\n\t\t\tsource: "runtime",\n\t\t\tcode: "runtime-error",\n\t\t\tcomponent: el.typeName,\n\t\t\tstatementId: el.statementId,\n\t\t\tmessage: `Evaluating prop "${key}" on ${el.typeName} failed: ${msg}`,\n\t\t\thint: `Check the expression used for prop "${key}"`\n\t\t});\n\t};\n\tconst propCtx = evalCtx.ctx.functions || evalCtx.ctx.actions ? {\n\t\t...evalCtx,\n\t\tctx: {\n\t\t\t...evalCtx.ctx,\n\t\t\treportError: report\n\t\t}\n\t} : evalCtx;\n\tfor (const [propKey, value] of Object.entries(el.props)) {\n\t\tkey = propKey;\n\t\tconst propSchema = def?.props?.shape?.[key];\n\t\ttry {\n\t\t\tevaluated[key] = evaluatePropValue(value, propCtx, schemaCtx, propSchema);\n\t\t} catch (e) {\n\t\t\tevaluated[key] = value;\n\t\t\treport(e instanceof Error ? e.message : String(e));\n\t\t}\n\t}\n\treturn {\n\t\t...el,\n\t\tprops: evaluated\n\t};\n}\n',
     "function evaluateElementProps(el, evalCtx) {\n\treturn evaluateElementPropsMoonbit(el, evalCtx);\n}\n",
   ],
+  [
+    'function createStore() {\n\tconst state = /* @__PURE__ */ new Map();\n\tconst pristine = /* @__PURE__ */ new Set();\n\tconst listeners = /* @__PURE__ */ new Set();\n\tlet snapshot = {};\n\tfunction notify() {\n\t\tconst currentListeners = [...listeners];\n\t\tfor (const listener of currentListeners) listener();\n\t}\n\tfunction rebuildSnapshot() {\n\t\tsnapshot = Object.fromEntries(state);\n\t}\n\tfunction get(name) {\n\t\treturn state.get(name);\n\t}\n\tfunction set(name, value, options) {\n\t\tif (options?.pristine) pristine.add(name);\n\t\telse pristine.delete(name);\n\t\tconst existing = state.get(name);\n\t\tif (Object.is(existing, value)) return;\n\t\tif (value && existing && typeof value === "object" && typeof existing === "object" && !Array.isArray(value) && !Array.isArray(existing)) {\n\t\t\tconst nk = Object.keys(value);\n\t\t\tconst ok = Object.keys(existing);\n\t\t\tif (nk.length === ok.length && nk.every((k) => Object.is(value[k], existing[k]))) return;\n\t\t}\n\t\tstate.set(name, value);\n\t\trebuildSnapshot();\n\t\tnotify();\n\t}\n\tfunction subscribe(listener) {\n\t\tlisteners.add(listener);\n\t\treturn () => {\n\t\t\tlisteners.delete(listener);\n\t\t};\n\t}\n\tfunction getSnapshot() {\n\t\treturn snapshot;\n\t}\n\tfunction initialize(defaults, persisted) {\n\t\tlet changed = false;\n\t\tfor (const key of Object.keys(persisted)) {\n\t\t\tpristine.delete(key);\n\t\t\tif (!state.has(key) || !Object.is(state.get(key), persisted[key])) {\n\t\t\t\tstate.set(key, persisted[key]);\n\t\t\t\tchanged = true;\n\t\t\t}\n\t\t}\n\t\tfor (const key of Object.keys(defaults)) if (!state.has(key)) {\n\t\t\tstate.set(key, defaults[key]);\n\t\t\tpristine.add(key);\n\t\t\tchanged = true;\n\t\t} else if (pristine.has(key) && !Object.is(state.get(key), defaults[key])) {\n\t\t\tstate.set(key, defaults[key]);\n\t\t\tchanged = true;\n\t\t}\n\t\tif (changed) {\n\t\t\trebuildSnapshot();\n\t\t\tnotify();\n\t\t}\n\t}\n\tfunction dispose() {\n\t\tstate.clear();\n\t\tpristine.clear();\n\t\tlisteners.clear();\n\t\tsnapshot = {};\n\t}\n\treturn {\n\t\tget,\n\t\tset,\n\t\tsubscribe,\n\t\tgetSnapshot,\n\t\tinitialize,\n\t\tdispose\n\t};\n}\n',
+    'function createStore() {\n\treturn createStoreMoonbit();\n}\n',
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -508,6 +512,124 @@ function evaluateElementPropsMoonbit(el, evalCtx) {
   }
   return { ...el, props: evaluated };
 }
+function storePlain(existing, value) {
+  return Boolean(
+    value &&
+      existing &&
+      typeof value === "object" &&
+      typeof existing === "object" &&
+      !Array.isArray(value) &&
+      !Array.isArray(existing),
+  );
+}
+function storeEqualKeys(existing, value) {
+  const nextKeys = Object.keys(value);
+  const prevKeys = Object.keys(existing);
+  const eq = [];
+  if (nextKeys.length === prevKeys.length) {
+    for (const key of nextKeys) {
+      const same = Object.is(value[key], existing[key]);
+      eq.push(same);
+      if (!same) break;
+    }
+  }
+  return __ouiStoreKeep({
+    same: false,
+    plain: true,
+    n: nextKeys.length,
+    o: prevKeys.length,
+    eq,
+  });
+}
+function createStoreMoonbit() {
+  const state = new Map();
+  const pristine = new Set();
+  const listeners = new Set();
+  let snapshot = {};
+  function notify() {
+    const currentListeners = [...listeners];
+    for (const listener of currentListeners) listener();
+  }
+  function rebuildSnapshot() {
+    snapshot = Object.fromEntries(state);
+  }
+  function get(name) {
+    return state.get(name);
+  }
+  function set(name, value, options) {
+    if (options?.pristine) pristine.add(name);
+    else pristine.delete(name);
+    const existing = state.get(name);
+    if (Object.is(existing, value)) {
+      if (__ouiStoreKeep({ same: true }).op === "keep") return;
+    } else if (storePlain(existing, value)) {
+      if (storeEqualKeys(existing, value).op === "keep") return;
+    } else if (__ouiStoreKeep({ same: false, plain: false }).op === "keep") return;
+    state.set(name, value);
+    rebuildSnapshot();
+    notify();
+  }
+  function subscribe(listener) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }
+  function getSnapshot() {
+    return snapshot;
+  }
+  function initialize(defaults, persisted) {
+    let changed = false;
+    for (const key of Object.keys(persisted)) {
+      pristine.delete(key);
+      const has = state.has(key);
+      const same = has ? Object.is(state.get(key), persisted[key]) : false;
+      if (__ouiStoreInit({ phase: "persisted", has, same }).op === "write") {
+        state.set(key, persisted[key]);
+        changed = true;
+      }
+    }
+    for (const key of Object.keys(defaults)) {
+      const has = state.has(key);
+      if (!has) {
+        if (__ouiStoreInit({ phase: "defaults", has: false }).op === "insert") {
+          state.set(key, defaults[key]);
+          pristine.add(key);
+          changed = true;
+        }
+        continue;
+      }
+      const clean = pristine.has(key);
+      if (!clean) {
+        __ouiStoreInit({ phase: "defaults", has: true, pristine: false });
+        continue;
+      }
+      const same = Object.is(state.get(key), defaults[key]);
+      if (__ouiStoreInit({ phase: "defaults", has: true, pristine: true, same }).op === "replace") {
+        state.set(key, defaults[key]);
+        changed = true;
+      }
+    }
+    if (changed) {
+      rebuildSnapshot();
+      notify();
+    }
+  }
+  function dispose() {
+    state.clear();
+    pristine.clear();
+    listeners.clear();
+    snapshot = {};
+  }
+  return {
+    get,
+    set,
+    subscribe,
+    getSnapshot,
+    initialize,
+    dispose,
+  };
+}
 `;
 
 function usage() {
@@ -528,11 +650,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -545,7 +667,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 41;
+  const expected = 42;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,
