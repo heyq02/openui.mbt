@@ -248,6 +248,34 @@ const REPLACEMENTS = [
     'function pushValidationIssue(ctx, component, path, issue) {\n\tctx.errors.push({\n\t\tcode: issue.code,\n\t\tcomponent,\n\t\tpath,\n\t\tmessage: validationMessage(component, path, issue),\n\t\tstatementId: ctx.currentStatementId,\n\t\t...issue.code === "no-root" && issue.reason === "fallback" && { severity: "warning" }\n\t});\n}\n',
     "function pushValidationIssue(ctx, component, path, issue) {\n\treturn pushValidationIssueMoonbit(ctx, component, path, issue);\n}\n",
   ],
+  [
+    'function refName(s) {\n\treturn typeof s["$ref"] === "string" ? s["$ref"].split("/").pop() : void 0;\n}\n',
+    "function refName(s) {\n\treturn refNameMoonbit(s);\n}\n",
+  ],
+  [
+    'function isCompositeSchema(s) {\n\treturn "$ref" in s || "anyOf" in s || "oneOf" in s || "allOf" in s;\n}\n',
+    "function isCompositeSchema(s) {\n\treturn isCompositeSchemaMoonbit(s);\n}\n",
+  ],
+  [
+    'function getSchemaDefaultValue(property) {\n\tif (!property || typeof property !== "object" || Array.isArray(property)) return;\n\treturn property.default;\n}\n',
+    "function getSchemaDefaultValue(property) {\n\treturn getSchemaDefaultValueMoonbit(property);\n}\n",
+  ],
+  [
+    'function getTypeFromSchema(property) {\n\tif (!property || typeof property !== "object" || Array.isArray(property)) return;\n\tconst p = property;\n\tconst ref = refName(p);\n\tif (ref) return ref;\n\tconst leaf = getScalarTypeInfo(p);\n\tif (leaf.enumValues) return leaf.enumValues.map((v) => JSON.stringify(v)).join("|");\n\tif (leaf.expectedType) return leaf.expectedType;\n\treturn typeof p.type === "string" ? p.type : void 0;\n}\n',
+    "function getTypeFromSchema(property) {\n\treturn getTypeFromSchemaMoonbit(property);\n}\n",
+  ],
+  [
+    'function buildParamsSignature(component, params) {\n\treturn `${component}(${params.map((p) => {\n\t\tconst type = getTypeFromSchema(p.schema);\n\t\tconst marked = p.required ? `${p.name}*` : p.name;\n\t\treturn type ? `${marked}: ${type}` : marked;\n\t}).join(", ")})`;\n}\n',
+    "function buildParamsSignature(component, params) {\n\treturn buildParamsSignatureMoonbit(component, params);\n}\n",
+  ],
+  [
+    'function slotRefNames(s) {\n\treturn (s["anyOf"] ?? s["oneOf"] ?? [s]).map(refName);\n}\n',
+    "function slotRefNames(s) {\n\treturn slotRefNamesMoonbit(s);\n}\n",
+  ],
+  [
+    "function isOnlyComponentSlot(s, ctx) {\n\tconst names = slotRefNames(s);\n\treturn names.length > 0 && names.every((n) => n !== void 0 && ctx.cat?.has(n));\n}\n",
+    "function isOnlyComponentSlot(s, ctx) {\n\treturn isOnlyComponentSlotMoonbit(s, ctx);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -1285,6 +1313,64 @@ function pushValidationIssueMoonbit(ctx, component, path, issue) {
   if (__ouiBind({ phase: "warn", warn }).op === "warning") entry.severity = "warning";
   errors.push(entry);
 }
+function getSchemaDefaultValueMoonbit(property) {
+  if (__ouiLink({ phase: "gate", bad: !property || typeof property !== "object" || Array.isArray(property) }).op === "skip") return;
+  return property.default;
+}
+function refNameMoonbit(s) {
+  if (__ouiLink({ phase: "ref", text: typeof s["$ref"] === "string" }).op === "name") return s["$ref"].split("/").pop();
+  return void 0;
+}
+function isCompositeSchemaMoonbit(s) {
+  let miss = "";
+  for (;;) {
+    const step = __ouiLink({ phase: "composite", miss });
+    if (step.op !== "check") return false;
+    if (step.key in s) return true;
+    miss = step.key;
+  }
+}
+function slotRefNamesMoonbit(s) {
+  const anyOf = s["anyOf"];
+  if (__ouiLink({ phase: "slot", any: anyOf != null }).op === "any") return anyOf.map(refName);
+  const oneOf = s["oneOf"];
+  if (__ouiLink({ phase: "slot", one: oneOf != null }).op === "one") return oneOf.map(refName);
+  return [s].map(refName);
+}
+function isOnlyComponentSlotMoonbit(s, ctx) {
+  const names = slotRefNames(s);
+  if (__ouiLink({ phase: "only", open: names.length > 0 }).op !== "scan") return false;
+  return names.every((n) => {
+    if (__ouiLink({ phase: "member", named: n !== void 0 }).op !== "has") return false;
+    return ctx.cat?.has(n);
+  });
+}
+function getTypeFromSchemaMoonbit(property) {
+  if (__ouiLink({ phase: "gate", bad: !property || typeof property !== "object" || Array.isArray(property) }).op === "skip") return;
+  const ref = refName(property);
+  if (__ouiLink({ phase: "type", ref: Boolean(ref) }).op === "ref") return ref;
+  const leaf = getScalarTypeInfo(property);
+  if (__ouiLink({ phase: "leaf", enums: Boolean(leaf.enumValues) }).op === "enum") {
+    return leaf.enumValues.map((v) => JSON.stringify(v)).join("|");
+  }
+  if (__ouiLink({ phase: "expect", typed: Boolean(leaf.expectedType) }).op === "type") return leaf.expectedType;
+  if (__ouiLink({ phase: "plain", text: typeof property.type === "string" }).op === "type") return property.type;
+  return void 0;
+}
+function buildParamsSignatureMoonbit(component, params) {
+  const head = String(component) + "(";
+  const parts = params.map((p) => {
+    const type = getTypeFromSchema(p.schema);
+    const required = Boolean(p.required);
+    const name = p.name;
+    const step = __ouiLink({ phase: "param", required, typed: Boolean(type) });
+    if (step.op === "both") return String(name) + "*: " + type;
+    if (step.op === "typed") return String(name) + ": " + type;
+    if (step.op === "star") return String(name) + "*";
+    return name;
+  });
+  return head + parts.join(", ") + ")";
+}
 `;
 
 function usage() {
@@ -1305,11 +1391,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg, shapeStep as __ouiShape, bindStep as __ouiBind } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg, shapeStep as __ouiShape, bindStep as __ouiBind, linkStep as __ouiLink } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg, shapeStep: __ouiShape, bindStep: __ouiBind } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg, shapeStep: __ouiShape, bindStep: __ouiBind, linkStep: __ouiLink } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -1322,7 +1408,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 67;
+  const expected = 74;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

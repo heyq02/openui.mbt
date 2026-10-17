@@ -1,0 +1,112 @@
+///|
+test "schema refs choose defaults, composite keys, and signatures" {
+  inspect(
+    link_step("{\"phase\":\"gate\",\"bad\":true}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"gate\",\"bad\":false}"),
+    content="{\"op\":\"read\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"gate\",\"bad\":1}"),
+    content="{\"op\":\"read\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"composite\"}"),
+    content="{\"op\":\"check\",\"key\":\"$ref\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"composite\",\"miss\":\"$ref\"}"),
+    content="{\"op\":\"check\",\"key\":\"anyOf\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"composite\",\"miss\":\"anyOf\"}"),
+    content="{\"op\":\"check\",\"key\":\"oneOf\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"composite\",\"miss\":\"oneOf\"}"),
+    content="{\"op\":\"check\",\"key\":\"allOf\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"composite\",\"miss\":\"allOf\"}"),
+    content="{\"op\":\"no\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"composite\",\"miss\":1}"),
+    content="{\"op\":\"check\",\"key\":\"$ref\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"slot\",\"any\":true}"),
+    content="{\"op\":\"any\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"slot\",\"one\":true}"),
+    content="{\"op\":\"one\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"slot\",\"any\":\"yes\"}"),
+    content="{\"op\":\"self\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"ref\",\"text\":true}"),
+    content="{\"op\":\"name\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"ref\",\"text\":false}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"only\",\"open\":true}"),
+    content="{\"op\":\"scan\"}",
+  )
+  inspect(link_step("{\"phase\":\"only\"}"), content="{\"op\":\"empty\"}")
+  inspect(
+    link_step("{\"phase\":\"member\",\"named\":true}"),
+    content="{\"op\":\"has\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"member\",\"named\":0}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"type\",\"ref\":true}"),
+    content="{\"op\":\"ref\"}",
+  )
+  inspect(link_step("{\"phase\":\"type\"}"), content="{\"op\":\"go\"}")
+  inspect(
+    link_step("{\"phase\":\"leaf\",\"enums\":true}"),
+    content="{\"op\":\"enum\"}",
+  )
+  inspect(link_step("{\"phase\":\"leaf\"}"), content="{\"op\":\"go\"}")
+  inspect(
+    link_step("{\"phase\":\"expect\",\"typed\":true}"),
+    content="{\"op\":\"type\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"expect\",\"typed\":false}"),
+    content="{\"op\":\"go\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"plain\",\"text\":true}"),
+    content="{\"op\":\"type\"}",
+  )
+  inspect(link_step("{\"phase\":\"plain\"}"), content="{\"op\":\"skip\"}")
+  inspect(
+    link_step("{\"phase\":\"param\",\"typed\":true,\"required\":true}"),
+    content="{\"op\":\"both\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"param\",\"typed\":true,\"required\":false}"),
+    content="{\"op\":\"typed\"}",
+  )
+  inspect(
+    link_step("{\"phase\":\"param\",\"required\":true}"),
+    content="{\"op\":\"star\"}",
+  )
+  inspect(link_step("{\"phase\":\"param\"}"), content="{\"op\":\"bare\"}")
+  inspect(link_step("{\"phase\":\"other\"}"), content="{\"op\":\"skip\"}")
+  inspect(link_step("{\"phase\":1}"), content="{\"op\":\"skip\"}")
+  inspect(link_step("[]"), content="{\"op\":\"skip\"}")
+  inspect(link_step("{"), content="{\"op\":\"skip\"}")
+}

@@ -510,3 +510,10 @@ pub fn shape_step(payload_json : String) -> String {
 pub fn bind_step(payload_json : String) -> String {
   @openui.bind_step(payload_json)
 }
+
+///|
+/// Schema default, ref, and signature branch. The host still reads fields.
+#export_name("link_step")
+pub fn link_step(payload_json : String) -> String {
+  @openui.link_step(payload_json)
+}
