@@ -120,6 +120,8 @@ export interface EnrichedError {
   hint?: string;
 }
 
+export function mergeStatements(existing: string, patch: string, rootId?: string): string;
+
 export function enrichErrors(
   validationErrors: Array<Record<string, unknown>>,
   schema:

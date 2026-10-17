@@ -14,7 +14,7 @@ npm install @heyq02/openui.mbt @openuidev/lang-core@1.0.1
 npx oui.mbt patch
 ```
 
-`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse`、`createStreamingParser()`、`parseMessage()`、`buildMessage()`、`parseRules()`、`parseStructuredRules()`、`enrichErrors()` 和内置字段校验换成 Wasm。`url` 与 `pattern` 仍调用宿主的 `URL` 和 `RegExp`。预处理、自动补全、物化、state、query、mutation 的提取，以及 `]]>openui:` 消息的切分和写回都在 MoonBit 里完成。Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
+`oui.mbt patch` 把 `@openuidev/lang-core@1.0.1` 里的 `createParser().parse`、`createStreamingParser()`、`parseMessage()`、`buildMessage()`、`parseRules()`、`parseStructuredRules()`、`enrichErrors()`、`mergeStatements()` 和内置字段校验换成 Wasm。`url` 与 `pattern` 仍调用宿主的 `URL` 和 `RegExp`。预处理、自动补全、物化、state、query、mutation 的提取，以及 `]]>openui:` 消息的切分和写回都在 MoonBit 里完成。Renderer 仍是官方代码。版本不是 1.0.1，或解析调用点和补丁对不上时，命令退出，已安装的文件保持原样。
 
 ```js
 import { parseProgram } from "@heyq02/openui.mbt/parser";
@@ -52,7 +52,7 @@ const program = parseProgram('root = TextContent("Hello", "large")');
 
 注册表单的一次解析与官方持平，流式更快。50 个标量字段、嵌套字段、400 与 4000 个标量字段的一次解析和流式都更慢。整页时间仍由官方 Renderer 主导。
 
-Wasm 二进制 168179 字节，gzip 74284。demo 页面代码 gzip 从 1341307 到 1431667。注册表单整页一次解析的中位数是 229.1 ms 和 235.7 ms。同一页按行流式再绘制的中位数是 228.3 ms 和 232.3 ms。字段校验合入后的 Wasm 是 175539 字节，gzip 77300。上面的解析和整页时间没有重跑。
+Wasm 二进制 168179 字节，gzip 74284。demo 页面代码 gzip 从 1341307 到 1431667。注册表单整页一次解析的中位数是 229.1 ms 和 235.7 ms。同一页按行流式再绘制的中位数是 228.3 ms 和 232.3 ms。语句合并合入后的 Wasm 是 182446 字节，gzip 79436。上面的解析和整页时间没有重跑。
 
 ```bash
 npm ci --prefix web

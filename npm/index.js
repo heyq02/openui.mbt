@@ -41,6 +41,7 @@ const {
   parse_structured_rules: parseStructuredRulesOpenui,
   builtin_check: builtinCheckOpenui,
   enrich_hints: enrichHintsOpenui,
+  merge_statements: mergeStatementsOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -261,4 +262,14 @@ export function enrichErrors(validationErrors, schema, componentNames) {
     }
     return error;
   });
+}
+
+/** Merge a patch onto an existing program. Unreachable statements are dropped. */
+export function mergeStatements(existing, patch, rootId) {
+  if (typeof existing !== "string" || typeof patch !== "string") {
+    existing.trim();
+    patch.trim();
+  }
+  if (rootId === undefined) return mergeStatementsOpenui(existing, patch, "", 0);
+  return mergeStatementsOpenui(existing, patch, String(rootId), 1);
 }

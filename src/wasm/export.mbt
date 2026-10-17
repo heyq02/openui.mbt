@@ -175,3 +175,15 @@ pub fn builtin_check(
 pub fn enrich_hints(payload_json : String) -> String {
   @openui.enrich_hints(payload_json)
 }
+
+///|
+/// Merge a patch onto an existing program. `has_root` 0 skips reachability.
+#export_name("merge_statements")
+pub fn merge_statements(
+  existing : String,
+  patch : String,
+  root_id : String,
+  use_root : Int32,
+) -> String {
+  @openui.merge_statements(existing, patch, root_id, has_root=use_root != 0)
+}
