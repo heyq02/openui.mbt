@@ -55,6 +55,17 @@ fn mapped_param_names(name : String) -> Array[String]? {
           found = Some(names)
         }
       }
+      if found is None {
+        for component in cached_catalog.val.components {
+          if component.name == name {
+            let names : Array[String] = []
+            for param in component.params {
+              names.push(param.name)
+            }
+            found = Some(names)
+          }
+        }
+      }
       found
     }
   }

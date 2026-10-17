@@ -360,6 +360,7 @@ fn schema_issues(catalog : SchemaCatalog) -> Array[Issue] {
       line: 0,
       column: 0,
       statement_id: "",
+      warning: false,
     })
   }
   issues
@@ -729,6 +730,7 @@ fn flat_errors(
       line: err.line,
       column: err.column,
       statement_id: "",
+      warning: false,
     })
   }
   push_issues(errors, session.flat.schema_issues.val)
@@ -1088,11 +1090,13 @@ fn closed_issue() -> Issue {
     line: 0,
     column: 0,
     statement_id: "",
+    warning: false,
   }
 }
 
 ///|
 fn closed_json() -> String {
+  root_expression.val = None
   encode_parse_result(None, true, [], [], [closed_issue()], 0, empty_tail())
 }
 

@@ -270,7 +270,7 @@ const patchedSource = readFileSync(
   "utf8",
 );
 for (const site of [
-  "parseMoonbitStatements(text)",
+  "parseCatalogMoonbit(input, cat, rootName)",
   "parseMoonbitStatements(t)",
   "parseMoonbitStatements(closed)",
   "parseMoonbitStatements(raw)",

@@ -224,6 +224,57 @@ test "unknown components and missing required props are reported" {
     ghost.contains("Available components: Stack, Title, Table"),
     content="true",
   )
+  let open = materialize_result("root = Stack([a])\na = Title(\"y\"", stack, "")
+  inspect(
+    open.contains(
+      "\"partial\":true,\"hasDynamicProps\":false,\"statementId\":\"a\"",
+    ),
+    content="true",
+  )
+  inspect(
+    open.contains(
+      "\"partial\":true,\"hasDynamicProps\":false,\"statementId\":\"root\"",
+    ),
+    content="true",
+  )
+  let optional =
+    #|{
+    #|  "properties": { "Card": {} },
+    #|  "$defs": {
+    #|    "Card": {
+    #|      "properties": {
+    #|        "theme": { "type": "string", "default": "dark" },
+    #|        "title": {}
+    #|      },
+    #|      "required": ["title"]
+    #|    }
+    #|  }
+    #|}
+  let kept = materialize_result("root = Card(null, \"hi\")", optional, "")
+  inspect(kept.contains("\"theme\":null"), content="true")
+  inspect(kept.contains("\"title\":\"hi\""), content="true")
+  inspect(kept.contains("\"errors\":[]"), content="true")
+  let entry = materialize_result(
+    "$t = true\nroot = $t ? a : b\na = Title(\"A\")\nb = Title(\"B\")", stack, "",
+  )
+  inspect(
+    entry.contains("\"root\":null,\"rootExpression\":{\"k\":\"Ternary\""),
+    content="true",
+  )
+  inspect(
+    entry.contains("\"mappedProps\":{\"text\":{\"k\":\"Str\",\"v\":\"A\"}}"),
+    content="true",
+  )
+  inspect(entry.contains("\"errors\":[]"), content="true")
+  inspect(entry.contains("\"orphaned\":[]"), content="true")
+  let loose =
+    #|{
+    #|  "properties": { "Title": {} },
+    #|  "$defs": { "Title": { "properties": { "text": {} }, "required": ["text"] } }
+    #|}
+  let unknown = materialize_result("root = Title(\"p\" + @Foo(1))", loose, "")
+  inspect(unknown.contains("\"code\":\"unknown-function\""), content="true")
+  inspect(unknown.contains("\"right\":{\"k\":\"Null\"}"), content="true")
 }
 
 ///|
@@ -237,6 +288,18 @@ test "a named root is used when there is no root statement" {
     #|    }
     #|  }
     #|}
+  inspect(
+    materialize_result("card = Card(\"Hi\")", schema, "Card").contains(
+      "\"severity\":\"warning\"",
+    ),
+    content="true",
+  )
+  inspect(
+    materialize_result("t = Title(\"x\")", schema, "Card").contains(
+      "no statement calls the root component Card",
+    ),
+    content="true",
+  )
   inspect(
     materialize_dump("card = Card(\"Hi\")\n", schema, "Card"),
     content=(
