@@ -212,6 +212,47 @@ fn push_issue(
 }
 
 ///|
+fn param_signature(name : String, params : Array[ParamDef]) -> String {
+  let labels : Array[String] = []
+  for param in params {
+    labels.push(param.label())
+  }
+  name + "(" + join_labels(labels, ", ") + ")"
+}
+
+///|
+fn required_message(code : String, path : String, signature : String) -> String {
+  let base = if code == "null-required" {
+    "required field \"" + path + "\" cannot be null"
+  } else {
+    "missing required field \"" + path + "\""
+  }
+  base + " — signature: " + signature
+}
+
+///|
+fn catalog_names(catalog : SchemaCatalog) -> String {
+  let names : Array[String] = []
+  for component in catalog.components {
+    names.push(component.name)
+  }
+  join_labels(names, ", ")
+}
+
+///|
+fn unknown_component_message(name : String, catalog : SchemaCatalog) -> String {
+  let base = "Unknown component \"" +
+    name +
+    "\" — not found in catalog or builtins"
+  let available = catalog_names(catalog)
+  if available == "" {
+    base
+  } else {
+    base + ". Available components: " + available
+  }
+}
+
+///|
 fn literal_display(value : Val) -> String? {
   match value {
     Null => Some("null")
@@ -388,11 +429,14 @@ fn materialize_ref(mat : Mat, name : String, line : Int32) -> Val {
     Some(stmt) => {
       mat.visited[name] = true
       mat.visiting.push(name)
+      let saved_statement = mat.current_statement
+      mat.current_statement = name
       let value = match stmt.expr {
         Comp(comp_name, is_function, args) =>
           materialize_call(mat, comp_name, is_function, args, name, stmt.line)
         other => materialize_expr(mat, other, stmt.line)
       }
+      mat.current_statement = saved_statement
       let next : Array[String] = []
       for item in mat.visiting {
         if item != name {
@@ -460,7 +504,7 @@ fn materialize_call(
         "unknown-component",
         name,
         "",
-        "Unknown component \"" + name + "\"",
+        unknown_component_message(name, mat.catalog),
         line,
       )
       Null
@@ -473,8 +517,31 @@ fn materialize_call(
       while index < params.length() && index < args.length() {
         let param = params[index]
         let value = materialize_expr(mat, args[index], line)
-        if value is Null && (param.node is Fields(_) || param.node is Items(_)) {
-          ()
+        if value is Null {
+          match lit_val(node_default(param.node)) {
+            Some(fallback) => props.push((param.name, fallback))
+            None =>
+              if param.required {
+                drop_component = true
+                mismatched.push(param.name)
+                push_issue(
+                  mat,
+                  "null-required",
+                  name,
+                  "/" + param.name,
+                  required_message(
+                    "null-required",
+                    "/" + param.name,
+                    param_signature(name, params),
+                  ),
+                  line,
+                )
+              } else {
+                props.push((param.name, Null))
+              }
+          }
+          index += 1
+          continue
         } else if param.node is Open {
           let _kept = refine(
             mat,
@@ -574,7 +641,11 @@ fn materialize_call(
                   "missing-required",
                   name,
                   "/" + param.name,
-                  "missing required field \"/" + param.name + "\"",
+                  required_message(
+                    "missing-required",
+                    "/" + param.name,
+                    param_signature(name, params),
+                  ),
                   line,
                 )
               }
@@ -1069,6 +1140,7 @@ fn materialize_statement(
     cache: Ref(Map([])),
     cache_limit: 0,
   }
+  mat.current_statement = stmt.id
   let value = match stmt.expr {
     Comp(name, is_function, args) =>
       materialize_call(mat, name, is_function, args, stmt.id, stmt.line)
@@ -1168,7 +1240,7 @@ fn literal_component(
   }
   let mut index = 0
   while index < args.length() {
-    if scalar_json(args[index]) is None {
+    if args[index] is Null || scalar_json(args[index]) is None {
       return None
     }
     index = index + 1
@@ -1180,7 +1252,7 @@ fn literal_component(
         code: "unknown-component",
         component: name,
         path: "",
-        message: "Unknown component \"" + name + "\"",
+        message: unknown_component_message(name, catalog),
         line,
         column: 0,
         statement_id,
@@ -1280,7 +1352,11 @@ fn literal_component(
               code: "missing-required",
               component: name,
               path: "/" + param.name,
-              message: "missing required field \"/" + param.name + "\"",
+              message: required_message(
+                "missing-required",
+                "/" + param.name,
+                param_signature(name, params),
+              ),
               line,
               column: 0,
               statement_id,
