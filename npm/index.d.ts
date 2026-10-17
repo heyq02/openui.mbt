@@ -204,7 +204,9 @@ export function queryError(payload: {
   hint?: null;
 };
 export function createQueryManager(
-  toolProvider?: { callTool: (name: string, args: unknown) => Promise<unknown> },
+  toolProvider?: {
+    callTool: (name: string, args: unknown) => Promise<unknown>;
+  },
   host?: {
     ToolNotFoundError?: new (...args: never[]) => Error;
     McpToolError?: new (...args: never[]) => Error;
