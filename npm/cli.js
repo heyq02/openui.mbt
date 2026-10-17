@@ -160,6 +160,14 @@ const REPLACEMENTS = [
     "function resolveStateField(name, bindingValue, store, evaluationContext, fieldGetter, fieldSetter) {\n\tif (isReactiveAssign(bindingValue) && store && evaluationContext) {\n\t\tconst { target, expr } = bindingValue;\n\t\treturn {\n\t\t\tname,\n\t\t\tvalue: store.get(target),\n\t\t\tsetValue: (value) => {\n\t\t\t\tconst extraScope = { $value: value };\n\t\t\t\tconst nextValue = evaluate(expr, {\n\t\t\t\t\t...evaluationContext,\n\t\t\t\t\textraScope\n\t\t\t\t});\n\t\t\t\tstore.set(target, nextValue);\n\t\t\t},\n\t\t\tisReactive: true\n\t\t};\n\t}\n\treturn {\n\t\tname,\n\t\tvalue: fieldGetter(name) ?? bindingValue,\n\t\tsetValue: (value) => fieldSetter(name, value),\n\t\tisReactive: false\n\t};\n}\n",
     "function resolveStateField(name, bindingValue, store, evaluationContext, fieldGetter, fieldSetter) {\n\treturn resolveStateFieldMoonbit(name, bindingValue, store, evaluationContext, fieldGetter, fieldSetter);\n}\n",
   ],
+  [
+    "function callArgs(node, context, params) {\n\tconst args = evaluateArgs(node, context, Object.keys(params.properties ?? {}).map((name) => ({\n\t\tname,\n\t\trequired: false\n\t})));\n\tfor (const key in args) if (args[key] === null && !params.required?.includes(key)) delete args[key];\n\treturn args;\n}\n",
+    "function callArgs(node, context, params) {\n\treturn callArgsMoonbit(node, context, params);\n}\n",
+  ],
+  [
+    "function missesRequired(args, params) {\n\treturn !!params.required?.some((key) => args[key] == null && getSchemaDefaultValue(params.properties?.[key]) === void 0);\n}\n",
+    "function missesRequired(args, params) {\n\treturn missesRequiredMoonbit(args, params);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -679,6 +687,39 @@ function resolveStateFieldMoonbit(name, bindingValue, store, evaluationContext, 
     isReactive: false,
   };
 }
+function callArgsMoonbit(node, context, params) {
+  const args = evaluateArgs(node, context, Object.keys(params.properties ?? {}).map((name) => ({
+    name,
+    required: false,
+  })));
+  for (const key in args) {
+    const nil = args[key] === null;
+    let list = false;
+    let hit = false;
+    if (nil) {
+      const listed = params.required;
+      list = listed != null;
+      hit = list && listed.includes(key);
+    }
+    const step = __ouiCallArg({ phase: "drop", nil, list, hit });
+    if (step.op === "drop") delete args[key];
+  }
+  return args;
+}
+function missesRequiredMoonbit(args, params) {
+  const required = params.required;
+  if (required == null) return __ouiCallArg({ phase: "miss", absent: false, bare: false }).op === "miss";
+  return !!required.some((key) => {
+    const absent = args[key] == null;
+    let bare = false;
+    if (absent) {
+      const properties = params.properties;
+      const property = properties == null ? void 0 : properties[key];
+      bare = getSchemaDefaultValue(property) === void 0;
+    }
+    return __ouiCallArg({ phase: "miss", absent, bare }).op === "miss";
+  });
+}
 `;
 
 function usage() {
@@ -699,11 +740,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -716,7 +757,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 45;
+  const expected = 47;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

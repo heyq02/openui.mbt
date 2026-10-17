@@ -76,6 +76,7 @@ const {
   query_error: queryErrorOpenui,
   state_field: stateFieldOpenui,
   strip_assign: stripAssignOpenui,
+  call_arg: callArgOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1303,6 +1304,11 @@ export function stateField(payload) {
 /** `stripReactiveAssign` branch. The host still calls `getState`. */
 export function stripAssign(payload) {
   return JSON.parse(stripAssignOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Null-argument deletion and missing-required check. The host evaluates the arguments. */
+export function callArg(payload) {
+  return JSON.parse(callArgOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */

@@ -433,3 +433,10 @@ pub fn state_field(payload_json : String) -> String {
 pub fn strip_assign(payload_json : String) -> String {
   @openui.strip_assign(payload_json)
 }
+
+///|
+/// Drop a null optional argument, or report a required argument with no default.
+#export_name("call_arg")
+pub fn call_arg(payload_json : String) -> String {
+  @openui.call_arg(payload_json)
+}
