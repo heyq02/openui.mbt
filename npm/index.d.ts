@@ -135,7 +135,11 @@ export function generatePrompt(spec: {
   root?: unknown;
   preamble?: unknown;
   components: Record<string, { signature?: unknown; description?: unknown }>;
-  componentGroups?: { name?: unknown; components: unknown[]; notes?: unknown[] }[];
+  componentGroups?: {
+    name?: unknown;
+    components: unknown[];
+    notes?: unknown[];
+  }[];
   functions?: Record<string, { signature?: unknown; description?: unknown }>;
   actions?: Record<string, { signature?: unknown; description?: unknown }>;
   builtinFunctions?: unknown;
