@@ -49,7 +49,7 @@ const REPLACEMENTS = [
     'function mergeStatements(existing, patch, rootId = "root") {\n\treturn mergeMoonbitStatements(existing, patch, rootId);\n}\n',
   ],
   [
-    "function jsonToOpenUI(json, library, options) {\n\tconst paramMap = compileSchema(library.toJSONSchema());\n\tconst collector = new StatementCollector();\n\tconst rootExpr = serializeElementExpr(json, paramMap, collector);\n\tconst rootId = json.statementId || \"root\";\n\tconst lines = [];\n\tlines.push(`${rootId} = ${rootExpr}`);\n\tfor (const stmt of collector.getStatements()) {\n\t\tif (stmt.id === rootId) continue;\n\t\tlines.push(stmt.text);\n\t}\n\tif (options?.stateDeclarations) {\n\t\tconst stateLines = serializeStateDeclarations(options.stateDeclarations, paramMap, collector);\n\t\tlines.push(...stateLines);\n\t}\n\treturn lines.join(\"\\n\");\n}\n",
+    'function jsonToOpenUI(json, library, options) {\n\tconst paramMap = compileSchema(library.toJSONSchema());\n\tconst collector = new StatementCollector();\n\tconst rootExpr = serializeElementExpr(json, paramMap, collector);\n\tconst rootId = json.statementId || "root";\n\tconst lines = [];\n\tlines.push(`${rootId} = ${rootExpr}`);\n\tfor (const stmt of collector.getStatements()) {\n\t\tif (stmt.id === rootId) continue;\n\t\tlines.push(stmt.text);\n\t}\n\tif (options?.stateDeclarations) {\n\t\tconst stateLines = serializeStateDeclarations(options.stateDeclarations, paramMap, collector);\n\t\tlines.push(...stateLines);\n\t}\n\treturn lines.join("\\n");\n}\n',
     "function jsonToOpenUI(json, library, options) {\n\treturn jsonToOpenUIMoonbit(json, library, options);\n}\n",
   ],
 ];
