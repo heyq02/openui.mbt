@@ -461,3 +461,10 @@ pub fn inline_step(payload_json : String) -> String {
 pub fn check_value(payload_json : String) -> String {
   @openui.check_value(payload_json)
 }
+
+///|
+/// `callFunction` branch. The host still calls the function and `checkValue`.
+#export_name("user_call")
+pub fn user_call(payload_json : String) -> String {
+  @openui.user_call(payload_json)
+}

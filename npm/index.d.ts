@@ -222,6 +222,13 @@ export function checkValue(payload: {
   known?: boolean;
   hit?: boolean;
 }): { op: string; text?: string; code?: string };
+export function userCall(payload: {
+  phase?: string;
+  miss?: boolean;
+  bad?: boolean;
+  returns?: boolean;
+  nil?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;
