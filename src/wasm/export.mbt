@@ -496,3 +496,10 @@ pub fn leaf_step(payload_json : String) -> String {
 pub fn msg_step(payload_json : String) -> String {
   @openui.msg_step(payload_json)
 }
+
+///|
+/// Schema validation branch. The host still copies values and reports errors.
+#export_name("shape_step")
+pub fn shape_step(payload_json : String) -> String {
+  @openui.shape_step(payload_json)
+}
