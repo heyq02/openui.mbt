@@ -604,7 +604,10 @@ function reviveAst(node) {
   if (node[0] === "Bool") return { k: "Bool", v: node[1] };
   if (node[0] === "Arr") return { k: "Arr", els: reviveList(node[1], reviveAst) };
   if (node[0] === "Obj")
-    return { k: "Obj", entries: node[1].map(([key, item]) => [key, reviveAst(item)]) };
+    return {
+      k: "Obj",
+      entries: node[1].map(([key, item]) => [key, reviveAst(item)]),
+    };
   return { k: "Null" };
 }
 
