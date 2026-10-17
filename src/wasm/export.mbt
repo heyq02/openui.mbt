@@ -198,3 +198,24 @@ pub fn json_to_openui(
 ) -> String {
   @openui.json_to_openui(schema_json, root_json, state_json)
 }
+
+///|
+/// Start an expression walk. The host answers each request.
+#export_name("eval_start")
+pub fn eval_start(ast_json : String) -> String {
+  @openui.eval_start(ast_json)
+}
+
+///|
+/// Answer the innermost expression walk.
+#export_name("eval_answer")
+pub fn eval_answer(answer_json : String) -> String {
+  @openui.eval_answer(answer_json)
+}
+
+///|
+/// Drop the innermost expression walk after a host throw.
+#export_name("eval_cancel")
+pub fn eval_cancel() -> String {
+  @openui.eval_cancel()
+}

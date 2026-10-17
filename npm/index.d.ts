@@ -122,6 +122,16 @@ export interface EnrichedError {
 
 export function mergeStatements(existing: string, patch: string, rootId?: string): string;
 
+export function evaluatePure(
+  node: { k?: unknown },
+  context?: {
+    getState?: (name: string) => unknown;
+    resolveRef?: (name: string) => unknown;
+    extraScope?: Record<string, unknown> | null;
+  },
+  schemaCtx?: unknown,
+  evalNode?: (node: { k?: unknown }) => unknown,
+): unknown;
 export function jsonToOpenUI(
   json: { typeName?: unknown; props?: object; statementId?: unknown },
   library: { toJSONSchema(): unknown },

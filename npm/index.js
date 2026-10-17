@@ -43,6 +43,9 @@ const {
   enrich_hints: enrichHintsOpenui,
   merge_statements: mergeStatementsOpenui,
   json_to_openui: jsonToOpenUIOpenui,
+  eval_start: evalStartOpenui,
+  eval_answer: evalAnswerOpenui,
+  eval_cancel: evalCancelOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -397,6 +400,163 @@ export function jsonToOpenUI(json, library, options) {
       )
     : "null";
   return jsonToOpenUIOpenui(JSON.stringify(schema), JSON.stringify(encodeRoot(json)), stateJson);
+}
+
+function encodeEvalAst(node, astNodes) {
+  const id = astNodes.length;
+  astNodes.push(node);
+  if (!node || typeof node !== "object") return node.k;
+  switch (node.k) {
+    case "Str":
+    case "Num":
+    case "Bool":
+      return ["Lit", id];
+    case "Null":
+    case "Ph":
+      return [node.k, id];
+    case "StateRef":
+      return ["StateRef", id, node.n];
+    case "Ref":
+    case "RuntimeRef":
+      return [node.k, id, node.n];
+    case "Arr":
+      return ["Arr", id, node.els.map((item) => encodeEvalAst(item, astNodes))];
+    case "Obj":
+      return ["Obj", id, node.entries.map(([key, item]) => [key, encodeEvalAst(item, astNodes)])];
+    case "BinOp":
+      return [
+        "BinOp",
+        id,
+        node.op,
+        encodeEvalAst(node.left, astNodes),
+        encodeEvalAst(node.right, astNodes),
+      ];
+    case "UnaryOp":
+      return ["UnaryOp", id, node.op, encodeEvalAst(node.operand, astNodes)];
+    case "Ternary":
+      return [
+        "Ternary",
+        id,
+        encodeEvalAst(node.cond, astNodes),
+        encodeEvalAst(node.then, astNodes),
+        encodeEvalAst(node.else, astNodes),
+      ];
+    case "Member":
+      return ["Member", id, encodeEvalAst(node.obj, astNodes), node.field];
+    case "Index":
+      return ["Index", id, encodeEvalAst(node.obj, astNodes), encodeEvalAst(node.index, astNodes)];
+    case "Assign":
+      return ["Assign", id, node.target];
+    case "Comp":
+      return ["Comp", id];
+    default:
+      return ["Other", id];
+  }
+}
+
+function evalToNumber(value) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const number = Number(value);
+    return Number.isNaN(number) ? 0 : number;
+  }
+  if (typeof value === "boolean") return value ? 1 : 0;
+  return 0;
+}
+
+function evalMember(obj, field) {
+  if (obj == null) return null;
+  if (Array.isArray(obj)) {
+    if (field === "length") return obj.length;
+    return obj.map((item) => item?.[field] ?? null);
+  }
+  return obj[field];
+}
+
+function evalIndex(obj, idx) {
+  if (obj == null || idx == null) return null;
+  if (Array.isArray(obj)) return obj[evalToNumber(idx)];
+  return obj[String(idx)];
+}
+
+function evalAdd(left, right) {
+  if (typeof left === "string" || typeof right === "string") {
+    return String(left ?? "") + String(right ?? "");
+  }
+  return evalToNumber(left) + evalToNumber(right);
+}
+
+/** Walk a pure expression. `evalNode` evaluates a nested call or component. */
+export function evaluatePure(node, context, schemaCtx, evalNode) {
+  const values = [];
+  const astNodes = [];
+  const box = (value) => {
+    values.push(value);
+    return values.length - 1;
+  };
+  const evalChild = evalNode ?? ((child) => child);
+  let req = JSON.parse(evalStartOpenui(JSON.stringify(encodeEvalAst(node, astNodes))));
+  try {
+    for (;;) {
+      if (req.done) return req.id < 0 ? undefined : values[req.id];
+      let id = 0;
+      if (req.need === "truthy") {
+        req = JSON.parse(evalAnswerOpenui(JSON.stringify({ bit: Boolean(values[req.id]) })));
+        continue;
+      }
+      if (req.need === "lit") id = box(astNodes[req.ast].v);
+      else if (req.need === "null") id = box(null);
+      else if (req.need === "undef") id = box(undefined);
+      else if (req.need === "str") id = box(req.v);
+      else if (req.need === "num") {
+        if (req.k === "nan") id = box(NaN);
+        else if (req.k === "inf") id = box(Infinity);
+        else if (req.k === "-inf") id = box(-Infinity);
+        else if (req.k === "-0") id = box(-0);
+        else id = box(req.v);
+      } else if (req.need === "bool") id = box(req.v);
+      else if (req.need === "state") {
+        id = box(context.extraScope?.[req.name] ?? context.getState(req.name));
+      } else if (req.need === "ref") id = box(context.resolveRef(req.name));
+      else if (req.need === "not") id = box(!values[req.id]);
+      else if (req.need === "neg") id = box(-evalToNumber(values[req.id]));
+      else if (req.need === "add") id = box(evalAdd(values[req.l], values[req.r]));
+      else if (req.need === "sub")
+        id = box(evalToNumber(values[req.l]) - evalToNumber(values[req.r]));
+      else if (req.need === "mul")
+        id = box(evalToNumber(values[req.l]) * evalToNumber(values[req.r]));
+      else if (req.need === "div") {
+        const right = evalToNumber(values[req.r]);
+        id = box(right === 0 ? 0 : evalToNumber(values[req.l]) / right);
+      } else if (req.need === "mod") {
+        const right = evalToNumber(values[req.r]);
+        id = box(right === 0 ? 0 : evalToNumber(values[req.l]) % right);
+      } else if (req.need === "eq") id = box(values[req.l] == values[req.r]);
+      else if (req.need === "ne") id = box(values[req.l] != values[req.r]);
+      else if (req.need === "gt")
+        id = box(evalToNumber(values[req.l]) > evalToNumber(values[req.r]));
+      else if (req.need === "lt")
+        id = box(evalToNumber(values[req.l]) < evalToNumber(values[req.r]));
+      else if (req.need === "ge")
+        id = box(evalToNumber(values[req.l]) >= evalToNumber(values[req.r]));
+      else if (req.need === "le")
+        id = box(evalToNumber(values[req.l]) <= evalToNumber(values[req.r]));
+      else if (req.need === "member") id = box(evalMember(values[req.id], req.field));
+      else if (req.need === "index") id = box(evalIndex(values[req.obj], values[req.idx]));
+      else if (req.need === "arr") id = box(req.ids.map((item) => values[item]));
+      else if (req.need === "obj") {
+        id = box(Object.fromEntries(req.entries.map(([key, item]) => [key, values[item]])));
+      } else if (req.need === "assign") {
+        const ast = astNodes[req.ast];
+        id = box({ __reactive: "assign", target: ast.target, expr: ast.value });
+      } else if (req.need === "eval") id = box(evalChild(astNodes[req.ast]));
+      else id = box(undefined);
+      req = JSON.parse(evalAnswerOpenui(JSON.stringify({ id })));
+    }
+  } catch (error) {
+    evalCancelOpenui();
+    throw error;
+  }
 }
 
 /** Merge a patch onto an existing program. Unreachable statements are dropped. */
