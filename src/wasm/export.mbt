@@ -524,3 +524,10 @@ pub fn link_step(payload_json : String) -> String {
 pub fn wrap_step(payload_json : String) -> String {
   @openui.wrap_step(payload_json)
 }
+
+///|
+/// Close an open string and the still-open brackets. The host maps `incomplete`.
+#export_name("auto_close_openui")
+pub fn auto_close_openui(src : String) -> String {
+  @openui.auto_close_json(src)
+}
