@@ -419,3 +419,17 @@ pub fn query_slot(payload_json : String) -> String {
 pub fn query_error(payload_json : String) -> String {
   @openui.query_error(payload_json)
 }
+
+///|
+/// Whether `resolveStateField` returns the reactive binding.
+#export_name("state_field")
+pub fn state_field(payload_json : String) -> String {
+  @openui.state_field(payload_json)
+}
+
+///|
+/// Whether `stripReactiveAssign` reads the current state.
+#export_name("strip_assign")
+pub fn strip_assign(payload_json : String) -> String {
+  @openui.strip_assign(payload_json)
+}

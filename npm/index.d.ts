@@ -189,6 +189,10 @@ export function querySlot(payload: {
   ever?: boolean;
   error?: boolean;
 }): { op?: string; load?: boolean; refetch?: boolean; error?: boolean };
+export function stateField(payload: { assign?: boolean; store?: boolean; context?: boolean }): {
+  op: string;
+};
+export function stripAssign(payload: { assign?: boolean }): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;

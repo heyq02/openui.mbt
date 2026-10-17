@@ -74,6 +74,8 @@ const {
   store_init: storeInitOpenui,
   query_slot: querySlotOpenui,
   query_error: queryErrorOpenui,
+  state_field: stateFieldOpenui,
+  strip_assign: stripAssignOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1291,6 +1293,16 @@ export function storeInit(payload) {
 /** Which cached value and status lists a query contributes. */
 export function querySlot(payload) {
   return JSON.parse(querySlotOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** `resolveStateField` branch. The host still reads state and builds `setValue`. */
+export function stateField(payload) {
+  return JSON.parse(stateFieldOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** `stripReactiveAssign` branch. The host still calls `getState`. */
+export function stripAssign(payload) {
+  return JSON.parse(stripAssignOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */
