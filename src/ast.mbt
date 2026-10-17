@@ -269,6 +269,8 @@ fn write_json_string(buf : StringBuilder, text : String) -> Unit {
     } else if code < 32 {
       buf.write_string("\\u00")
       write_hex_byte(buf, code)
+    } else if code >= 0xD800 && code <= 0xDFFF {
+      buf.write_char(code.unsafe_to_char())
     } else {
       match code.to_char() {
         Some(ch) => buf.write_char(ch)

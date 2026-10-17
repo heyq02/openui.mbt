@@ -359,6 +359,7 @@ fn schema_issues(catalog : SchemaCatalog) -> Array[Issue] {
       message: err.message(),
       line: 0,
       column: 0,
+      statement_id: "",
     })
   }
   issues
@@ -705,6 +706,23 @@ fn flat_orphans(
 }
 
 ///|
+fn rooted_issues(items : Array[Issue], root_id : String) -> Array[Issue] {
+  let next : Array[Issue] = []
+  for issue in items {
+    next.push({
+      code: issue.code,
+      component: issue.component,
+      path: issue.path,
+      message: issue.message,
+      line: issue.line,
+      column: issue.column,
+      statement_id: root_id,
+    })
+  }
+  next
+}
+
+///|
 fn push_issues(target : Array[Issue], items : Array[Issue]) -> Unit {
   for issue in items {
     target.push(issue)
@@ -727,6 +745,7 @@ fn flat_errors(
       message: err.message(),
       line: err.line,
       column: err.column,
+      statement_id: "",
     })
   }
   push_issues(errors, session.flat.schema_issues.val)
@@ -736,10 +755,15 @@ fn flat_errors(
     if !seen.contains(name) && name_defined(session, defined_extra, name) {
       seen[name] = true
       match extra_issues.get(name) {
-        Some(items) => push_issues(errors, items)
+        Some(items) =>
+          push_issues(errors, rooted_issues(items, session.flat.root_id.val))
         None =>
           match session.flat.issues.val.get(name) {
-            Some(items) => push_issues(errors, items)
+            Some(items) =>
+              push_issues(
+                errors,
+                rooted_issues(items, session.flat.root_id.val),
+              )
             None => ()
           }
       }
@@ -758,6 +782,7 @@ fn encode_flat(
   orphaned : Array[String],
   errors : Array[Issue],
   count : Int32,
+  tail : String,
 ) -> String {
   let buf = StringBuilder()
   buf.write_string("{\"root\":{\"type\":\"element\",\"typeName\":")
@@ -793,10 +818,9 @@ fn encode_flat(
   buf.write_string(",\"statementCount\":")
   buf.write_string(count.to_string())
   buf.write_string(",\"errors\":")
-  write_issues(buf, errors)
-  buf.write_string(
-    "},\"stateDeclarations\":{},\"queryStatements\":[],\"mutationStatements\":[]}",
-  )
+  write_issues(buf, reported_issues(errors))
+  buf.write_string("}")
+  buf.write_string(tail)
   buf.to_string()
 }
 
@@ -837,8 +861,6 @@ fn flat_result(
   partial : Bool,
   incomplete : Bool,
   finished : Bool,
-  src : String,
-  open_at : Int32,
 ) -> String? {
   let committed = session.program.val.statements.length()
   if !prepare_flat(session, session.program.val) {
@@ -881,23 +903,20 @@ fn flat_result(
     flat_errors(session, program, extra_issues, extra)
   }
   errors = without_provisional(errors, finished)
-  if finished && open_at >= 0 {
-    let (line, column) = position_at(src, open_at)
-    errors.push({
-      code: "incomplete",
-      component: "",
-      path: "",
-      message: UnclosedInput.message(),
-      line,
-      column,
-    })
-  }
   let unresolved = if extra.length() == 0 &&
     session.flat.unique.val &&
     session.flat.complete.val {
     []
   } else {
     flat_unresolved(session, extra)
+  }
+  let (tail, side_issues) = if has_side_statements(program) {
+    side_tail(program, session.schema)
+  } else {
+    (empty_tail(), [])
+  }
+  for issue in side_issues {
+    errors.push(issue)
   }
   Some(
     encode_flat(
@@ -912,8 +931,34 @@ fn flat_result(
         flat_orphans(program, session.flat.root_id.val, session.flat.refset.val)
       },
       errors,
-      program.statements.length(),
+      unique_statement_count(program),
+      tail,
     ),
+  )
+}
+
+///|
+fn unclosed_program(src : String, open_at : Int32) -> (Program, Int32) {
+  let cut = line_start(src, open_at)
+  let closed = parse(prefix(src, cut))
+  let pending = auto_close(src.unsafe_substring(start=cut, end=src.length()))
+  let extra = parse(pending.text)
+  let seen : Map[String, Bool] = Map([])
+  for stmt in closed.statements {
+    seen[stmt.id] = true
+  }
+  let statements : Array[Statement] = []
+  for stmt in closed.statements {
+    statements.push(stmt)
+  }
+  for stmt in extra.statements {
+    if !(pending.incomplete && seen.contains(stmt.id)) {
+      statements.push(stmt)
+    }
+  }
+  (
+    { statements, errors: closed.errors, },
+    closed.statements.length() + extra.statements.length(),
   )
 }
 
@@ -922,9 +967,57 @@ fn present(
   session : Session,
   finished : Bool,
 ) -> (Val?, Bool, Array[String], Array[String], Array[Issue], Int32) {
-  encoded_elements.val = session.encoded.val
   let src = session.buffer.val
   let open_at = session_hold(session)
+  if open_at >= 0 && !has_preprocess_marker(src) {
+    let (program, count) = unclosed_program(src, open_at)
+    let (line, column) = position_at(src, open_at)
+    ignore(UnclosedInput.message())
+    ignore(line)
+    ignore(column)
+    let (root, _, unresolved, orphaned, errors, _) = materialize_program(
+      program,
+      session.schema,
+      session.root_name,
+      true,
+      Ref(Map([])),
+      0,
+    )
+    let reported = without_provisional(errors, finished)
+    let (_, tail_issues) = side_tail(program, session.schema)
+    for issue in tail_issues {
+      reported.push(issue)
+    }
+    return (root, true, unresolved, orphaned, reported, count)
+  }
+  if has_preprocess_marker(src) {
+    if open_at >= 0 {
+      let (line, column) = position_at(src, open_at)
+      ignore(UnclosedInput.message())
+      ignore(line)
+      ignore(column)
+    }
+    let prepared = normalize_source(src)
+    if prepared.empty {
+      return (None, true, [], [], [], 0)
+    }
+    let program = parse(prepared.text)
+    let (root, incomplete, unresolved, orphaned, errors, count) = materialize_program(
+      program,
+      session.schema,
+      session.root_name,
+      prepared.incomplete,
+      Ref(Map([])),
+      0,
+    )
+    let reported = without_provisional(errors, finished)
+    let (_, tail_issues) = side_tail(program, session.schema)
+    for issue in tail_issues {
+      reported.push(issue)
+    }
+    return (root, incomplete, unresolved, orphaned, reported, count)
+  }
+  encoded_elements.val = session.encoded.val
   let (text, held) = view_source(src, open_at, finished)
   let program = sync_program(session, text, finished)
   let partial = source_incomplete(text)
@@ -938,17 +1031,6 @@ fn present(
   )
   let incomplete = if finished { nested } else { held || nested }
   let reported = without_provisional(errors, finished)
-  if finished && open_at >= 0 {
-    let (line, column) = position_at(src, open_at)
-    reported.push({
-      code: "incomplete",
-      component: "",
-      path: "",
-      message: UnclosedInput.message(),
-      line,
-      column,
-    })
-  }
   (root, incomplete, unresolved, orphaned, reported, count)
 }
 
@@ -956,19 +1038,45 @@ fn present(
 fn render_json(session : Session, finished : Bool) -> String {
   let src = session.buffer.val
   let open_at = session_hold(session)
+  if open_at >= 0 && !has_preprocess_marker(src) {
+    let (program, count) = unclosed_program(src, open_at)
+    let (root, _, unresolved, orphaned, errors, _) = materialize_program(
+      program,
+      session.schema,
+      session.root_name,
+      true,
+      Ref(Map([])),
+      0,
+    )
+    let reported = without_provisional(errors, finished)
+    let (tail, extra) = side_tail(program, session.schema)
+    for issue in extra {
+      reported.push(issue)
+    }
+    return encode_parse_result(
+      root, true, unresolved, orphaned, reported, count, tail,
+    )
+  }
+  if has_preprocess_marker(src) {
+    return materialize_result(src, session.schema, session.root_name)
+  }
   let (text, held) = view_source(src, open_at, finished)
   let program = sync_program(session, text, finished)
   let partial = source_incomplete(text)
   let incomplete = if finished { partial } else { held || partial }
-  match
-    flat_result(session, program, partial, incomplete, finished, src, open_at) {
+  match flat_result(session, program, partial, incomplete, finished) {
     Some(json) => json
     None => {
       let (root, reported_incomplete, unresolved, orphaned, errors, count) = present(
         session, finished,
       )
+      let (tail, _) = if has_side_statements(program) {
+        side_tail(program, session.schema)
+      } else {
+        (empty_tail(), [])
+      }
       encode_parse_result(
-        root, reported_incomplete, unresolved, orphaned, errors, count,
+        root, reported_incomplete, unresolved, orphaned, errors, count, tail,
       )
     }
   }
@@ -1001,12 +1109,13 @@ fn closed_issue() -> Issue {
     message: StreamClosed.message(),
     line: 0,
     column: 0,
+    statement_id: "",
   }
 }
 
 ///|
 fn closed_json() -> String {
-  encode_parse_result(None, true, [], [], [closed_issue()], 0)
+  encode_parse_result(None, true, [], [], [closed_issue()], 0, empty_tail())
 }
 
 ///|
@@ -1110,32 +1219,27 @@ pub fn stream_view(id : Int32, complete : Int32) -> String {
 ///|
 fn preview(session : Session) -> (String, String) {
   encoded_elements.val = Map([])
-  let src = session.buffer.val
-  let open_at = hold_from(src)
-  let program = parse(src)
+  let prepared = normalize_source(session.buffer.val)
+  if prepared.empty {
+    let json = blank_result()
+    return (json, result_dump(None, true, [], [], []))
+  }
+  let program = parse(prepared.text)
   let (root, nested, unresolved, orphaned, errors, count) = materialize_program(
     program,
     session.schema,
     session.root_name,
-    open_at >= 0,
+    prepared.incomplete,
     Ref(Map([])),
     0,
   )
-  let reported = errors
-  if open_at >= 0 {
-    let (line, column) = position_at(src, open_at)
-    reported.push({
-      code: "incomplete",
-      component: "",
-      path: "",
-      message: UnclosedInput.message(),
-      line,
-      column,
-    })
+  let (tail, extra) = side_tail(program, session.schema)
+  for issue in extra {
+    errors.push(issue)
   }
   (
-    encode_parse_result(root, nested, unresolved, orphaned, reported, count),
-    result_dump(root, nested, unresolved, orphaned, reported),
+    encode_parse_result(root, nested, unresolved, orphaned, errors, count, tail),
+    result_dump(root, nested, unresolved, orphaned, errors),
   )
 }
 

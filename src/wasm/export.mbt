@@ -117,3 +117,10 @@ pub fn stream_finish(id : Int32) -> String {
 pub fn stream_close(id : Int32) -> Int32 {
   @openui.stream_close(id)
 }
+
+///|
+/// Split an OpenUI `]]>openui:` message. `streaming` 1 holds a partial marker.
+#export_name("parse_message")
+pub fn parse_message(raw : String, streaming : Int32) -> String {
+  @openui.parse_message(raw, streaming != 0)
+}

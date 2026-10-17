@@ -15,6 +15,28 @@ let stream_schema : String =
   #|}
 
 ///|
+test "an unclosed line is auto-closed before finish" {
+  let id = stream_open(stream_schema, "")
+  let _ = stream_push(id, "root = TextContent(\"")
+  inspect(
+    stream_dump(id),
+    content=(
+      #|incomplete: true
+      #|unresolved:
+      #|orphaned:
+      #|errors: 0
+      #|TextContent
+      #|  text: ""
+    ),
+  )
+  inspect(stream_view(id, 0).contains("\"text\":\"\""), content="true")
+  let _ = stream_push(id, "Hi\")\n")
+  inspect(stream_dump(id).contains("text: \"Hi\""), content="true")
+  inspect(stream_dump(id).contains("incomplete: false"), content="true")
+  let _closed = stream_close(id)
+}
+
+///|
 test "an unfinished line is held back until finish" {
   let id = stream_open(stream_schema, "")
   let _ = stream_push(id, "root = TextContent(\"Hi\")\nroot = TextContent(\"")
@@ -36,10 +58,9 @@ test "an unfinished line is held back until finish" {
       #|incomplete: true
       #|unresolved:
       #|orphaned:
-      #|errors: 1
-      #|2:19 incomplete unclosed input
+      #|errors: 0
       #|TextContent
-      #|  text: ""
+      #|  text: "Hi"
     ),
   )
   let _closed = stream_close(id)
@@ -105,7 +126,7 @@ test "an open line stays uncommitted until it closes" {
   inspect(stream_view(999, 1).contains("unknown-stream"), content="true")
   let open = stream_open(stream_schema, "")
   let _ = stream_push(open, "root = TextContent(\"")
-  inspect(stream_view(open, 1).contains("unclosed input"), content="true")
+  inspect(stream_view(open, 1).contains("\"incomplete\":true"), content="true")
   let _ = stream_close(open)
   let preview = stream_view(id, 1)
   inspect(preview.contains("\"statementCount\":2"), content="true")
@@ -373,6 +394,7 @@ test "flat edges stay aligned with one-shot materialize" {
   let open = stream_open(stream_schema, "")
   let _ = stream_push(open, "root = Stack([a])\n")
   let _ = stream_append(open, "a = TextContent(\"", 1)
-  inspect(stream_dump(open).contains("unclosed input"), content="true")
+  inspect(stream_dump(open).contains("unclosed input"), content="false")
+  inspect(stream_dump(open).contains("incomplete: true"), content="true")
   let _ = stream_close(open)
 }

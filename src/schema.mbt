@@ -26,10 +26,30 @@ pub enum SchemaShape {
 }
 
 ///|
+/// A scalar default copied out of a JSON Schema `default`.
+pub enum JsonLit {
+  Absent
+  Boolean(Bool)
+  Num(Double, String)
+  Str(String)
+}
+
+///|
+/// Nested JSON Schema kept for recursive validation.
+pub enum SchemaNode {
+  Open
+  Leaf(String, Array[String]?, JsonLit)
+  Fields(Array[(String, SchemaNode)], Array[String])
+  Items(SchemaNode)
+  Slot(Array[String])
+}
+
+///|
 pub struct ParamDef {
   name : String
   required : Bool
   shape : SchemaShape
+  node : SchemaNode
 }
 
 ///|
@@ -720,6 +740,189 @@ fn names_in(fields : Array[(String, J)]) -> Array[String] {
 }
 
 ///|
+fn double_of(repr : String) -> Double? {
+  if repr.length() == 0 {
+    return None
+  }
+  let mut value = 0.0
+  let mut frac = 0.1
+  let mut dot = false
+  let mut index = 0
+  let mut digits = 0
+  while index < repr.length() {
+    let ch = repr.at(index).to_int()
+    if ch == code('.') {
+      if dot {
+        return None
+      }
+      dot = true
+    } else if ch >= code('0') && ch <= code('9') {
+      let digit = Double::from_int(ch - code('0'))
+      if dot {
+        value = value + digit * frac
+        frac = frac / 10.0
+      } else {
+        value = value * 10.0 + digit
+      }
+      digits = digits + 1
+    } else {
+      return None
+    }
+    index = index + 1
+  }
+  if digits == 0 {
+    None
+  } else {
+    Some(value)
+  }
+}
+
+///|
+fn lit_of(value : J) -> JsonLit {
+  match value {
+    Bool(flag) => Boolean(flag)
+    Num(repr) =>
+      match double_of(repr) {
+        Some(number) => Num(number, repr)
+        None => Absent
+      }
+    Str(text) => Str(text)
+    _ => Absent
+  }
+}
+
+///|
+fn read_default(fields : Array[(String, J)]) -> JsonLit {
+  match object_get(fields, "default") {
+    Some(value) => lit_of(value)
+    None => Absent
+  }
+}
+
+///|
+fn ref_items(items : Array[J]) -> Array[String]? {
+  if items.length() == 0 {
+    return None
+  }
+  let names : Array[String] = []
+  for item in items {
+    match as_fields(item) {
+      Some(fields) =>
+        match object_get(fields, "$ref") {
+          Some(Str(raw)) => names.push(ref_name(raw))
+          _ => return None
+        }
+      None => return None
+    }
+  }
+  Some(names)
+}
+
+///|
+fn node_of(value : J) -> SchemaNode {
+  match as_fields(value) {
+    None => Open
+    Some(fields) => {
+      let fallback = read_default(fields)
+      match object_get(fields, "$ref") {
+        Some(Str(raw)) => Slot([ref_name(raw)])
+        Some(_) => Open
+        None =>
+          match object_get(fields, "enum") {
+            Some(Arr(items)) => {
+              let encoded : Array[String] = []
+              for item in items {
+                encoded.push(item.display())
+              }
+              Leaf("", Some(encoded), fallback)
+            }
+            Some(_) => Open
+            None =>
+              match object_get(fields, "const") {
+                Some(item) => Leaf("", Some([item.display()]), fallback)
+                None => node_from_type(fields, fallback)
+              }
+          }
+      }
+    }
+  }
+}
+
+///|
+fn node_from_type(
+  fields : Array[(String, J)],
+  fallback : JsonLit,
+) -> SchemaNode {
+  match object_get(fields, "anyOf") {
+    Some(Arr(items)) =>
+      match ref_items(items) {
+        Some(names) => return Slot(names)
+        None => return Open
+      }
+    Some(_) => return Open
+    None => ()
+  }
+  match object_get(fields, "oneOf") {
+    Some(Arr(items)) =>
+      match ref_items(items) {
+        Some(names) => return Slot(names)
+        None => return Open
+      }
+    Some(_) => return Open
+    None => ()
+  }
+  if object_get(fields, "allOf") is Some(_) {
+    return Open
+  }
+  match object_get(fields, "type") {
+    Some(Str("object")) => Fields(node_fields(fields), node_required(fields))
+    Some(Str("array")) =>
+      match object_get(fields, "items") {
+        Some(item) =>
+          match as_fields(item) {
+            Some(_) => Items(node_of(item))
+            None => Items(Open)
+          }
+        None => Items(Open)
+      }
+    Some(Str("string")) => Leaf("string", None, fallback)
+    Some(Str("number")) | Some(Str("integer")) => Leaf("number", None, fallback)
+    Some(Str("boolean")) => Leaf("boolean", None, fallback)
+    _ => Open
+  }
+}
+
+///|
+fn node_fields(fields : Array[(String, J)]) -> Array[(String, SchemaNode)] {
+  let props = match object_get(fields, "properties") {
+    Some(Obj(props)) => props
+    _ => []
+  }
+  let nodes : Array[(String, SchemaNode)] = []
+  for prop in props {
+    let (name, value) = prop
+    nodes.push((name, node_of(value)))
+  }
+  nodes
+}
+
+///|
+fn node_required(fields : Array[(String, J)]) -> Array[String] {
+  let required : Array[String] = []
+  match object_get(fields, "required") {
+    Some(Arr(items)) =>
+      for item in items {
+        match item {
+          Str(name) => required.push(name)
+          _ => ()
+        }
+      }
+    _ => ()
+  }
+  required
+}
+
+///|
 fn compile_params(
   schema : J,
   path : String,
@@ -769,6 +972,7 @@ fn compile_params(
               name,
               required,
               shape: shape_of(value, path + ".properties." + name, errors),
+              node: node_of(value),
             })
           }
           None => ()

@@ -604,7 +604,7 @@ const report = {
   langCore: supported,
   notes: [
     "官方 is @openuidev/lang-core@1.0.1. patch 后 is the same package after oui.mbt patch.",
-    "createParser().parse and createStreamingParser() materialize in Wasm. Renderer stays official.",
+    "createParser().parse, createStreamingParser(), and parseMessage() run in Wasm. Renderer stays official.",
     "Workspace test wall time is not measured. Most packages never import the parser, and Vitest startup dominates that number.",
     "shippedEsm concatenates files. The demo bundle is the size a page actually downloads.",
     "Page time is navigation start to the frame after the official Renderer commits signup.openui. The parse page sends the whole document once. The stream page feeds it line by line through createStreamingParser, then paints the finished tree. Both include downloading the local bundle, evaluating JavaScript, compiling Wasm, and painting.",
