@@ -503,3 +503,10 @@ pub fn msg_step(payload_json : String) -> String {
 pub fn shape_step(payload_json : String) -> String {
   @openui.shape_step(payload_json)
 }
+
+///|
+/// Argument binding and validation severity. The host still reads fields and builds objects.
+#export_name("bind_step")
+pub fn bind_step(payload_json : String) -> String {
+  @openui.bind_step(payload_json)
+}

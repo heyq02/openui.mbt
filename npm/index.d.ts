@@ -286,6 +286,12 @@ export function shapeStep(payload: {
   open?: boolean;
   valid?: boolean;
 }): { op: string };
+export function bindStep(payload: {
+  phase?: string;
+  mapped?: boolean;
+  failed?: boolean;
+  warn?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;
