@@ -50,6 +50,8 @@ const {
   is_ast_kind: isAstKindOpenui,
   to_literal_ast: toLiteralAstOpenui,
   literal_value: literalValueOpenui,
+  call_builtin: callBuiltinOpenui,
+  lazy_step: lazyStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -469,6 +471,64 @@ function evalAdd(left, right) {
     return String(left ?? "") + String(right ?? "");
   }
   return evalToNumber(left) + evalToNumber(right);
+}
+
+function encodeBuiltinValue(value) {
+  if (value === null) return { t: "null" };
+  if (value === undefined) return { t: "u" };
+  if (typeof value === "number") {
+    if (Number.isNaN(value)) return { t: "nan" };
+    if (value === Infinity) return { t: "pinf" };
+    if (value === -Infinity) return { t: "ninf" };
+    if (Object.is(value, -0)) return { t: "n0" };
+    return { t: "n", v: value };
+  }
+  if (typeof value === "string") return { t: "s", v: value };
+  if (typeof value === "boolean") return { t: "b", v: value };
+  if (Array.isArray(value)) {
+    const items = [];
+    for (let i = 0; i < value.length; i += 1) {
+      items.push(i in value ? encodeBuiltinValue(value[i]) : { t: "hole" });
+    }
+    return { t: "a", v: items };
+  }
+  if (typeof value === "object") return { t: "o" };
+  return { t: "x" };
+}
+
+function reviveBuiltin(encoded, args) {
+  if (!encoded || encoded.t === "js") return { __useJs: true };
+  if (encoded.t === "null") return null;
+  if (encoded.t === "index") {
+    const array = args?.array;
+    return Array.isArray(array) ? (array[encoded.i] ?? null) : null;
+  }
+  if (encoded.t === "nan") return NaN;
+  if (encoded.t === "pinf") return Infinity;
+  if (encoded.t === "ninf") return -Infinity;
+  if (encoded.t === "n0") return -0;
+  if (encoded.t === "n") return encoded.v;
+  return null;
+}
+
+/** Eager built-in except `Sort` and `Filter`, which return `{ __useJs: true }`. */
+export function callBuiltin(name, args) {
+  const encoded = {};
+  if (args && typeof args === "object") {
+    for (const key of Object.keys(args)) encoded[key] = encodeBuiltinValue(args[key]);
+  }
+  return reviveBuiltin(
+    JSON.parse(callBuiltinOpenui(String(name ?? ""), JSON.stringify(encoded))),
+    args,
+  );
+}
+
+/** `Run`, `Set`, and `Reset` decision. `op` is `run`, `set`, `reset`, or `none`. */
+export function lazyStep(name, kinds) {
+  const list = Array.isArray(kinds)
+    ? kinds.map((kind) => (typeof kind === "string" ? kind : ""))
+    : [];
+  return JSON.parse(lazyStepOpenui(String(name ?? ""), JSON.stringify(list)));
 }
 
 /** Walk a pure expression. `evalNode` evaluates a nested call or component. */

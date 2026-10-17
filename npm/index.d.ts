@@ -131,6 +131,11 @@ export function toLiteralAST(value: unknown): {
 };
 export function literalValue(node: { k?: unknown }): { v: unknown } | undefined;
 export function walkAST(node: { k?: unknown }, visit: (node: { k?: unknown }) => void): void;
+export function callBuiltin(name: string, args: Record<string, unknown>): unknown;
+export function lazyStep(
+  name: string,
+  kinds: string[],
+): { op: "run" | "set" | "reset" | "none"; at?: number[] };
 export function evaluatePure(
   node: { k?: unknown },
   context?: {

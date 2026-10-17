@@ -247,3 +247,17 @@ pub fn to_literal_ast(value_json : String) -> String {
 pub fn literal_value(node_json : String) -> String {
   @openui.literal_value(node_json)
 }
+
+///|
+/// Evaluate one eager built-in from tagged arguments.
+#export_name("call_builtin")
+pub fn call_builtin(name : String, args_json : String) -> String {
+  @openui.call_builtin(name, args_json)
+}
+
+///|
+/// Decide `Run`, `Set`, or `Reset` from argument kinds.
+#export_name("lazy_step")
+pub fn lazy_step(name : String, kinds_json : String) -> String {
+  @openui.lazy_step(name, kinds_json)
+}
