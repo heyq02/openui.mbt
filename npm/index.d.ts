@@ -292,6 +292,20 @@ export function bindStep(payload: {
   failed?: boolean;
   warn?: boolean;
 }): { op: string };
+export function linkStep(payload: {
+  phase?: string;
+  bad?: boolean;
+  miss?: string;
+  any?: boolean;
+  one?: boolean;
+  text?: boolean;
+  open?: boolean;
+  named?: boolean;
+  ref?: boolean;
+  enums?: boolean;
+  typed?: boolean;
+  required?: boolean;
+}): { op: string; key?: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;
