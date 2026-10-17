@@ -60,6 +60,18 @@ const {
   is_element_node: isElementNodeOpenui,
   is_reactive_assign: isReactiveAssignOpenui,
   is_runtime_expr: isRuntimeExprOpenui,
+  is_action_plan: isActionPlanOpenui,
+  flatten_plans: flattenPlansOpenui,
+  extract_tool_result: extractToolOpenui,
+  stable_stringify: stableStringifyOpenui,
+  resolve_field: resolveFieldOpenui,
+  to_number: toNumberOpenui,
+  evaluate_root: evaluateRootOpenui,
+  each_step: eachStepOpenui,
+  prop_step: propStepOpenui,
+  prop_error: propErrorOpenui,
+  store_keep: storeKeepOpenui,
+  store_init: storeInitOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1084,6 +1096,243 @@ export function isReactiveAssign(value) {
 export function isRuntimeExpr(node) {
   const kind = node.k;
   return isRuntimeExprOpenui(typeof kind === "string" ? kind : "") === 1;
+}
+
+/** `{ steps: [...] }` on a non-null object, including arrays. */
+export function isActionPlan(value) {
+  const object = value !== null && typeof value === "object";
+  return (
+    isActionPlanOpenui(
+      JSON.stringify({
+        object,
+        steps: object && Array.isArray(value.steps) ? "a" : "x",
+      }),
+    ) === 1
+  );
+}
+
+function appendFlat(steps, inner) {
+  if (Array.isArray(inner)) {
+    for (let i = 0; i < inner.length; i += 1) {
+      if (i in inner) steps.push(inner[i]);
+    }
+    return;
+  }
+  steps.push(inner);
+}
+
+/** Flatten plans and stray steps. The dist shim still applies `ownSteps`. */
+export function flattenPlans(values) {
+  if (!Array.isArray(values)) return values.flatMap(() => []);
+  const tags = [];
+  const inners = [];
+  for (let i = 0; i < values.length; i += 1) {
+    if (!(i in values)) {
+      tags.push("h");
+      continue;
+    }
+    const value = values[i];
+    if (isActionPlan(value)) {
+      inners.push(value.steps);
+      tags.push("plan");
+      continue;
+    }
+    if (value !== null && typeof value === "object" && "type" in value) {
+      tags.push("step");
+      continue;
+    }
+    tags.push("drop");
+  }
+  const ops = JSON.parse(flattenPlansOpenui(JSON.stringify(tags)));
+  const steps = [];
+  let planAt = 0;
+  for (const item of ops) {
+    if (item.op === "steps") {
+      appendFlat(steps, inners[planAt]);
+      planAt += 1;
+    } else if (item.op === "step") {
+      steps.push(values[item.i]);
+    }
+  }
+  return { steps };
+}
+
+const stableDepthLimit = 1000;
+
+function stringifyJson(value) {
+  return JSON.stringify(value, (_key, val) => {
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      const sorted = {};
+      for (const k of Object.keys(val).sort()) sorted[k] = val[k];
+      return sorted;
+    }
+    if (val === undefined) return "__undefined__";
+    if (typeof val === "number") {
+      if (Number.isNaN(val)) return "__NaN__";
+      if (val === Infinity) return "__Inf__";
+      if (val === -Infinity) return "__-Inf__";
+    }
+    return val;
+  });
+}
+
+class ArrayCycle extends Error {}
+
+function encodeRaw(value, arrays, depth) {
+  if (depth > stableDepthLimit) throw new RangeError("Maximum call stack size exceeded");
+  if (typeof value === "bigint") throw new TypeError("Do not know how to serialize a BigInt");
+  if (value === null) return { t: "z" };
+  if (value === undefined) return { t: "u" };
+  const kind = typeof value;
+  if (kind === "string") return { t: "s", v: value };
+  if (kind === "boolean") return { t: "b", v: value };
+  if (kind === "number") {
+    if (Number.isNaN(value)) return { t: "nan" };
+    if (value === Infinity) return { t: "pinf" };
+    if (value === -Infinity) return { t: "ninf" };
+    return { t: "n", v: value };
+  }
+  if (kind === "function") return { t: "f" };
+  if (kind === "symbol") return { t: "y" };
+  if (kind !== "object") return { t: "z" };
+  if (Array.isArray(value)) {
+    if (arrays.includes(value)) throw new ArrayCycle();
+    arrays.push(value);
+    try {
+      const items = [];
+      for (let i = 0; i < value.length; i += 1) {
+        items.push(i in value ? encodeStable(value[i], String(i), arrays, depth + 1) : { t: "u" });
+      }
+      return { t: "a", v: items };
+    } finally {
+      arrays.pop();
+    }
+  }
+  const entries = [];
+  for (const key of Object.keys(value).sort()) {
+    entries.push([key, encodeStable(value[key], key, arrays, depth + 1)]);
+  }
+  return { t: "o", v: entries };
+}
+
+function encodeStable(value, key, arrays, depth) {
+  if (
+    value !== null &&
+    (typeof value === "object" || typeof value === "function") &&
+    typeof value.toJSON === "function"
+  ) {
+    return encodeRaw(value.toJSON(key), arrays, depth + 1);
+  }
+  return encodeRaw(value, arrays, depth);
+}
+
+/** JSON text with sorted keys. `undefined` when the root value is omitted. */
+export function stableStringify(value) {
+  try {
+    const marked = stableStringifyOpenui(JSON.stringify(encodeStable(value, "", [], 0)));
+    if (marked === "U") return undefined;
+    if (marked === "Ebigint") throw new TypeError("Do not know how to serialize a BigInt");
+    if (marked.startsWith("S")) return marked.slice(1);
+    throw new TypeError(marked.slice(1) || marked);
+  } catch (error) {
+    if (error instanceof ArrayCycle) return stringifyJson(value);
+    throw error;
+  }
+}
+
+/** Dot-path read. A missing path or null receiver is `undefined`. */
+export function resolveField(obj, path) {
+  if (!path || obj == null) return undefined;
+  if (typeof path !== "string") {
+    if (!path.includes(".")) return obj[path];
+    let cur = obj;
+    for (const part of path.split(".")) {
+      if (cur == null) return undefined;
+      cur = cur[part];
+    }
+    return cur;
+  }
+  const parts = JSON.parse(resolveFieldOpenui(JSON.stringify(path)));
+  let cur = obj;
+  for (const part of parts) {
+    if (cur == null) return undefined;
+    cur = cur[part];
+  }
+  return cur;
+}
+
+/** Next `evaluateRoot` step. `miss` includes the fixed `no-root` error. */
+export function rootStep(tag) {
+  return JSON.parse(evaluateRootOpenui(typeof tag === "string" ? tag : ""));
+}
+
+/** `Each` gate. The host still evaluates the list and the template. */
+export function eachStep(payload) {
+  return JSON.parse(eachStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Next step for one prop value. The host evaluates, recurses, and reads state. */
+export function propStep(payload) {
+  return JSON.parse(propStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** `createStore().set` keeps the value when this returns `keep`. */
+export function storeKeep(payload) {
+  return JSON.parse(storeKeepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** One `createStore().initialize` key. */
+export function storeInit(payload) {
+  return JSON.parse(storeInitOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Runtime error object for a prop that throws. `statementId` stays null here. */
+export function propError(payload) {
+  const key = payload && typeof payload.key === "string" ? payload.key : "";
+  const typeName = payload && typeof payload.typeName === "string" ? payload.typeName : "";
+  const message = payload && typeof payload.message === "string" ? payload.message : "";
+  return JSON.parse(propErrorOpenui(JSON.stringify({ key, typeName, message })));
+}
+
+/** Official `toNumber`. An existing number is returned as itself. */
+export function toNumber(value) {
+  if (typeof value === "number") return value;
+  const payload =
+    typeof value === "string"
+      ? { t: "s", v: value }
+      : typeof value === "boolean"
+        ? { t: "b", v: value }
+        : { t: "x" };
+  const marked = JSON.parse(toNumberOpenui(JSON.stringify(payload)));
+  if (marked.t === "nan") return NaN;
+  if (marked.t === "pinf") return Infinity;
+  if (marked.t === "ninf") return -Infinity;
+  if (marked.t === "n0") return -0;
+  return marked.v;
+}
+
+/** Query cache key. `deps == null` omits the suffix. */
+export function buildCacheKey(toolName, args, deps) {
+  const depsKey = deps != null ? `::${stableStringify(deps)}` : "";
+  return `${toolName}::${stableStringify(args)}${depsKey}`;
+}
+
+/** Decide an MCP `callTool` result from tags. The host throws, returns, and parses. */
+export function extractToolResult(payload) {
+  const items = [];
+  if (Array.isArray(payload.items)) {
+    for (const item of payload.items) items.push(item);
+  }
+  return JSON.parse(
+    extractToolOpenui(
+      JSON.stringify({
+        error: payload.error === true,
+        structured: payload.structured === true,
+        content: typeof payload.content === "string" ? payload.content : "",
+        items,
+      }),
+    ),
+  );
 }
 
 /** Replace `Ref(varName)` with the literal AST of `value`. */

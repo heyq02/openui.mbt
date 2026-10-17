@@ -100,6 +100,54 @@ const REPLACEMENTS = [
     'function isReactiveAssign(value) {\n\treturn typeof value === "object" && value !== null && value.__reactive === "assign";\n}\n',
     "function isReactiveAssign(value) {\n\treturn isReactiveAssignMoonbit(value);\n}\n",
   ],
+  [
+    'function isActionPlan(value) {\n\treturn typeof value === "object" && value !== null && Array.isArray(value.steps);\n}\n',
+    "function isActionPlan(value) {\n\treturn isActionPlanMoonbit(value);\n}\n",
+  ],
+  [
+    'function flattenPlans(values) {\n\treturn ownSteps({ steps: values.flatMap((v) => {\n\t\tif (isActionPlan(v)) return v.steps;\n\t\treturn v != null && typeof v === "object" && "type" in v ? [v] : [];\n\t}) });\n}\n',
+    "function flattenPlans(values) {\n\treturn flattenPlansMoonbit(values);\n}\n",
+  ],
+  [
+    'function extractToolResult(result) {\n\tif (result.isError) {\n\t\tconst errorText = result.content?.filter((c) => c.type === "text").map((c) => c.text).join("\\n");\n\t\tthrow new McpToolError(errorText || "Unknown error");\n\t}\n\tif (result.structuredContent != null) return result.structuredContent;\n\tconst textParts = result.content?.filter((c) => c.type === "text").map((c) => c.text ?? "");\n\tif (textParts?.length) {\n\t\tconst text = textParts.join("");\n\t\ttry {\n\t\t\treturn JSON.parse(text);\n\t\t} catch {\n\t\t\treturn text;\n\t\t}\n\t}\n\treturn null;\n}\n',
+    "function extractToolResult(result) {\n\treturn extractToolResultMoonbit(result);\n}\n",
+  ],
+  [
+    'function stableStringify(value) {\n\treturn JSON.stringify(value, (_key, val) => {\n\t\tif (val && typeof val === "object" && !Array.isArray(val)) {\n\t\t\tconst sorted = {};\n\t\t\tfor (const k of Object.keys(val).sort()) sorted[k] = val[k];\n\t\t\treturn sorted;\n\t\t}\n\t\tif (val === void 0) return "__undefined__";\n\t\tif (typeof val === "number") {\n\t\t\tif (Number.isNaN(val)) return "__NaN__";\n\t\t\tif (val === Infinity) return "__Inf__";\n\t\t\tif (val === -Infinity) return "__-Inf__";\n\t\t}\n\t\treturn val;\n\t});\n}\n',
+    "function stableStringify(value) {\n\treturn stableStringifyMoonbit(value);\n}\n",
+  ],
+  [
+    'function buildCacheKey(toolName, args, deps) {\n\tconst depsKey = deps != null ? "::" + stableStringify(deps) : "";\n\treturn toolName + "::" + stableStringify(args) + depsKey;\n}\n',
+    "function buildCacheKey(toolName, args, deps) {\n\treturn buildCacheKeyMoonbit(toolName, args, deps);\n}\n",
+  ],
+  [
+    'function resolveField(obj, path) {\n\tif (!path || obj == null) return void 0;\n\tif (!path.includes(".")) return obj[path];\n\tlet cur = obj;\n\tfor (const p of path.split(".")) {\n\t\tif (cur == null) return void 0;\n\t\tcur = cur[p];\n\t}\n\treturn cur;\n}\n',
+    "function resolveField(obj, path) {\n\treturn resolveFieldMoonbit(obj, path);\n}\n",
+  ],
+  [
+    'function toNumber(val) {\n\tif (typeof val === "number") return val;\n\tif (typeof val === "string") {\n\t\tconst n = Number(val);\n\t\treturn isNaN(n) ? 0 : n;\n\t}\n\tif (typeof val === "boolean") return val ? 1 : 0;\n\treturn 0;\n}\n',
+    "function toNumber(val) {\n\treturn toNumberMoonbit(val);\n}\n",
+  ],
+  [
+    'function evaluateRoot(result, evalCtx) {\n\tif (result.root) return evaluateElementProps(result.root, evalCtx);\n\tif (!result.rootExpression) return null;\n\tconst value = evaluate(result.rootExpression, evalCtx.ctx, { library: evalCtx.library });\n\tif (isElementNode(value)) return evaluateElementProps(value, evalCtx);\n\tevalCtx.errors?.push({\n\t\tsource: "runtime",\n\t\tcode: "no-root",\n\t\tstatementId: "root",\n\t\tmessage: "root does not evaluate to a component"\n\t});\n\treturn null;\n}\n',
+    "function evaluateRoot(result, evalCtx) {\n\treturn evaluateRootMoonbit(result, evalCtx);\n}\n",
+  ],
+  [
+    'function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\tif (name === "Each") {\n\t\tif (args.length < 3) return [];\n\t\tconst arr = evaluate(args[0], context);\n\t\tif (!Array.isArray(arr)) return [];\n\t\tconst varName = args[1].k === "Ref" ? args[1].n : args[1].k === "Str" ? args[1].v : null;\n\t\tif (!varName) return [];\n\t\tconst template = args[2];\n\t\treturn arr.map((item, _idx) => {\n\t\t\tconst substituted = substituteRef(template, varName, item);\n\t\t\tconst childCtx = {\n\t\t\t\t...context,\n\t\t\t\tresolveRef: (refName) => {\n\t\t\t\t\tif (refName === varName) return item;\n\t\t\t\t\treturn context.resolveRef(refName);\n\t\t\t\t}\n\t\t\t};\n\t\t\tconst result = evaluate(substituted, childCtx, schemaCtx);\n\t\t\tif (schemaCtx && isElementNode(result)) return evaluateElementInline(result, childCtx, schemaCtx);\n\t\t\treturn result;\n\t\t});\n\t}\n\treturn null;\n}\n',
+    "function evaluateLazyBuiltin(name, args, context, schemaCtx) {\n\treturn evaluateLazyBuiltinMoonbit(name, args, context, schemaCtx);\n}\n",
+  ],
+  [
+    'function evaluatePropValue$1(value, context, schemaCtx, reactiveSchema, callbacks) {\n\tif (value == null) return value;\n\tif (typeof value !== "object") return value;\n\tif (isASTNode(value)) {\n\t\tif (value.k === "StateRef" && reactiveSchema && isReactiveSchema(reactiveSchema)) return {\n\t\t\t__reactive: "assign",\n\t\t\ttarget: value.n,\n\t\t\texpr: {\n\t\t\t\tk: "StateRef",\n\t\t\t\tn: "$value"\n\t\t\t}\n\t\t};\n\t\tconst result = evaluate(value, context, schemaCtx);\n\t\tif (isElementNode(result)) return callbacks.recurseElement(result);\n\t\tif (Array.isArray(result)) return result.map((item) => isElementNode(item) ? callbacks.recurseElement(item) : item);\n\t\tif (isReactiveAssign(result) && !(reactiveSchema && isReactiveSchema(reactiveSchema))) return context.getState(result.target) ?? null;\n\t\treturn result;\n\t}\n\tif (typeof value === "string" && reactiveSchema && isReactiveSchema(reactiveSchema)) return value;\n\tif (Array.isArray(value)) return value.map((v) => callbacks.recurse(v, reactiveSchema));\n\tif (isElementNode(value)) return callbacks.recurseElement(value);\n\tif (isActionPlan(value)) return value;\n\tconst obj = value;\n\tlet needsEval = false;\n\tfor (const val of Object.values(obj)) if (typeof val === "object" && val !== null) {\n\t\tneedsEval = true;\n\t\tbreak;\n\t}\n\tif (needsEval) {\n\t\tconst result = {};\n\t\tfor (const [k, v] of Object.entries(obj)) result[k] = callbacks.recurse(v, reactiveSchema);\n\t\treturn result;\n\t}\n\treturn value;\n}\n',
+    "function evaluatePropValue$1(value, context, schemaCtx, reactiveSchema, callbacks) {\n\treturn evaluatePropValueMoonbit(value, context, schemaCtx, reactiveSchema, callbacks);\n}\n",
+  ],
+  [
+    'function evaluateElementProps(el, evalCtx) {\n\tif (el.hasDynamicProps === false) return el;\n\tconst schemaCtx = { library: evalCtx.library };\n\tconst def = evalCtx.library.components[el.typeName];\n\tconst evaluated = {};\n\tlet key = "";\n\tconst report = (msg) => {\n\t\tevalCtx.errors?.push({\n\t\t\tsource: "runtime",\n\t\t\tcode: "runtime-error",\n\t\t\tcomponent: el.typeName,\n\t\t\tstatementId: el.statementId,\n\t\t\tmessage: `Evaluating prop "${key}" on ${el.typeName} failed: ${msg}`,\n\t\t\thint: `Check the expression used for prop "${key}"`\n\t\t});\n\t};\n\tconst propCtx = evalCtx.ctx.functions || evalCtx.ctx.actions ? {\n\t\t...evalCtx,\n\t\tctx: {\n\t\t\t...evalCtx.ctx,\n\t\t\treportError: report\n\t\t}\n\t} : evalCtx;\n\tfor (const [propKey, value] of Object.entries(el.props)) {\n\t\tkey = propKey;\n\t\tconst propSchema = def?.props?.shape?.[key];\n\t\ttry {\n\t\t\tevaluated[key] = evaluatePropValue(value, propCtx, schemaCtx, propSchema);\n\t\t} catch (e) {\n\t\t\tevaluated[key] = value;\n\t\t\treport(e instanceof Error ? e.message : String(e));\n\t\t}\n\t}\n\treturn {\n\t\t...el,\n\t\tprops: evaluated\n\t};\n}\n',
+    "function evaluateElementProps(el, evalCtx) {\n\treturn evaluateElementPropsMoonbit(el, evalCtx);\n}\n",
+  ],
+  [
+    'function createStore() {\n\tconst state = /* @__PURE__ */ new Map();\n\tconst pristine = /* @__PURE__ */ new Set();\n\tconst listeners = /* @__PURE__ */ new Set();\n\tlet snapshot = {};\n\tfunction notify() {\n\t\tconst currentListeners = [...listeners];\n\t\tfor (const listener of currentListeners) listener();\n\t}\n\tfunction rebuildSnapshot() {\n\t\tsnapshot = Object.fromEntries(state);\n\t}\n\tfunction get(name) {\n\t\treturn state.get(name);\n\t}\n\tfunction set(name, value, options) {\n\t\tif (options?.pristine) pristine.add(name);\n\t\telse pristine.delete(name);\n\t\tconst existing = state.get(name);\n\t\tif (Object.is(existing, value)) return;\n\t\tif (value && existing && typeof value === "object" && typeof existing === "object" && !Array.isArray(value) && !Array.isArray(existing)) {\n\t\t\tconst nk = Object.keys(value);\n\t\t\tconst ok = Object.keys(existing);\n\t\t\tif (nk.length === ok.length && nk.every((k) => Object.is(value[k], existing[k]))) return;\n\t\t}\n\t\tstate.set(name, value);\n\t\trebuildSnapshot();\n\t\tnotify();\n\t}\n\tfunction subscribe(listener) {\n\t\tlisteners.add(listener);\n\t\treturn () => {\n\t\t\tlisteners.delete(listener);\n\t\t};\n\t}\n\tfunction getSnapshot() {\n\t\treturn snapshot;\n\t}\n\tfunction initialize(defaults, persisted) {\n\t\tlet changed = false;\n\t\tfor (const key of Object.keys(persisted)) {\n\t\t\tpristine.delete(key);\n\t\t\tif (!state.has(key) || !Object.is(state.get(key), persisted[key])) {\n\t\t\t\tstate.set(key, persisted[key]);\n\t\t\t\tchanged = true;\n\t\t\t}\n\t\t}\n\t\tfor (const key of Object.keys(defaults)) if (!state.has(key)) {\n\t\t\tstate.set(key, defaults[key]);\n\t\t\tpristine.add(key);\n\t\t\tchanged = true;\n\t\t} else if (pristine.has(key) && !Object.is(state.get(key), defaults[key])) {\n\t\t\tstate.set(key, defaults[key]);\n\t\t\tchanged = true;\n\t\t}\n\t\tif (changed) {\n\t\t\trebuildSnapshot();\n\t\t\tnotify();\n\t\t}\n\t}\n\tfunction dispose() {\n\t\tstate.clear();\n\t\tpristine.clear();\n\t\tlisteners.clear();\n\t\tsnapshot = {};\n\t}\n\treturn {\n\t\tget,\n\t\tset,\n\t\tsubscribe,\n\t\tgetSnapshot,\n\t\tinitialize,\n\t\tdispose\n\t};\n}\n',
+    "function createStore() {\n\treturn createStoreMoonbit();\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -233,6 +281,355 @@ function isReactiveAssignMoonbit(value) {
 function isRuntimeExprMoonbit(node) {
   return __ouiIsRuntimeExpr(node);
 }
+function isActionPlanMoonbit(value) {
+  return __ouiIsActionPlan(value);
+}
+function flattenPlansMoonbit(values) {
+  return ownSteps(__ouiFlattenPlans(values));
+}
+function toolContentItems(content) {
+  const items = [];
+  for (let i = 0; i < content.length; i++) {
+    if (!(i in content)) {
+      items.push("h");
+      continue;
+    }
+    if (content[i] == null) {
+      items.push("bad");
+      break;
+    }
+    items.push(content[i].type === "text" ? "text" : "skip");
+  }
+  return items;
+}
+function extractToolResultMoonbit(result) {
+  if (result.isError) {
+    const content = result.content;
+    if (content != null && !Array.isArray(content)) {
+      const errorText = result.content?.filter((c) => c.type === "text").map((c) => c.text).join("\\n");
+      throw new McpToolError(errorText || "Unknown error");
+    }
+    const decision = __ouiExtractToolResult({
+      error: true,
+      structured: false,
+      content: content == null ? "missing" : "array",
+      items: content == null ? [] : toolContentItems(content)
+    });
+    if (decision.op === "throw") void content[decision.i].type;
+    const errorText = decision.at.map((i) => content[i].text).join("\\n");
+    throw new McpToolError(errorText || "Unknown error");
+  }
+  if (result.structuredContent != null) return result.structuredContent;
+  const content = result.content;
+  if (content != null && !Array.isArray(content)) {
+    const textParts = result.content?.filter((c) => c.type === "text").map((c) => c.text ?? "");
+    if (textParts?.length) {
+      const text = textParts.join("");
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text;
+      }
+    }
+    return null;
+  }
+  const decision = __ouiExtractToolResult({
+    error: false,
+    structured: false,
+    content: content == null ? "missing" : "array",
+    items: content == null ? [] : toolContentItems(content)
+  });
+  if (decision.op === "throw") void content[decision.i].type;
+  if (decision.op === "parse") {
+    const text = decision.at.map((i) => content[i].text ?? "").join("");
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+  return null;
+}
+function stableStringifyMoonbit(value) {
+  return __ouiStableStringify(value);
+}
+function buildCacheKeyMoonbit(toolName, args, deps) {
+  return __ouiBuildCacheKey(toolName, args, deps);
+}
+function resolveFieldMoonbit(obj, path) {
+  return __ouiResolveField(obj, path);
+}
+function toNumberMoonbit(val) {
+  return __ouiToNumber(val);
+}
+function evaluateRootMoonbit(result, evalCtx) {
+  const step = __ouiEvaluateRoot(result.root ? "root" : result.rootExpression ? "expr" : "none");
+  if (step.op === "props") return evaluateElementProps(result.root, evalCtx);
+  if (step.op !== "eval") return null;
+  const value = evaluate(result.rootExpression, evalCtx.ctx, { library: evalCtx.library });
+  const after = __ouiEvaluateRoot(isElementNode(value) ? "element" : "miss");
+  if (after.op === "props") return evaluateElementProps(value, evalCtx);
+  evalCtx.errors?.push(after.error);
+  return null;
+}
+function eachLength(args) {
+  const length = args.length;
+  if (typeof length === "number" && Number.isFinite(length)) return { n: length };
+  if (length === -Infinity) return { n: -1 };
+  if (length < 3) return { n: 0 };
+  return { wide: true };
+}
+function evaluateLazyBuiltinMoonbit(name, args, context, schemaCtx) {
+  const openPayload = {
+    phase: "open",
+    name: typeof name === "string" ? name : "",
+  };
+  if (name === "Each") Object.assign(openPayload, eachLength(args));
+  const open = __ouiEach(openPayload);
+  if (open.op === "empty") return [];
+  if (open.op !== "eval") return null;
+  const arr = evaluate(args[0], context);
+  const listed = __ouiEach({ phase: "array", array: Array.isArray(arr) });
+  if (listed.op !== "bind") return [];
+  let slot = "";
+  let named = null;
+  if (args[1].k === "Ref") {
+    slot = "Ref";
+    named = args[1].n;
+  } else if (args[1].k === "Str") {
+    slot = "Str";
+    named = args[1].v;
+  }
+  const picked = __ouiEach({ phase: "name", k: slot, ok: Boolean(named) });
+  if (picked.op !== "map") return [];
+  const varName = named;
+  const template = args[2];
+  return arr.map((item, _idx) => {
+    const substituted = substituteRef(template, varName, item);
+    const childCtx = {
+      ...context,
+      resolveRef: (refName) => {
+        if (refName === varName) return item;
+        return context.resolveRef(refName);
+      },
+    };
+    const result = evaluate(substituted, childCtx, schemaCtx);
+    if (schemaCtx && isElementNode(result)) return evaluateElementInline(result, childCtx, schemaCtx);
+    return result;
+  });
+}
+function evaluatePropValueMoonbit(value, context, schemaCtx, reactiveSchema, callbacks) {
+  if (value == null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    const step = __ouiPropStep({ phase: "start", kind: "array" });
+    if (step.op === "arr") return value.map((item) => callbacks.recurse(item, reactiveSchema));
+    return value;
+  }
+  const seen = value.k;
+  const probe = __ouiPropStep({ phase: "kind", k: typeof seen === "string" ? seen : "" });
+  if (probe.op === "ast") {
+    const again = value.k;
+    const stateRef = again === "StateRef";
+    const reactive = stateRef && Boolean(reactiveSchema && isReactiveSchema(reactiveSchema));
+    const step = __ouiPropStep({
+      phase: "start",
+      kind: "ast",
+      k: stateRef ? "StateRef" : typeof again === "string" ? again : "",
+      reactive,
+    });
+    if (step.op === "assign") return {
+      __reactive: "assign",
+      target: value.n,
+      expr: { k: "StateRef", n: "$value" },
+    };
+    const result = evaluate(value, context, schemaCtx);
+    if (isElementNode(result)) {
+      const after = __ouiPropStep({ phase: "eval", element: true });
+      if (after.op === "el") return callbacks.recurseElement(result);
+      return result;
+    }
+    if (Array.isArray(result)) {
+      const after = __ouiPropStep({ phase: "eval", array: true });
+      if (after.op === "items") return result.map((item) => isElementNode(item) ? callbacks.recurseElement(item) : item);
+      return result;
+    }
+    if (isReactiveAssign(result)) {
+      const live = Boolean(reactiveSchema && isReactiveSchema(reactiveSchema));
+      const after = __ouiPropStep({ phase: "eval", assign: true, reactive: live });
+      if (after.op === "state") return context.getState(result.target) ?? null;
+      return result;
+    }
+    __ouiPropStep({ phase: "eval" });
+    return result;
+  }
+  if (isElementNode(value)) {
+    const step = __ouiPropStep({ phase: "start", kind: "el" });
+    if (step.op === "el") return callbacks.recurseElement(value);
+    return value;
+  }
+  if (isActionPlan(value)) {
+    __ouiPropStep({ phase: "start", kind: "plan" });
+    return value;
+  }
+  let needs = false;
+  for (const val of Object.values(value)) if (typeof val === "object" && val !== null) {
+    needs = true;
+    break;
+  }
+  const scanned = __ouiPropStep({ phase: "scan", needs });
+  if (scanned.op !== "obj") return value;
+  const result = {};
+  for (const [key, item] of Object.entries(value)) result[key] = callbacks.recurse(item, reactiveSchema);
+  return result;
+}
+function evaluateElementPropsMoonbit(el, evalCtx) {
+  if (el.hasDynamicProps === false) return el;
+  const schemaCtx = { library: evalCtx.library };
+  const def = evalCtx.library.components[el.typeName];
+  const evaluated = {};
+  let key = "";
+  const report = (msg) => {
+    const component = el.typeName;
+    const statementId = el.statementId;
+    const error = __ouiPropError({ key, typeName: String(el.typeName), message: String(msg) });
+    error.component = component;
+    error.statementId = statementId;
+    evalCtx.errors?.push(error);
+  };
+  const propCtx = evalCtx.ctx.functions || evalCtx.ctx.actions ? {
+    ...evalCtx,
+    ctx: { ...evalCtx.ctx, reportError: report },
+  } : evalCtx;
+  for (const [propKey, value] of Object.entries(el.props)) {
+    key = propKey;
+    const propSchema = def?.props?.shape?.[key];
+    try {
+      evaluated[key] = evaluatePropValue(value, propCtx, schemaCtx, propSchema);
+    } catch (e) {
+      evaluated[key] = value;
+      report(e instanceof Error ? e.message : String(e));
+    }
+  }
+  return { ...el, props: evaluated };
+}
+function storePlain(existing, value) {
+  return Boolean(
+    value &&
+      existing &&
+      typeof value === "object" &&
+      typeof existing === "object" &&
+      !Array.isArray(value) &&
+      !Array.isArray(existing),
+  );
+}
+function storeEqualKeys(existing, value) {
+  const nextKeys = Object.keys(value);
+  const prevKeys = Object.keys(existing);
+  const eq = [];
+  if (nextKeys.length === prevKeys.length) {
+    for (const key of nextKeys) {
+      const same = Object.is(value[key], existing[key]);
+      eq.push(same);
+      if (!same) break;
+    }
+  }
+  return __ouiStoreKeep({
+    same: false,
+    plain: true,
+    n: nextKeys.length,
+    o: prevKeys.length,
+    eq,
+  });
+}
+function createStoreMoonbit() {
+  const state = new Map();
+  const pristine = new Set();
+  const listeners = new Set();
+  let snapshot = {};
+  function notify() {
+    const currentListeners = [...listeners];
+    for (const listener of currentListeners) listener();
+  }
+  function rebuildSnapshot() {
+    snapshot = Object.fromEntries(state);
+  }
+  function get(name) {
+    return state.get(name);
+  }
+  function set(name, value, options) {
+    if (options?.pristine) pristine.add(name);
+    else pristine.delete(name);
+    const existing = state.get(name);
+    if (Object.is(existing, value)) {
+      if (__ouiStoreKeep({ same: true }).op === "keep") return;
+    } else if (storePlain(existing, value)) {
+      if (storeEqualKeys(existing, value).op === "keep") return;
+    } else if (__ouiStoreKeep({ same: false, plain: false }).op === "keep") return;
+    state.set(name, value);
+    rebuildSnapshot();
+    notify();
+  }
+  function subscribe(listener) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }
+  function getSnapshot() {
+    return snapshot;
+  }
+  function initialize(defaults, persisted) {
+    let changed = false;
+    for (const key of Object.keys(persisted)) {
+      pristine.delete(key);
+      const has = state.has(key);
+      const same = has ? Object.is(state.get(key), persisted[key]) : false;
+      if (__ouiStoreInit({ phase: "persisted", has, same }).op === "write") {
+        state.set(key, persisted[key]);
+        changed = true;
+      }
+    }
+    for (const key of Object.keys(defaults)) {
+      const has = state.has(key);
+      if (!has) {
+        if (__ouiStoreInit({ phase: "defaults", has: false }).op === "insert") {
+          state.set(key, defaults[key]);
+          pristine.add(key);
+          changed = true;
+        }
+        continue;
+      }
+      const clean = pristine.has(key);
+      if (!clean) {
+        __ouiStoreInit({ phase: "defaults", has: true, pristine: false });
+        continue;
+      }
+      const same = Object.is(state.get(key), defaults[key]);
+      if (__ouiStoreInit({ phase: "defaults", has: true, pristine: true, same }).op === "replace") {
+        state.set(key, defaults[key]);
+        changed = true;
+      }
+    }
+    if (changed) {
+      rebuildSnapshot();
+      notify();
+    }
+  }
+  function dispose() {
+    state.clear();
+    pristine.clear();
+    listeners.clear();
+    snapshot = {};
+  }
+  return {
+    get,
+    set,
+    subscribe,
+    getSnapshot,
+    initialize,
+    dispose,
+  };
+}
 `;
 
 function usage() {
@@ -253,11 +650,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -270,7 +667,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 30;
+  const expected = 42;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

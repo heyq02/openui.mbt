@@ -135,6 +135,67 @@ export function systemPromptKind(spec: object): "cloud" | "legacy" | "library";
 export function isElementNode(value: unknown): boolean;
 export function isReactiveAssign(value: unknown): boolean;
 export function isRuntimeExpr(node: { k?: unknown }): boolean;
+export function isActionPlan(value: unknown): boolean;
+export function flattenPlans(values: unknown): { steps: unknown[] } | unknown;
+export function resolveField(obj: unknown, path: unknown): unknown;
+export function toNumber(value: unknown): number;
+export function rootStep(tag: string): {
+  op: string;
+  error?: {
+    source: string;
+    code: string;
+    statementId: string;
+    message: string;
+  };
+};
+export function eachStep(payload: {
+  phase?: string;
+  name?: string;
+  n?: number;
+  wide?: boolean;
+  array?: boolean;
+  k?: string;
+  ok?: boolean;
+}): { op: string };
+export function propStep(payload: {
+  phase?: string;
+  kind?: string;
+  k?: string;
+  reactive?: boolean;
+  element?: boolean;
+  array?: boolean;
+  assign?: boolean;
+  needs?: boolean;
+}): { op: string };
+export function storeKeep(payload: {
+  same?: boolean;
+  plain?: boolean;
+  n?: number;
+  o?: number;
+  eq?: boolean[];
+}): { op: string };
+export function storeInit(payload: {
+  phase?: string;
+  has?: boolean;
+  same?: boolean;
+  pristine?: boolean;
+}): { op: string };
+export function propError(payload: { key?: string; typeName?: string; message?: string }): {
+  source: string;
+  code: string;
+  component: string;
+  statementId: null;
+  message: string;
+  hint: string;
+};
+export function stableStringify(value: unknown): string | undefined;
+export function buildCacheKey(toolName: unknown, args: unknown, deps: unknown): string;
+export function extractToolResult(payload: {
+  error?: boolean;
+  structured?: boolean;
+  content?: string;
+  items?: string[];
+}): { op: string; at?: number[]; i?: number };
 export function walkAST(node: { k?: unknown }, visit: (node: { k?: unknown }) => void): void;
 export function generatePrompt(spec: {
   root?: unknown;

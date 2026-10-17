@@ -321,3 +321,87 @@ pub fn is_reactive_assign(node_json : String) -> Int32 {
 pub fn is_runtime_expr(kind : String) -> Int32 {
   @openui.is_runtime_expr(kind)
 }
+
+///|
+/// `1` when `steps` is an array on a non-null object.
+#export_name("is_action_plan")
+pub fn is_action_plan(node_json : String) -> Int32 {
+  @openui.is_action_plan(node_json)
+}
+
+///|
+/// Indices `flattenPlans` keeps. The host copies the original steps.
+#export_name("flatten_plans")
+pub fn flatten_plans(tags_json : String) -> String {
+  @openui.flatten_plans(tags_json)
+}
+
+///|
+/// MCP tool-result decision. The host returns `structuredContent` and parses text.
+#export_name("extract_tool_result")
+pub fn extract_tool_result(payload_json : String) -> String {
+  @openui.extract_tool_result(payload_json)
+}
+
+///|
+/// Stable JSON text. The host applies `toJSON` and reports cycles.
+#export_name("stable_stringify")
+pub fn stable_stringify(value_json : String) -> String {
+  @openui.stable_stringify(value_json)
+}
+
+///|
+/// Dot segments for `resolveField`. The host reads each property.
+#export_name("resolve_field")
+pub fn resolve_field(path_json : String) -> String {
+  @openui.resolve_field(path_json)
+}
+
+///|
+/// `toNumber` for a tagged value. The host keeps an existing number.
+#export_name("to_number")
+pub fn to_number(value_json : String) -> String {
+  @openui.to_number(value_json)
+}
+
+///|
+/// Next step for `evaluateRoot`. The host evaluates and keeps the element.
+#export_name("evaluate_root")
+pub fn evaluate_root(tag : String) -> String {
+  @openui.evaluate_root(tag)
+}
+
+///|
+/// `Each` gate. The host evaluates the list and the template.
+#export_name("each_step")
+pub fn each_step(payload_json : String) -> String {
+  @openui.each_step(payload_json)
+}
+
+///|
+/// Next step for one prop value. The host evaluates and recurses.
+#export_name("prop_step")
+pub fn prop_step(payload_json : String) -> String {
+  @openui.prop_step(payload_json)
+}
+
+///|
+/// Runtime error text for a prop that throws. The host keeps the live component.
+#export_name("prop_error")
+pub fn prop_error(payload_json : String) -> String {
+  @openui.prop_error(payload_json)
+}
+
+///|
+/// Whether `createStore().set` keeps the stored value.
+#export_name("store_keep")
+pub fn store_keep(payload_json : String) -> String {
+  @openui.store_keep(payload_json)
+}
+
+///|
+/// One `createStore().initialize` key.
+#export_name("store_init")
+pub fn store_init(payload_json : String) -> String {
+  @openui.store_init(payload_json)
+}

@@ -1,0 +1,87 @@
+///|
+test "store set and initialize decide which values to write" {
+  inspect(store_keep("{\"same\":true}"), content="{\"op\":\"keep\"}")
+  inspect(
+    store_keep("{\"same\":true,\"plain\":true}"),
+    content="{\"op\":\"keep\"}",
+  )
+  inspect(
+    store_keep("{\"same\":false,\"plain\":false}"),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(
+    store_keep(
+      "{\"same\":false,\"plain\":true,\"n\":2,\"o\":2,\"eq\":[true,true]}",
+    ),
+    content="{\"op\":\"keep\"}",
+  )
+  inspect(
+    store_keep("{\"same\":false,\"plain\":true,\"n\":0,\"o\":0,\"eq\":[]}"),
+    content="{\"op\":\"keep\"}",
+  )
+  inspect(
+    store_keep(
+      "{\"same\":false,\"plain\":true,\"n\":2,\"o\":2,\"eq\":[true,false]}",
+    ),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(
+    store_keep("{\"same\":false,\"plain\":true,\"n\":2,\"o\":2,\"eq\":[true]}"),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(
+    store_keep("{\"same\":false,\"plain\":true,\"n\":2,\"o\":1,\"eq\":[]}"),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(
+    store_keep(
+      "{\"same\":false,\"plain\":true,\"n\":2,\"o\":2,\"eq\":[true,true,true]}",
+    ),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(store_keep("{"), content="{\"op\":\"write\"}")
+  inspect(store_keep("[]"), content="{\"op\":\"write\"}")
+  inspect(
+    store_keep("{\"same\":false,\"plain\":true}"),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(
+    store_keep("{\"same\":false,\"plain\":true,\"n\":1,\"o\":1,\"eq\":1}"),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(
+    store_init("{\"phase\":\"persisted\",\"has\":false}"),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(
+    store_init("{\"phase\":\"persisted\",\"has\":true,\"same\":false}"),
+    content="{\"op\":\"write\"}",
+  )
+  inspect(
+    store_init("{\"phase\":\"persisted\",\"has\":true,\"same\":true}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    store_init("{\"phase\":\"defaults\",\"has\":false}"),
+    content="{\"op\":\"insert\"}",
+  )
+  inspect(
+    store_init("{\"phase\":\"defaults\",\"has\":true,\"pristine\":false}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    store_init(
+      "{\"phase\":\"defaults\",\"has\":true,\"pristine\":true,\"same\":false}",
+    ),
+    content="{\"op\":\"replace\"}",
+  )
+  inspect(
+    store_init(
+      "{\"phase\":\"defaults\",\"has\":true,\"pristine\":true,\"same\":true}",
+    ),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(store_init("{\"phase\":\"other\"}"), content="{\"op\":\"skip\"}")
+  inspect(store_init("{\"phase\":1}"), content="{\"op\":\"skip\"}")
+  inspect(store_init("{"), content="{\"op\":\"skip\"}")
+}
