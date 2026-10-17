@@ -482,3 +482,10 @@ pub fn custom_call(payload_json : String) -> String {
 pub fn mapped_comp(payload_json : String) -> String {
   @openui.mapped_comp(payload_json)
 }
+
+///|
+/// Schema leaf branch. The host still reads fields and builds messages.
+#export_name("leaf_step")
+pub fn leaf_step(payload_json : String) -> String {
+  @openui.leaf_step(payload_json)
+}

@@ -83,6 +83,7 @@ const {
   user_call: userCallOpenui,
   custom_call: customCallOpenui,
   mapped_comp: mappedCompOpenui,
+  leaf_step: leafStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1345,6 +1346,11 @@ export function customCall(payload) {
 /** Mapped component branch. `assign` is a reactive state binding. */
 export function mappedComp(payload) {
   return JSON.parse(mappedCompOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Schema leaf branch. `fail` is an enum or scalar type miss. */
+export function leafStep(payload) {
+  return JSON.parse(leafStepOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */

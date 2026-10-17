@@ -244,6 +244,15 @@ export function mappedComp(payload: {
   element?: boolean;
   array?: boolean;
 }): { op: string };
+export function leafStep(payload: {
+  phase?: string;
+  kind?: string;
+  scalar?: boolean;
+  hit?: boolean;
+  array?: boolean;
+  typed?: boolean;
+  match?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;
