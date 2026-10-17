@@ -193,6 +193,14 @@ export function stateField(payload: { assign?: boolean; store?: boolean; context
   op: string;
 };
 export function stripAssign(payload: { assign?: boolean }): { op: string };
+export function callArg(payload: {
+  phase?: string;
+  nil?: boolean;
+  list?: boolean;
+  hit?: boolean;
+  absent?: boolean;
+  bare?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;
