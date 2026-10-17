@@ -88,6 +88,7 @@ const {
   shape_step: shapeStepOpenui,
   bind_step: bindStepOpenui,
   link_step: linkStepOpenui,
+  wrap_step: wrapStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1375,6 +1376,11 @@ export function bindStep(payload) {
 /** Schema ref branch. `read` keeps a default. `name` splits a ref. */
 export function linkStep(payload) {
   return JSON.parse(linkStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Prop and action branch. `own` filters a plan. `list` evaluates an Action argument. */
+export function wrapStep(payload) {
+  return JSON.parse(wrapStepOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */

@@ -306,6 +306,21 @@ export function linkStep(payload: {
   typed?: boolean;
   required?: boolean;
 }): { op: string; key?: string };
+export function wrapStep(payload: {
+  phase?: string;
+  plan?: boolean;
+  action?: boolean;
+  open?: boolean;
+  array?: boolean;
+  has?: boolean;
+  filled?: boolean;
+  kind?: string;
+  ok?: boolean;
+  state?: boolean;
+  empty?: boolean;
+  present?: boolean;
+  own?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;
