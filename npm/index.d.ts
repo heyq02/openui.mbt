@@ -98,4 +98,106 @@ export function buildMessage(message: {
   end?: boolean;
 }): string;
 
+export interface ParsedRule {
+  type: string;
+  arg?: unknown;
+}
+
+export function parseRules(rules: unknown): ParsedRule[];
+
+export function parseStructuredRules(rules: unknown): ParsedRule[];
+
+export function checkBuiltin(kind: string, value: unknown, arg?: unknown): string | undefined;
+
+export interface EnrichedError {
+  source: "parser";
+  code: string;
+  message: string;
+  component: string;
+  path?: string;
+  statementId?: string;
+  severity?: string;
+  hint?: string;
+}
+
+export function mergeStatements(existing: string, patch: string, rootId?: string): string;
+
+export function isASTNode(value: unknown): boolean;
+export function toLiteralAST(value: unknown): {
+  k: string;
+  v?: unknown;
+  els?: unknown[];
+  entries?: unknown[];
+};
+export function literalValue(node: { k?: unknown }): { v: unknown } | undefined;
+export function substituteRef(node: { k?: unknown }, varName: unknown, value: unknown): unknown;
+export function systemPromptKind(spec: object): "cloud" | "legacy" | "library";
+export function isElementNode(value: unknown): boolean;
+export function isReactiveAssign(value: unknown): boolean;
+export function isRuntimeExpr(node: { k?: unknown }): boolean;
+export function walkAST(node: { k?: unknown }, visit: (node: { k?: unknown }) => void): void;
+export function generatePrompt(spec: {
+  root?: unknown;
+  preamble?: unknown;
+  components: Record<string, { signature?: unknown; description?: unknown }>;
+  componentGroups?: {
+    name?: unknown;
+    components: unknown[];
+    notes?: unknown[];
+  }[];
+  functions?: Record<string, { signature?: unknown; description?: unknown }>;
+  actions?: Record<string, { signature?: unknown; description?: unknown }>;
+  builtinFunctions?: unknown;
+  toolCalls?: unknown;
+  bindings?: unknown;
+  tools?: unknown[];
+  examples?: unknown[];
+  toolExamples?: unknown[];
+  editMode?: unknown;
+  inlineMode?: unknown;
+  additionalRules?: unknown[];
+}): string;
+export function cloudConfig(spec: {
+  library?: unknown;
+  promptOptions?: {
+    examples?: unknown;
+    preamble?: unknown;
+    additionalRules?: unknown;
+  } | null;
+  instructions?: unknown;
+}): string;
+export function callBuiltin(name: string, args: Record<string, unknown>): unknown;
+export function eagerStep(
+  name: string,
+  args: { url?: unknown; message?: unknown; context?: unknown },
+): { steps: Array<Record<string, unknown>> };
+export function lazyStep(
+  name: string,
+  kinds: string[],
+): { op: "run" | "set" | "reset" | "none"; at?: number[] };
+export function evaluatePure(
+  node: { k?: unknown },
+  context?: {
+    getState?: (name: string) => unknown;
+    resolveRef?: (name: string) => unknown;
+    extraScope?: Record<string, unknown> | null;
+  },
+  schemaCtx?: unknown,
+  evalNode?: (node: { k?: unknown }) => unknown,
+): unknown;
+export function jsonToOpenUI(
+  json: { typeName?: unknown; props?: object; statementId?: unknown },
+  library: { toJSONSchema(): unknown },
+  options?: { stateDeclarations?: Record<string, unknown> | null },
+): string;
+
+export function enrichErrors(
+  validationErrors: Array<Record<string, unknown>>,
+  schema:
+    | { $defs?: Record<string, { properties?: object; required?: unknown[] }> }
+    | null
+    | undefined,
+  componentNames: string[],
+): EnrichedError[];
+
 export function createStream(schema: string, rootName?: string): OpenUiStream;

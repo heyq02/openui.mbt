@@ -143,3 +143,181 @@ pub fn build_message(
     end != 0,
   )
 }
+
+///|
+/// Parse string validation rules into JSON.
+#export_name("parse_rules")
+pub fn parse_rules(rules_json : String) -> String {
+  @openui.parse_rules(rules_json)
+}
+
+///|
+/// Keep structured rules tagged `true` or `arg`.
+#export_name("parse_structured_rules")
+pub fn parse_structured_rules(entries_json : String) -> String {
+  @openui.parse_structured_rules(entries_json)
+}
+
+///|
+/// Run one built-in validator. Empty means the value passed.
+#export_name("builtin_check")
+pub fn builtin_check(
+  kind : String,
+  value_json : String,
+  arg_json : String,
+) -> String {
+  @openui.builtin_check(kind, value_json, arg_json)
+}
+
+///|
+/// Hint strings for parser validation errors. Empty means no hint.
+#export_name("enrich_hints")
+pub fn enrich_hints(payload_json : String) -> String {
+  @openui.enrich_hints(payload_json)
+}
+
+///|
+/// Merge a patch onto an existing program. `has_root` 0 skips reachability.
+#export_name("merge_statements")
+pub fn merge_statements(
+  existing : String,
+  patch : String,
+  root_id : String,
+  use_root : Int32,
+) -> String {
+  @openui.merge_statements(existing, patch, root_id, has_root=use_root != 0)
+}
+
+///|
+/// Serialize a tagged element tree to OpenUI Lang source.
+#export_name("json_to_openui")
+pub fn json_to_openui(
+  schema_json : String,
+  root_json : String,
+  state_json : String,
+) -> String {
+  @openui.json_to_openui(schema_json, root_json, state_json)
+}
+
+///|
+/// Start an expression walk. The host answers each request.
+#export_name("eval_start")
+pub fn eval_start(ast_json : String) -> String {
+  @openui.eval_start(ast_json)
+}
+
+///|
+/// Answer the innermost expression walk.
+#export_name("eval_answer")
+pub fn eval_answer(answer_json : String) -> String {
+  @openui.eval_answer(answer_json)
+}
+
+///|
+/// Drop the innermost expression walk after a host throw.
+#export_name("eval_cancel")
+pub fn eval_cancel() -> String {
+  @openui.eval_cancel()
+}
+
+///|
+/// Child edges visited after the current AST node.
+#export_name("walk_plan")
+pub fn walk_plan(kind : String) -> String {
+  @openui.walk_plan(kind)
+}
+
+///|
+/// `1` when `kind` is an AST discriminant.
+#export_name("is_ast_kind")
+pub fn is_ast_kind(kind : String) -> Int32 {
+  @openui.is_ast_kind(kind)
+}
+
+///|
+/// Encode a tagged JavaScript value as a literal AST.
+#export_name("to_literal_ast")
+pub fn to_literal_ast(value_json : String) -> String {
+  @openui.to_literal_ast(value_json)
+}
+
+///|
+/// Read a literal AST. `["no"]` means it is not a literal.
+#export_name("literal_value")
+pub fn literal_value(node_json : String) -> String {
+  @openui.literal_value(node_json)
+}
+
+///|
+/// Evaluate one eager built-in from tagged arguments.
+#export_name("call_builtin")
+pub fn call_builtin(name : String, args_json : String) -> String {
+  @openui.call_builtin(name, args_json)
+}
+
+///|
+/// Decide `Run`, `Set`, or `Reset` from argument kinds.
+#export_name("lazy_step")
+pub fn lazy_step(name : String, kinds_json : String) -> String {
+  @openui.lazy_step(name, kinds_json)
+}
+
+///|
+/// Build an `OpenUrl` or `ToAssistant` step. The host keeps `context`.
+#export_name("eager_step")
+pub fn eager_step(name : String, args_json : String) -> String {
+  @openui.eager_step(name, args_json)
+}
+
+///|
+/// Render the ordered `generatePrompt` spec.
+#export_name("generate_prompt")
+pub fn generate_prompt(spec_json : String) -> String {
+  @openui.generate_prompt(spec_json)
+}
+
+///|
+/// Decide a cloud config block. The host still serializes the JSON.
+#export_name("cloud_config")
+pub fn cloud_config(spec_json : String) -> String {
+  @openui.cloud_config(spec_json)
+}
+
+///|
+/// Replace `Ref` nodes with an encoded literal. The host builds that literal.
+#export_name("substitute_ref")
+pub fn substitute_ref(
+  node_json : String,
+  var_name_json : String,
+  literal_json : String,
+) -> String {
+  @openui.substitute_ref(node_json, var_name_json, literal_json)
+}
+
+///|
+/// `cloud`, `library`, or `legacy` for `generateSystemPrompt`.
+#export_name("system_prompt_kind")
+pub fn system_prompt_kind(spec_json : String) -> String {
+  @openui.system_prompt_kind(spec_json)
+}
+
+///|
+/// `1` when the tagged fields are an element node.
+#export_name("is_element_node")
+pub fn is_element_node(node_json : String) -> Int32 {
+  @openui.is_element_node(node_json)
+}
+
+///|
+/// `1` when `__reactive` is `"assign"` on a non-null object.
+#export_name("is_reactive_assign")
+pub fn is_reactive_assign(node_json : String) -> Int32 {
+  @openui.is_reactive_assign(node_json)
+}
+
+///|
+/// `1` for a runtime expression discriminant.
+#export_name("is_runtime_expr")
+pub fn is_runtime_expr(kind : String) -> Int32 {
+  @openui.is_runtime_expr(kind)
+}
