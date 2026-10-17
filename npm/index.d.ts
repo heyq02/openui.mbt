@@ -235,6 +235,15 @@ export function customCall(payload: {
   miss?: boolean;
   bad?: boolean;
 }): { op: string };
+export function mappedComp(payload: {
+  phase?: string;
+  mapped?: boolean;
+  state?: boolean;
+  reactive?: boolean;
+  schema?: boolean;
+  element?: boolean;
+  array?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;

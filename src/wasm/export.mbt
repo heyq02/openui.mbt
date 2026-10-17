@@ -475,3 +475,10 @@ pub fn user_call(payload_json : String) -> String {
 pub fn custom_call(payload_json : String) -> String {
   @openui.custom_call(payload_json)
 }
+
+///|
+/// Mapped component props. The host still reads state and evaluates values.
+#export_name("mapped_comp")
+pub fn mapped_comp(payload_json : String) -> String {
+  @openui.mapped_comp(payload_json)
+}

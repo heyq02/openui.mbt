@@ -18,7 +18,7 @@ env:
   # Dated CDN pins (e.g. 0.1.20260920) return 403; always install latest.
   MOON_VERSION: "latest"
   # Documented native baseline; the suite only grows.
-  NATIVE_TEST_BASELINE: "65"
+  NATIVE_TEST_BASELINE: "66"
 
 jobs:
   test-native:

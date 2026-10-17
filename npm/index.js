@@ -82,6 +82,7 @@ const {
   check_value: checkValueOpenui,
   user_call: userCallOpenui,
   custom_call: customCallOpenui,
+  mapped_comp: mappedCompOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1339,6 +1340,11 @@ export function userCall(payload) {
 /** Custom-action branch. `build` means the host records one step. */
 export function customCall(payload) {
   return JSON.parse(customCallOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Mapped component branch. `assign` is a reactive state binding. */
+export function mappedComp(payload) {
+  return JSON.parse(mappedCompOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */
