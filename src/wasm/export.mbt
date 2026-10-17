@@ -263,6 +263,13 @@ pub fn lazy_step(name : String, kinds_json : String) -> String {
 }
 
 ///|
+/// Build an `OpenUrl` or `ToAssistant` step. The host keeps `context`.
+#export_name("eager_step")
+pub fn eager_step(name : String, args_json : String) -> String {
+  @openui.eager_step(name, args_json)
+}
+
+///|
 /// Render the ordered `generatePrompt` spec.
 #export_name("generate_prompt")
 pub fn generate_prompt(spec_json : String) -> String {

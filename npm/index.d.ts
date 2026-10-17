@@ -162,6 +162,10 @@ export function cloudConfig(spec: {
   instructions?: unknown;
 }): string;
 export function callBuiltin(name: string, args: Record<string, unknown>): unknown;
+export function eagerStep(
+  name: string,
+  args: { url?: unknown; message?: unknown; context?: unknown },
+): { steps: Array<Record<string, unknown>> };
 export function lazyStep(
   name: string,
   kinds: string[],

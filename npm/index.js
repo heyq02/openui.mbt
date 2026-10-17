@@ -52,6 +52,7 @@ const {
   literal_value: literalValueOpenui,
   call_builtin: callBuiltinOpenui,
   lazy_step: lazyStepOpenui,
+  eager_step: eagerStepOpenui,
   generate_prompt: generatePromptOpenui,
   cloud_config: cloudConfigOpenui,
 } = instance.exports;
@@ -719,6 +720,68 @@ export function cloudConfig(spec) {
   }
   const block = `]]>openui:config\n${JSON.stringify(config)}`;
   return spec.instructions ? `${block}\n${spec.instructions}` : block;
+}
+
+function encodeStepValue(value) {
+  if (value === null) return { t: "null" };
+  if (value === undefined) return { t: "u" };
+  const type = typeof value;
+  if (type === "string") return { t: "s", v: value };
+  if (type === "number") {
+    const tagged = encodeBuiltinValue(value);
+    tagged.j = String(value);
+    return tagged;
+  }
+  if (type === "boolean") return { t: "b", v: value };
+  if (type === "symbol") return { t: "x", j: String(value), sym: true };
+  if (type === "bigint" || type === "function") return { t: "x", j: String(value) };
+  if (Array.isArray(value)) {
+    const items = [];
+    for (let index = 0; index < value.length; index += 1) {
+      items.push(index in value ? encodeStepValue(value[index]) : { t: "hole" });
+    }
+    return { t: "a", v: items };
+  }
+  if (type === "object") {
+    const tagged = { t: "o" };
+    if (typeof value.toString === "function" && value.toString !== Object.prototype.toString) {
+      try {
+        tagged.j = String(value);
+      } catch {
+        tagged.throw = true;
+      }
+    }
+    return tagged;
+  }
+  return { t: "x", throw: true };
+}
+
+/** `OpenUrl` and `ToAssistant` plans. `context` stays the original value. */
+export function eagerStep(name, args) {
+  const encoded = {};
+  if (args && typeof args === "object") {
+    if (Object.prototype.hasOwnProperty.call(args, "url")) encoded.url = encodeStepValue(args.url);
+    if (Object.prototype.hasOwnProperty.call(args, "message")) {
+      encoded.message = encodeStepValue(args.message);
+    }
+  }
+  const decision = JSON.parse(eagerStepOpenui(String(name ?? ""), JSON.stringify(encoded)));
+  if (decision.op === "throw") {
+    String(name === "OpenUrl" ? args?.url : args?.message);
+  }
+  if (decision.op === "open_url") return { steps: [{ type: "open_url", url: decision.url }] };
+  if (decision.op === "continue") {
+    return {
+      steps: [
+        {
+          type: "continue_conversation",
+          message: decision.message,
+          context: args?.context ?? undefined,
+        },
+      ],
+    };
+  }
+  return { steps: [] };
 }
 
 /** `Run`, `Set`, and `Reset` decision. `op` is `run`, `set`, `reset`, or `none`. */
