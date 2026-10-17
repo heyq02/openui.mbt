@@ -180,6 +180,59 @@ export function storeInit(payload: {
   same?: boolean;
   pristine?: boolean;
 }): { op: string };
+export function querySlot(payload: {
+  phase?: string;
+  data?: boolean;
+  prev?: boolean;
+  prevData?: boolean;
+  loading?: boolean;
+  ever?: boolean;
+  error?: boolean;
+}): { op?: string; load?: boolean; refetch?: boolean; error?: boolean };
+export function stateField(payload: { assign?: boolean; store?: boolean; context?: boolean }): {
+  op: string;
+};
+export function stripAssign(payload: { assign?: boolean }): { op: string };
+export function queryError(payload: {
+  source?: string;
+  kind?: string;
+  tool?: string;
+  detail?: string;
+}): {
+  source: string;
+  code: string;
+  message: string;
+  statementId: null;
+  component: string;
+  toolName: string;
+  hint?: null;
+};
+export function createQueryManager(
+  toolProvider?: {
+    callTool: (name: string, args: unknown) => Promise<unknown>;
+  },
+  host?: {
+    ToolNotFoundError?: new (...args: never[]) => Error;
+    McpToolError?: new (...args: never[]) => Error;
+  },
+): {
+  evaluateQueries: (nodes: unknown[]) => void;
+  getResult: (statementId: string) => unknown;
+  isLoading: (statementId: string) => boolean;
+  isAnyLoading: () => boolean;
+  invalidate: (statementIds?: string[]) => void;
+  registerMutations: (nodes: unknown[]) => void;
+  fireMutation: (
+    statementId: string,
+    evaluatedArgs: unknown,
+    refreshQueryIds?: string[],
+  ) => Promise<boolean>;
+  getMutationResult: (statementId: string) => unknown;
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => Record<string, unknown>;
+  activate: () => void;
+  dispose: () => void;
+};
 export function propError(payload: { key?: string; typeName?: string; message?: string }): {
   source: string;
   code: string;

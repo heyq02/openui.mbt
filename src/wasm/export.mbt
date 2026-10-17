@@ -405,3 +405,31 @@ pub fn store_keep(payload_json : String) -> String {
 pub fn store_init(payload_json : String) -> String {
   @openui.store_init(payload_json)
 }
+
+///|
+/// Query snapshot choice. The host keeps the cache entry.
+#export_name("query_slot")
+pub fn query_slot(payload_json : String) -> String {
+  @openui.query_slot(payload_json)
+}
+
+///|
+/// Query or mutation error text. The host keeps live ids.
+#export_name("query_error")
+pub fn query_error(payload_json : String) -> String {
+  @openui.query_error(payload_json)
+}
+
+///|
+/// Whether `resolveStateField` returns the reactive binding.
+#export_name("state_field")
+pub fn state_field(payload_json : String) -> String {
+  @openui.state_field(payload_json)
+}
+
+///|
+/// Whether `stripReactiveAssign` reads the current state.
+#export_name("strip_assign")
+pub fn strip_assign(payload_json : String) -> String {
+  @openui.strip_assign(payload_json)
+}
