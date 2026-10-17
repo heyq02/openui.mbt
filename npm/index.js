@@ -36,6 +36,7 @@ const {
   stream_finish: streamFinish,
   stream_close: streamClose,
   parse_message: parseMessageOpenui,
+  build_message: buildMessageOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -95,4 +96,27 @@ export function createStream(schema, rootName = "") {
 /** Split an OpenUI `]]>openui:` message. `streaming` holds a partial marker line. */
 export function parseMessage(raw, options) {
   return JSON.parse(parseMessageOpenui(raw ?? "", options && options.streaming ? 1 : 0));
+}
+
+/** Write an OpenUI `]]>openui:` message. Context objects are JSON-encoded before the marker. */
+export function buildMessage(message) {
+  const attributes = (message && message.attributes) || {};
+  const pairs = [];
+  for (const [key, value] of Object.entries(attributes)) {
+    pairs.push([String(key), String(value)]);
+  }
+  const hasContext = !!message && message.context != null;
+  const context = hasContext
+    ? typeof message.context === "string"
+      ? message.context
+      : JSON.stringify(message.context)
+    : "";
+  const content = message && message.content !== undefined ? String(message.content) : "undefined";
+  return buildMessageOpenui(
+    content,
+    context,
+    hasContext ? 1 : 0,
+    JSON.stringify(pairs),
+    message && message.end ? 1 : 0,
+  );
 }
