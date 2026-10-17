@@ -76,6 +76,15 @@ const {
   query_error: queryErrorOpenui,
   state_field: stateFieldOpenui,
   strip_assign: stripAssignOpenui,
+  call_arg: callArgOpenui,
+  list_step: listStepOpenui,
+  inline_step: inlineStepOpenui,
+  check_value: checkValueOpenui,
+  user_call: userCallOpenui,
+  custom_call: customCallOpenui,
+  mapped_comp: mappedCompOpenui,
+  leaf_step: leafStepOpenui,
+  msg_step: msgStepOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1303,6 +1312,51 @@ export function stateField(payload) {
 /** `stripReactiveAssign` branch. The host still calls `getState`. */
 export function stripAssign(payload) {
   return JSON.parse(stripAssignOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Null-argument deletion and missing-required check. The host evaluates the arguments. */
+export function callArg(payload) {
+  return JSON.parse(callArgOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** `Sort` and `Filter` branch. The host still uses `localeCompare` and `==`. */
+export function listStep(payload) {
+  return JSON.parse(listStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Inline element gate. `keep` means `hasDynamicProps === false`. */
+export function inlineStep(payload) {
+  return JSON.parse(inlineStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Field-validator branch. Static messages and bound codes come back as JSON. */
+export function checkValue(payload) {
+  return JSON.parse(checkValueOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** `callFunction` branch. `null` stops the call. `keep` returns the checked value. */
+export function userCall(payload) {
+  return JSON.parse(userCallOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Custom-action branch. `build` means the host records one step. */
+export function customCall(payload) {
+  return JSON.parse(customCallOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Mapped component branch. `assign` is a reactive state binding. */
+export function mappedComp(payload) {
+  return JSON.parse(mappedCompOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Schema leaf branch. `fail` is an enum or scalar type miss. */
+export function leafStep(payload) {
+  return JSON.parse(leafStepOpenui(JSON.stringify(payload ?? {})));
+}
+
+/** Validation message branch. `none` leaves the official message undefined. */
+export function msgStep(payload) {
+  return JSON.parse(msgStepOpenui(JSON.stringify(payload ?? {})));
 }
 
 /** Structured query or mutation failure. `statementId` stays null here. */

@@ -433,3 +433,66 @@ pub fn state_field(payload_json : String) -> String {
 pub fn strip_assign(payload_json : String) -> String {
   @openui.strip_assign(payload_json)
 }
+
+///|
+/// Drop a null optional argument, or report a required argument with no default.
+#export_name("call_arg")
+pub fn call_arg(payload_json : String) -> String {
+  @openui.call_arg(payload_json)
+}
+
+///|
+/// `Sort` and `Filter` branch. The host compares with `localeCompare` and `==`.
+#export_name("list_step")
+pub fn list_step(payload_json : String) -> String {
+  @openui.list_step(payload_json)
+}
+
+///|
+/// Whether an inline element keeps its current props.
+#export_name("inline_step")
+pub fn inline_step(payload_json : String) -> String {
+  @openui.inline_step(payload_json)
+}
+
+///|
+/// Field-validator branch. The host still builds `URL`, `RegExp`, and bound text.
+#export_name("check_value")
+pub fn check_value(payload_json : String) -> String {
+  @openui.check_value(payload_json)
+}
+
+///|
+/// `callFunction` branch. The host still calls the function and `checkValue`.
+#export_name("user_call")
+pub fn user_call(payload_json : String) -> String {
+  @openui.user_call(payload_json)
+}
+
+///|
+/// Custom-action branch. The host still builds the step and records it.
+#export_name("custom_call")
+pub fn custom_call(payload_json : String) -> String {
+  @openui.custom_call(payload_json)
+}
+
+///|
+/// Mapped component props. The host still reads state and evaluates values.
+#export_name("mapped_comp")
+pub fn mapped_comp(payload_json : String) -> String {
+  @openui.mapped_comp(payload_json)
+}
+
+///|
+/// Schema leaf branch. The host still reads fields and builds messages.
+#export_name("leaf_step")
+pub fn leaf_step(payload_json : String) -> String {
+  @openui.leaf_step(payload_json)
+}
+
+///|
+/// Validation message branch. The host still reads issue fields and joins text.
+#export_name("msg_step")
+pub fn msg_step(payload_json : String) -> String {
+  @openui.msg_step(payload_json)
+}

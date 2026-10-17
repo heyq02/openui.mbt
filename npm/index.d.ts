@@ -193,6 +193,74 @@ export function stateField(payload: { assign?: boolean; store?: boolean; context
   op: string;
 };
 export function stripAssign(payload: { assign?: boolean }): { op: string };
+export function callArg(payload: {
+  phase?: string;
+  nil?: boolean;
+  list?: boolean;
+  hit?: boolean;
+  absent?: boolean;
+  bare?: boolean;
+}): { op: string };
+export function listStep(payload: {
+  phase?: string;
+  kind?: string;
+  array?: boolean;
+  numeric?: boolean;
+  desc?: boolean;
+  op?: string;
+}): { op: string; sign?: number };
+export function inlineStep(payload: { frozen?: boolean }): { op: string };
+export function checkValue(payload: {
+  phase?: string;
+  nil?: boolean;
+  empty?: boolean;
+  has?: boolean;
+  n?: number;
+  code?: string;
+  kind?: string;
+  ok?: boolean;
+  known?: boolean;
+  hit?: boolean;
+}): { op: string; text?: string; code?: string };
+export function userCall(payload: {
+  phase?: string;
+  miss?: boolean;
+  bad?: boolean;
+  returns?: boolean;
+  nil?: boolean;
+}): { op: string };
+export function customCall(payload: {
+  phase?: string;
+  named?: boolean;
+  miss?: boolean;
+  bad?: boolean;
+}): { op: string };
+export function mappedComp(payload: {
+  phase?: string;
+  mapped?: boolean;
+  state?: boolean;
+  reactive?: boolean;
+  schema?: boolean;
+  element?: boolean;
+  array?: boolean;
+}): { op: string };
+export function leafStep(payload: {
+  phase?: string;
+  kind?: string;
+  scalar?: boolean;
+  hit?: boolean;
+  array?: boolean;
+  typed?: boolean;
+  match?: boolean;
+}): { op: string };
+export function msgStep(payload: {
+  phase?: string;
+  code?: string;
+  marked?: boolean;
+  show?: boolean;
+  kind?: string;
+  named?: boolean;
+}): { op: string };
 export function queryError(payload: {
   source?: string;
   kind?: string;

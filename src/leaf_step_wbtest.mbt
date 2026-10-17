@@ -1,0 +1,94 @@
+///|
+test "schema leaves choose enum, const, scalar type, and array" {
+  inspect(
+    leaf_step("{\"phase\":\"scalar\",\"kind\":\"enum\"}"),
+    content="{\"op\":\"enum\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"scalar\",\"kind\":\"const\"}"),
+    content="{\"op\":\"const\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"scalar\",\"kind\":\"string\"}"),
+    content="{\"op\":\"string\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"scalar\",\"kind\":\"number\"}"),
+    content="{\"op\":\"number\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"scalar\",\"kind\":\"integer\"}"),
+    content="{\"op\":\"number\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"scalar\",\"kind\":\"boolean\"}"),
+    content="{\"op\":\"boolean\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"scalar\",\"kind\":\"object\"}"),
+    content="{\"op\":\"empty\"}",
+  )
+  inspect(leaf_step("{\"phase\":\"scalar\"}"), content="{\"op\":\"empty\"}")
+  inspect(
+    leaf_step("{\"phase\":\"scalar\",\"kind\":1}"),
+    content="{\"op\":\"empty\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"enum\",\"scalar\":true,\"hit\":false}"),
+    content="{\"op\":\"fail\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"enum\",\"scalar\":true,\"hit\":true}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"enum\",\"scalar\":false,\"hit\":true}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"enum\",\"scalar\":false,\"hit\":false}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"enum\",\"scalar\":\"yes\",\"hit\":1}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(leaf_step("{\"phase\":\"enum\"}"), content="{\"op\":\"skip\"}")
+  inspect(
+    leaf_step("{\"phase\":\"js\",\"array\":true}"),
+    content="{\"op\":\"array\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"js\",\"array\":false}"),
+    content="{\"op\":\"type\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"js\",\"array\":1}"),
+    content="{\"op\":\"type\"}",
+  )
+  inspect(leaf_step("{\"phase\":\"js\"}"), content="{\"op\":\"type\"}")
+  inspect(
+    leaf_step("{\"phase\":\"type\",\"typed\":true,\"match\":false}"),
+    content="{\"op\":\"fail\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"type\",\"typed\":true,\"match\":true}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"type\",\"typed\":false,\"match\":false}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"type\",\"typed\":false,\"match\":true}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(
+    leaf_step("{\"phase\":\"type\",\"typed\":1,\"match\":\"no\"}"),
+    content="{\"op\":\"skip\"}",
+  )
+  inspect(leaf_step("{\"phase\":\"other\"}"), content="{\"op\":\"skip\"}")
+  inspect(leaf_step("{\"phase\":1}"), content="{\"op\":\"skip\"}")
+  inspect(leaf_step("[]"), content="{\"op\":\"skip\"}")
+  inspect(leaf_step("{"), content="{\"op\":\"skip\"}")
+}

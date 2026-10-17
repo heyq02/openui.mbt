@@ -38,7 +38,7 @@ const REPLACEMENTS = [
   ],
   [
     'const builtInValidators = {\n\trequired: (value) => {\n\t\tif (isEmpty(value)) return "This field is required";\n\t\tif (typeof value === "object" && !Array.isArray(value) && value !== null) {\n\t\t\tconst vals = Object.values(value);\n\t\t\tif (vals.length > 0 && vals.every((v) => typeof v === "boolean") && !vals.some(Boolean)) return "At least one option is required";\n\t\t}\n\t},\n\temail: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return "Please enter a valid email";\n\t\treturn /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value) ? void 0 : "Please enter a valid email";\n\t},\n\turl: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return "Please enter a valid URL";\n\t\ttry {\n\t\t\tnew URL(value);\n\t\t\treturn;\n\t\t} catch {\n\t\t\treturn "Please enter a valid URL";\n\t\t}\n\t},\n\tnumeric: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value === "number" && !isNaN(value)) return void 0;\n\t\tif (typeof value === "string" && !isNaN(parseFloat(value)) && value.trim() !== "") return void 0;\n\t\treturn "Must be a number";\n\t},\n\tmin: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tconst n = typeof value === "number" ? value : parseFloat(String(value));\n\t\tif (isNaN(n)) return void 0;\n\t\tconst min = Number(arg);\n\t\treturn n >= min ? void 0 : `Must be at least ${min}`;\n\t},\n\tmax: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tconst n = typeof value === "number" ? value : parseFloat(String(value));\n\t\tif (isNaN(n)) return void 0;\n\t\tconst max = Number(arg);\n\t\treturn n <= max ? void 0 : `Must be no more than ${max}`;\n\t},\n\tminLength: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return void 0;\n\t\tconst min = Number(arg);\n\t\treturn value.length >= min ? void 0 : `Must be at least ${min} characters`;\n\t},\n\tmaxLength: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return void 0;\n\t\tconst max = Number(arg);\n\t\treturn value.length <= max ? void 0 : `Must be no more than ${max} characters`;\n\t},\n\tpattern: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string" || typeof arg !== "string") return void 0;\n\t\ttry {\n\t\t\treturn new RegExp(arg).test(value) ? void 0 : "Invalid format";\n\t\t} catch {\n\t\t\treturn;\n\t\t}\n\t}\n};\n',
-    'const builtInValidators = {\n\trequired: (value) => builtinMoonbit("required", value),\n\temail: (value) => builtinMoonbit("email", value),\n\turl: (value) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string") return "Please enter a valid URL";\n\t\ttry {\n\t\t\tnew URL(value);\n\t\t\treturn;\n\t\t} catch {\n\t\t\treturn "Please enter a valid URL";\n\t\t}\n\t},\n\tnumeric: (value) => builtinMoonbit("numeric", value),\n\tmin: (value, arg) => builtinMoonbit("min", value, arg),\n\tmax: (value, arg) => builtinMoonbit("max", value, arg),\n\tminLength: (value, arg) => builtinMoonbit("minLength", value, arg),\n\tmaxLength: (value, arg) => builtinMoonbit("maxLength", value, arg),\n\tpattern: (value, arg) => {\n\t\tif (isEmpty(value)) return void 0;\n\t\tif (typeof value !== "string" || typeof arg !== "string") return void 0;\n\t\ttry {\n\t\t\treturn new RegExp(arg).test(value) ? void 0 : "Invalid format";\n\t\t} catch {\n\t\t\treturn;\n\t\t}\n\t}\n};\n',
+    "const builtInValidators = {\n\trequired: (value) => requiredMoonbit(value),\n\temail: (value) => emailMoonbit(value),\n\turl: (value) => urlMoonbit(value),\n\tnumeric: (value) => numericMoonbit(value),\n\tmin: (value, arg) => minMoonbit(value, arg),\n\tmax: (value, arg) => maxMoonbit(value, arg),\n\tminLength: (value, arg) => minLengthMoonbit(value, arg),\n\tmaxLength: (value, arg) => maxLengthMoonbit(value, arg),\n\tpattern: (value, arg) => patternMoonbit(value, arg)\n};\n",
   ],
   [
     'function enrichErrors(validationErrors, schema, componentNames) {\n\treturn validationErrors.map((ve) => {\n\t\tconst error = {\n\t\t\tsource: "parser",\n\t\t\tcode: ve.code,\n\t\t\tmessage: ve.message,\n\t\t\tcomponent: ve.component,\n\t\t\tpath: ve.path || void 0,\n\t\t\tstatementId: ve.statementId,\n\t\t\t...ve.severity && { severity: ve.severity }\n\t\t};\n\t\tif (ve.code === "unknown-component" && componentNames.length) error.hint = `Available components: ${componentNames.join(", ")}`;\n\t\telse if (ve.code === "missing-required" || ve.code === "null-required") error.hint = buildSignatureHint(ve.component, schema.$defs?.[ve.component]);\n\t\telse if (ve.code === "inline-reserved") error.hint = `Declare as a top-level statement: myVar = ${ve.component}(...)`;\n\t\treturn error;\n\t});\n}\n',
@@ -54,7 +54,7 @@ const REPLACEMENTS = [
   ],
   [
     'function evaluate(node, context, schemaCtx) {\n\tswitch (node.k) {\n\t\tcase "Str": return node.v;\n\t\tcase "Num": return node.v;\n\t\tcase "Bool": return node.v;\n\t\tcase "Null": return null;\n\t\tcase "Ph": return null;\n\t\tcase "StateRef": return context.extraScope?.[node.n] ?? context.getState(node.n);\n\t\tcase "Ref":\n\t\tcase "RuntimeRef": return context.resolveRef(node.n);\n\t\tcase "Arr": return node.els.map((el) => evaluate(el, context));\n\t\tcase "Obj": return Object.fromEntries(node.entries.map(([k, v]) => [k, evaluate(v, context)]));\n\t\tcase "Comp": {\n\t\t\tconst builtin = BUILTINS[node.name];\n\t\t\tif (builtin) {\n\t\t\t\tif (builtin.lazy) return evaluateLazyBuiltin(node.name, node.args, context, schemaCtx);\n\t\t\t\treturn builtin.fn(evaluateArgs(node, context));\n\t\t\t}\n\t\t\tif (isStep(node.name)) return evaluateActionCall(node, context);\n\t\t\tconst fns = context.functions;\n\t\t\tif (fns && Object.prototype.hasOwnProperty.call(fns, node.name)) return callFunction(node.name, fns[node.name], node, context);\n\t\t\tconst acts = context.actions;\n\t\t\tif (acts && Object.prototype.hasOwnProperty.call(acts, node.name)) {\n\t\t\t\tconst def = acts[node.name];\n\t\t\t\tconst args = callArgs(node, context, def.params);\n\t\t\t\tif (missesRequired(args, def.params)) return { steps: [] };\n\t\t\t\tconst params = checkValue(args, def.params, node.name, "", context, true);\n\t\t\t\tif (params === INVALID) return { steps: [] };\n\t\t\t\tconst step = {\n\t\t\t\t\ttype: "custom_action",\n\t\t\t\t\tname: node.name,\n\t\t\t\t\tparams\n\t\t\t\t};\n\t\t\t\tcustomSteps.add(step);\n\t\t\t\treturn { steps: [step] };\n\t\t\t}\n\t\t\tif (node.mappedProps) {\n\t\t\t\tconst def = schemaCtx?.library.components[node.name];\n\t\t\t\tconst props = {};\n\t\t\t\tfor (const [key, val] of Object.entries(node.mappedProps)) {\n\t\t\t\t\tconst propSchema = def?.props?.shape?.[key];\n\t\t\t\t\tif (val.k === "StateRef" && propSchema && isReactiveSchema(propSchema)) props[key] = {\n\t\t\t\t\t\t__reactive: "assign",\n\t\t\t\t\t\ttarget: val.n,\n\t\t\t\t\t\texpr: {\n\t\t\t\t\t\t\tk: "StateRef",\n\t\t\t\t\t\t\tn: "$value"\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t\telse if (val.k === "StateRef") props[key] = schemaCtx ? context.getState(val.n) : val;\n\t\t\t\t\telse props[key] = evaluate(val, context, schemaCtx);\n\t\t\t\t}\n\t\t\t\tconst result = {\n\t\t\t\t\ttype: "element",\n\t\t\t\t\ttypeName: node.name,\n\t\t\t\t\tprops,\n\t\t\t\t\tpartial: false,\n\t\t\t\t\thasDynamicProps: true\n\t\t\t\t};\n\t\t\t\tif (schemaCtx) {\n\t\t\t\t\tfor (const [key, val] of Object.entries(props)) if (isElementNode(val)) props[key] = evaluateElementInline(val, context, schemaCtx);\n\t\t\t\t\telse if (Array.isArray(val)) props[key] = val.map((item) => isElementNode(item) ? evaluateElementInline(item, context, schemaCtx) : item);\n\t\t\t\t}\n\t\t\t\treturn result;\n\t\t\t}\n\t\t\tconsole.warn(`[openui] Unexpected unmapped Comp node: ${node.name}`);\n\t\t\treturn null;\n\t\t}\n\t\tcase "BinOp": {\n\t\t\tif (node.op === "&&") {\n\t\t\t\tconst left = evaluate(node.left, context);\n\t\t\t\treturn left ? evaluate(node.right, context) : left;\n\t\t\t}\n\t\t\tif (node.op === "||") {\n\t\t\t\tconst left = evaluate(node.left, context);\n\t\t\t\treturn left ? left : evaluate(node.right, context);\n\t\t\t}\n\t\t\tconst left = evaluate(node.left, context);\n\t\t\tconst right = evaluate(node.right, context);\n\t\t\tswitch (node.op) {\n\t\t\t\tcase "+":\n\t\t\t\t\tif (typeof left === "string" || typeof right === "string") return String(left ?? "") + String(right ?? "");\n\t\t\t\t\treturn toNumber(left) + toNumber(right);\n\t\t\t\tcase "-": return toNumber(left) - toNumber(right);\n\t\t\t\tcase "*": return toNumber(left) * toNumber(right);\n\t\t\t\tcase "/": return toNumber(right) === 0 ? 0 : toNumber(left) / toNumber(right);\n\t\t\t\tcase "%": return toNumber(right) === 0 ? 0 : toNumber(left) % toNumber(right);\n\t\t\t\tcase "==": return left == right;\n\t\t\t\tcase "!=": return left != right;\n\t\t\t\tcase ">": return toNumber(left) > toNumber(right);\n\t\t\t\tcase "<": return toNumber(left) < toNumber(right);\n\t\t\t\tcase ">=": return toNumber(left) >= toNumber(right);\n\t\t\t\tcase "<=": return toNumber(left) <= toNumber(right);\n\t\t\t\tdefault: return null;\n\t\t\t}\n\t\t}\n\t\tcase "UnaryOp":\n\t\t\tif (node.op === "!") return !evaluate(node.operand, context);\n\t\t\tif (node.op === "-") return -toNumber(evaluate(node.operand, context));\n\t\t\treturn null;\n\t\tcase "Ternary": return evaluate(node.cond, context) ? evaluate(node.then, context) : evaluate(node.else, context);\n\t\tcase "Member": {\n\t\t\tconst obj = evaluate(node.obj, context);\n\t\t\tif (obj == null) return null;\n\t\t\tif (Array.isArray(obj)) {\n\t\t\t\tif (node.field === "length") return obj.length;\n\t\t\t\treturn obj.map((item) => item?.[node.field] ?? null);\n\t\t\t}\n\t\t\treturn obj[node.field];\n\t\t}\n\t\tcase "Index": {\n\t\t\tconst obj = evaluate(node.obj, context);\n\t\t\tconst idx = evaluate(node.index, context);\n\t\t\tif (obj == null || idx == null) return null;\n\t\t\tif (Array.isArray(obj)) return obj[toNumber(idx)];\n\t\t\treturn obj[String(idx)];\n\t\t}\n\t\tcase "Assign": return {\n\t\t\t__reactive: "assign",\n\t\t\ttarget: node.target,\n\t\t\texpr: node.value\n\t\t};\n\t}\n}\n',
-    'function evaluate(node, context, schemaCtx) {\n\tif (node.k === "Comp") {\n\t\t\tconst builtin = BUILTINS[node.name];\n\t\t\tif (builtin) {\n\t\t\t\tif (builtin.lazy) return evaluateLazyBuiltin(node.name, node.args, context, schemaCtx);\n\t\t\t\tconst builtinArgs = evaluateArgs(node, context);\n\t\t\t\tconst builtinResult = callBuiltinMoonbit(node.name, builtinArgs);\n\t\t\t\tif (!(builtinResult && builtinResult.__useJs)) return builtinResult;\n\t\t\t\treturn builtin.fn(builtinArgs);\n\t\t\t}\n\t\t\tif (isStep(node.name) && (node.name === "Run" || node.name === "Set" || node.name === "Reset")) return lazyStepMoonbit(node);\n\t\t\tif (isStep(node.name) && (node.name === \"OpenUrl\" || node.name === \"ToAssistant\")) return eagerStepMoonbit(node, context);\n\t\t\tif (isStep(node.name)) return evaluateActionCall(node, context);\n\t\t\tconst fns = context.functions;\n\t\t\tif (fns && Object.prototype.hasOwnProperty.call(fns, node.name)) return callFunction(node.name, fns[node.name], node, context);\n\t\t\tconst acts = context.actions;\n\t\t\tif (acts && Object.prototype.hasOwnProperty.call(acts, node.name)) {\n\t\t\t\tconst def = acts[node.name];\n\t\t\t\tconst args = callArgs(node, context, def.params);\n\t\t\t\tif (missesRequired(args, def.params)) return { steps: [] };\n\t\t\t\tconst params = checkValue(args, def.params, node.name, "", context, true);\n\t\t\t\tif (params === INVALID) return { steps: [] };\n\t\t\t\tconst step = {\n\t\t\t\t\ttype: "custom_action",\n\t\t\t\t\tname: node.name,\n\t\t\t\t\tparams\n\t\t\t\t};\n\t\t\t\tcustomSteps.add(step);\n\t\t\t\treturn { steps: [step] };\n\t\t\t}\n\t\t\tif (node.mappedProps) {\n\t\t\t\tconst def = schemaCtx?.library.components[node.name];\n\t\t\t\tconst props = {};\n\t\t\t\tfor (const [key, val] of Object.entries(node.mappedProps)) {\n\t\t\t\t\tconst propSchema = def?.props?.shape?.[key];\n\t\t\t\t\tif (val.k === "StateRef" && propSchema && isReactiveSchema(propSchema)) props[key] = {\n\t\t\t\t\t\t__reactive: "assign",\n\t\t\t\t\t\ttarget: val.n,\n\t\t\t\t\t\texpr: {\n\t\t\t\t\t\t\tk: "StateRef",\n\t\t\t\t\t\t\tn: "$value"\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t\telse if (val.k === "StateRef") props[key] = schemaCtx ? context.getState(val.n) : val;\n\t\t\t\t\telse props[key] = evaluate(val, context, schemaCtx);\n\t\t\t\t}\n\t\t\t\tconst result = {\n\t\t\t\t\ttype: "element",\n\t\t\t\t\ttypeName: node.name,\n\t\t\t\t\tprops,\n\t\t\t\t\tpartial: false,\n\t\t\t\t\thasDynamicProps: true\n\t\t\t\t};\n\t\t\t\tif (schemaCtx) {\n\t\t\t\t\tfor (const [key, val] of Object.entries(props)) if (isElementNode(val)) props[key] = evaluateElementInline(val, context, schemaCtx);\n\t\t\t\t\telse if (Array.isArray(val)) props[key] = val.map((item) => isElementNode(item) ? evaluateElementInline(item, context, schemaCtx) : item);\n\t\t\t\t}\n\t\t\t\treturn result;\n\t\t\t}\n\t\t\tconsole.warn(`[openui] Unexpected unmapped Comp node: ${node.name}`);\n\t\t\treturn null;\n\t}\n\treturn evaluateMoonbitPure(node, context, schemaCtx);\n}\n',
+    'function evaluate(node, context, schemaCtx) {\n\tif (node.k === "Comp") {\n\t\t\tconst builtin = BUILTINS[node.name];\n\t\t\tif (builtin) {\n\t\t\t\tif (builtin.lazy) return evaluateLazyBuiltin(node.name, node.args, context, schemaCtx);\n\t\t\t\tconst builtinArgs = evaluateArgs(node, context);\n\t\t\t\tconst builtinResult = callBuiltinMoonbit(node.name, builtinArgs);\n\t\t\t\tif (!(builtinResult && builtinResult.__useJs)) return builtinResult;\n\t\t\t\treturn builtin.fn(builtinArgs);\n\t\t\t}\n\t\t\tif (isStep(node.name) && (node.name === "Run" || node.name === "Set" || node.name === "Reset")) return lazyStepMoonbit(node);\n\t\t\tif (isStep(node.name) && (node.name === \"OpenUrl\" || node.name === \"ToAssistant\")) return eagerStepMoonbit(node, context);\n\t\t\tif (isStep(node.name)) return evaluateActionCall(node, context);\n\t\t\tconst fns = context.functions;\n\t\t\tif (fns && Object.prototype.hasOwnProperty.call(fns, node.name)) return callFunction(node.name, fns[node.name], node, context);\n\t\t\tconst action = customActionMoonbit(node, context);\n\t\t\tif (action) return action\n\t\t\treturn mappedCompMoonbit(node, context, schemaCtx);\n\t}\n\treturn evaluateMoonbitPure(node, context, schemaCtx);\n}\n',
   ],
   [
     'function walkAST(node, visit) {\n\tconst walk = (current) => {\n\t\tvisit(current);\n\t\tswitch (current.k) {\n\t\t\tcase "Comp":\n\t\t\t\tcurrent.args.forEach(walk);\n\t\t\t\tObject.values(current.mappedProps ?? {}).forEach(walk);\n\t\t\t\tbreak;\n\t\t\tcase "Arr":\n\t\t\t\tcurrent.els.forEach(walk);\n\t\t\t\tbreak;\n\t\t\tcase "Obj":\n\t\t\t\tcurrent.entries.forEach(([, value]) => walk(value));\n\t\t\t\tbreak;\n\t\t\tcase "BinOp":\n\t\t\t\twalk(current.left);\n\t\t\t\twalk(current.right);\n\t\t\t\tbreak;\n\t\t\tcase "UnaryOp":\n\t\t\t\twalk(current.operand);\n\t\t\t\tbreak;\n\t\t\tcase "Ternary":\n\t\t\t\twalk(current.cond);\n\t\t\t\twalk(current.then);\n\t\t\t\twalk(current.else);\n\t\t\t\tbreak;\n\t\t\tcase "Member":\n\t\t\t\twalk(current.obj);\n\t\t\t\tbreak;\n\t\t\tcase "Index":\n\t\t\t\twalk(current.obj);\n\t\t\t\twalk(current.index);\n\t\t\t\tbreak;\n\t\t\tcase "Assign":\n\t\t\t\twalk(current.value);\n\t\t\t\tbreak;\n\t\t}\n\t};\n\twalk(node);\n}\n',
@@ -159,6 +159,54 @@ const REPLACEMENTS = [
   [
     "function resolveStateField(name, bindingValue, store, evaluationContext, fieldGetter, fieldSetter) {\n\tif (isReactiveAssign(bindingValue) && store && evaluationContext) {\n\t\tconst { target, expr } = bindingValue;\n\t\treturn {\n\t\t\tname,\n\t\t\tvalue: store.get(target),\n\t\t\tsetValue: (value) => {\n\t\t\t\tconst extraScope = { $value: value };\n\t\t\t\tconst nextValue = evaluate(expr, {\n\t\t\t\t\t...evaluationContext,\n\t\t\t\t\textraScope\n\t\t\t\t});\n\t\t\t\tstore.set(target, nextValue);\n\t\t\t},\n\t\t\tisReactive: true\n\t\t};\n\t}\n\treturn {\n\t\tname,\n\t\tvalue: fieldGetter(name) ?? bindingValue,\n\t\tsetValue: (value) => fieldSetter(name, value),\n\t\tisReactive: false\n\t};\n}\n",
     "function resolveStateField(name, bindingValue, store, evaluationContext, fieldGetter, fieldSetter) {\n\treturn resolveStateFieldMoonbit(name, bindingValue, store, evaluationContext, fieldGetter, fieldSetter);\n}\n",
+  ],
+  [
+    "function callArgs(node, context, params) {\n\tconst args = evaluateArgs(node, context, Object.keys(params.properties ?? {}).map((name) => ({\n\t\tname,\n\t\trequired: false\n\t})));\n\tfor (const key in args) if (args[key] === null && !params.required?.includes(key)) delete args[key];\n\treturn args;\n}\n",
+    "function callArgs(node, context, params) {\n\treturn callArgsMoonbit(node, context, params);\n}\n",
+  ],
+  [
+    "function missesRequired(args, params) {\n\treturn !!params.required?.some((key) => args[key] == null && getSchemaDefaultValue(params.properties?.[key]) === void 0);\n}\n",
+    "function missesRequired(args, params) {\n\treturn missesRequiredMoonbit(args, params);\n}\n",
+  ],
+  [
+    'fn: ({ array, field, direction }) => {\n\t\t\tif (!Array.isArray(array)) return array;\n\t\t\tconst f = String(field ?? "");\n\t\t\tconst desc = String(direction ?? "asc") === "desc";\n\t\t\treturn [...array].sort((a, b) => {\n\t\t\t\tconst av = f ? resolveField(a, f) : a;\n\t\t\t\tconst bv = f ? resolveField(b, f) : b;\n\t\t\t\tconst aIsNumeric = typeof av === "number" || typeof av === "string" && !isNaN(Number(av)) && av !== "";\n\t\t\t\tconst bIsNumeric = typeof bv === "number" || typeof bv === "string" && !isNaN(Number(bv)) && bv !== "";\n\t\t\t\tif (aIsNumeric && bIsNumeric) {\n\t\t\t\t\tconst diff = toNumber(av) - toNumber(bv);\n\t\t\t\t\treturn desc ? -diff : diff;\n\t\t\t\t}\n\t\t\t\tconst cmp = String(av ?? "").localeCompare(String(bv ?? ""));\n\t\t\t\treturn desc ? -cmp : cmp;\n\t\t\t});\n\t\t}',
+    "fn: ({ array, field, direction }) => sortArrayMoonbit(array, field, direction)",
+  ],
+  [
+    'fn: ({ array, field, operator, value }) => {\n\t\t\tif (!Array.isArray(array)) return [];\n\t\t\tconst f = String(field ?? "");\n\t\t\tconst o = String(operator ?? "==");\n\t\t\treturn array.filter((item) => {\n\t\t\t\tconst v = f ? resolveField(item, f) : item;\n\t\t\t\tswitch (o) {\n\t\t\t\t\tcase "==": return v == value;\n\t\t\t\t\tcase "!=": return v != value;\n\t\t\t\t\tcase ">": return toNumber(v) > toNumber(value);\n\t\t\t\t\tcase "<": return toNumber(v) < toNumber(value);\n\t\t\t\t\tcase ">=": return toNumber(v) >= toNumber(value);\n\t\t\t\t\tcase "<=": return toNumber(v) <= toNumber(value);\n\t\t\t\t\tcase "contains": return String(v ?? "").includes(String(value ?? ""));\n\t\t\t\t\tdefault: return false;\n\t\t\t\t}\n\t\t\t});\n\t\t}',
+    "fn: ({ array, field, operator, value }) => filterArrayMoonbit(array, field, operator, value)",
+  ],
+  [
+    "function evaluateElementInline(el, context, schemaCtx) {\n\tif (el.hasDynamicProps === false) return el;\n\tconst def = schemaCtx.library.components[el.typeName];\n\tconst evaluated = {};\n\tfor (const [key, value] of Object.entries(el.props)) {\n\t\tconst propSchema = def?.props?.shape?.[key];\n\t\tevaluated[key] = evaluatePropInline(value, context, schemaCtx, propSchema);\n\t}\n\treturn {\n\t\t...el,\n\t\tprops: evaluated\n\t};\n}\n",
+    "function evaluateElementInline(el, context, schemaCtx) {\n\treturn evaluateElementInlineMoonbit(el, context, schemaCtx);\n}\n",
+  ],
+  [
+    'function isEmpty(value) {\n\tif (value === null || value === void 0 || value === "") return true;\n\tif (Array.isArray(value) && value.length === 0) return true;\n\tif (value && typeof value === "object" && !Array.isArray(value) && "value" in value) return isEmpty(value.value);\n\tif (typeof value === "object" && value !== null && !Array.isArray(value) && Object.keys(value).length === 0) return true;\n\treturn false;\n}\n',
+    "function isEmpty(value) {\n\treturn isEmptyMoonbit(value);\n}\n",
+  ],
+  [
+    'function validate(value, rules, customValidators) {\n\tfor (const rule of rules) {\n\t\tconst validator = customValidators?.[rule.type] ?? builtInValidators[rule.type];\n\t\tif (!validator) {\n\t\t\tconsole.warn(`[openui] Unknown validation rule type: "${rule.type}"`);\n\t\t\tcontinue;\n\t\t}\n\t\tconst error = validator(value, rule.arg);\n\t\tif (error) return error;\n\t}\n}\n',
+    "function validate(value, rules, customValidators) {\n\treturn validateMoonbit(value, rules, customValidators);\n}\n",
+  ],
+  [
+    'function callFunction(name, def, node, context) {\n\tconst raw = callArgs(node, context, def.params);\n\tif (missesRequired(raw, def.params)) return null;\n\tconst args = checkValue(raw, def.params, name, "", context);\n\tif (args === INVALID) return null;\n\tlet result;\n\ttry {\n\t\tresult = def.fn(args);\n\t} catch (e) {\n\t\tcontext.reportError?.(`@${name} threw: ${e instanceof Error ? e.message : String(e)}`);\n\t\treturn null;\n\t}\n\tif (!def.returns) return result;\n\tconst checked = checkValue(result, def.returns, name, "/returns", context);\n\treturn checked === INVALID ? null : checked ?? null;\n}\n',
+    "function callFunction(name, def, node, context) {\n\treturn callFunctionMoonbit(name, def, node, context);\n}\n",
+  ],
+  [
+    'function jsType(value) {\n\treturn Array.isArray(value) ? "array" : typeof value;\n}\n',
+    "function jsType(value) {\n\treturn jsTypeMoonbit(value);\n}\n",
+  ],
+  [
+    'function getScalarTypeInfo(s) {\n\tif (Array.isArray(s["enum"])) return { enumValues: s["enum"] };\n\tif ("const" in s) return { enumValues: [s["const"]] };\n\tswitch (s["type"]) {\n\t\tcase "string": return { expectedType: "string" };\n\t\tcase "number":\n\t\tcase "integer": return { expectedType: "number" };\n\t\tcase "boolean": return { expectedType: "boolean" };\n\t\tdefault: return {};\n\t}\n}\n',
+    "function getScalarTypeInfo(s) {\n\treturn getScalarTypeInfoMoonbit(s);\n}\n",
+  ],
+  [
+    'function checkTypeMismatch(value, info) {\n\tconst actual = typeof value;\n\tif (info.enumValues) {\n\t\tif (!SCALAR_TYPEOFS.includes(actual)) return null;\n\t\tif (info.enumValues.includes(value)) return null;\n\t\treturn {\n\t\t\texpected: `one of [${info.enumValues.map((v) => JSON.stringify(v)).join(", ")}]`,\n\t\t\tactual: JSON.stringify(value)\n\t\t};\n\t}\n\tif (info.expectedType && info.expectedType !== actual) return {\n\t\texpected: info.expectedType,\n\t\tactual: jsType(value)\n\t};\n\treturn null;\n}\n',
+    "function checkTypeMismatch(value, info) {\n\treturn checkTypeMismatchMoonbit(value, info);\n}\n",
+  ],
+  [
+    'function validationMessage(component, path, issue) {\n\tswitch (issue.code) {\n\t\tcase "type-mismatch": return `field "${path}" expects ${issue.expected} but got ${issue.actual}`;\n\t\tcase "missing-required": return `missing required field "${path}"${issue.signature ? ` — signature: ${issue.signature}` : ""}`;\n\t\tcase "null-required": return `required field "${path}" cannot be null${issue.signature ? ` — signature: ${issue.signature}` : ""}`;\n\t\tcase "unknown-component": return `Unknown component "${component}" — not found in catalog or builtins${issue.available?.length ? `. Available components: ${issue.available.join(", ")}` : ""}`;\n\t\tcase "inline-reserved": return `${component}() must be declared as a top-level statement, not used inline as a value`;\n\t\tcase "excess-args": return `${component} takes ${issue.declared} arg(s), got ${issue.got} (${issue.got - issue.declared} excess dropped)`;\n\t\tcase "unknown-function": return `Unknown function "@${component}": not a built-in or action step. The call evaluates to null`;\n\t\tcase "no-root":\n\t\t\tif (issue.reason === "not-component") return "root does not evaluate to a component";\n\t\t\tif (issue.reason === "fallback") return `No root statement. Rendering the first statement that calls the root component ${component}`;\n\t\t\treturn component ? `No root statement, and no statement calls the root component ${component}` : "No root statement";\n\t}\n}\n',
+    "function validationMessage(component, path, issue) {\n\treturn validationMessageMoonbit(component, path, issue);\n}\n",
   ],
 ];
 
@@ -495,7 +543,8 @@ function evaluatePropValueMoonbit(value, context, schemaCtx, reactiveSchema, cal
   return result;
 }
 function evaluateElementPropsMoonbit(el, evalCtx) {
-  if (el.hasDynamicProps === false) return el;
+  const frozen = el.hasDynamicProps === false;
+  if (__ouiInlineStep({ frozen }).op === "keep") return el;
   const schemaCtx = { library: evalCtx.library };
   const def = evalCtx.library.components[el.typeName];
   const evaluated = {};
@@ -679,6 +728,353 @@ function resolveStateFieldMoonbit(name, bindingValue, store, evaluationContext, 
     isReactive: false,
   };
 }
+function callArgsMoonbit(node, context, params) {
+  const args = evaluateArgs(node, context, Object.keys(params.properties ?? {}).map((name) => ({
+    name,
+    required: false,
+  })));
+  for (const key in args) {
+    const nil = args[key] === null;
+    let list = false;
+    let hit = false;
+    if (nil) {
+      const listed = params.required;
+      list = listed != null;
+      hit = list && listed.includes(key);
+    }
+    const step = __ouiCallArg({ phase: "drop", nil, list, hit });
+    if (step.op === "drop") delete args[key];
+  }
+  return args;
+}
+function missesRequiredMoonbit(args, params) {
+  const required = params.required;
+  if (required == null) return __ouiCallArg({ phase: "miss", absent: false, bare: false }).op === "miss";
+  return !!required.some((key) => {
+    const absent = args[key] == null;
+    let bare = false;
+    if (absent) {
+      const properties = params.properties;
+      const property = properties == null ? void 0 : properties[key];
+      bare = getSchemaDefaultValue(property) === void 0;
+    }
+    return __ouiCallArg({ phase: "miss", absent, bare }).op === "miss";
+  });
+}
+function sortArrayMoonbit(array, field, direction) {
+  const opened = __ouiListStep({ phase: "open", kind: "sort", array: Array.isArray(array) });
+  if (opened.op !== "sort") return array;
+  const f = String(field ?? "");
+  const desc = String(direction ?? "asc") === "desc";
+  return [...array].sort((a, b) => {
+    const av = f ? resolveField(a, f) : a;
+    const bv = f ? resolveField(b, f) : b;
+    const aIsNumeric = typeof av === "number" || typeof av === "string" && !isNaN(Number(av)) && av !== "";
+    const bIsNumeric = typeof bv === "number" || typeof bv === "string" && !isNaN(Number(bv)) && bv !== "";
+    const step = __ouiListStep({ phase: "pair", numeric: aIsNumeric && bIsNumeric, desc });
+    if (step.op === "num") return (toNumber(av) - toNumber(bv)) * step.sign;
+    return String(av ?? "").localeCompare(String(bv ?? "")) * step.sign;
+  });
+}
+function filterArrayMoonbit(array, field, operator, value) {
+  const opened = __ouiListStep({ phase: "open", kind: "filter", array: Array.isArray(array) });
+  if (opened.op !== "filter") return [];
+  const f = String(field ?? "");
+  const o = String(operator ?? "==");
+  return array.filter((item) => {
+    const v = f ? resolveField(item, f) : item;
+    const step = __ouiListStep({ phase: "cmp", op: o });
+    if (step.op === "eq") return v == value;
+    if (step.op === "ne") return v != value;
+    if (step.op === "gt") return toNumber(v) > toNumber(value);
+    if (step.op === "lt") return toNumber(v) < toNumber(value);
+    if (step.op === "ge") return toNumber(v) >= toNumber(value);
+    if (step.op === "le") return toNumber(v) <= toNumber(value);
+    if (step.op === "has") return String(v ?? "").includes(String(value ?? ""));
+    return false;
+  });
+}
+function evaluateElementInlineMoonbit(el, context, schemaCtx) {
+  const frozen = el.hasDynamicProps === false;
+  if (__ouiInlineStep({ frozen }).op === "keep") return el;
+  const def = schemaCtx.library.components[el.typeName];
+  const evaluated = {};
+  for (const [key, value] of Object.entries(el.props)) {
+    const propSchema = def?.props?.shape?.[key];
+    evaluated[key] = evaluatePropInline(value, context, schemaCtx, propSchema);
+  }
+  return { ...el, props: evaluated };
+}
+function checkText(step, bound) {
+  if (step.op !== "fail") return void 0;
+  if (step.code === "min") return "Must be at least " + bound;
+  if (step.code === "max") return "Must be no more than " + bound;
+  if (step.code === "minLength") return "Must be at least " + bound + " characters";
+  if (step.code === "maxLength") return "Must be no more than " + bound + " characters";
+  return step.text;
+}
+function isEmptyMoonbit(value) {
+  const nil = value === null || value === void 0 || value === "";
+  const array = Array.isArray(value);
+  const blank = __ouiCheck({ phase: "blank", nil, empty: array && value.length === 0 });
+  if (blank.op === "empty") return true;
+  const object = Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  const has = object && "value" in value;
+  if (has && __ouiCheck({ phase: "wrap", has: true }).op === "dive") return isEmptyMoonbit(value.value);
+  if (!object) return __ouiCheck({ phase: "done" }).op === "empty";
+  return __ouiCheck({ phase: "keys", n: Object.keys(value).length }).op === "empty";
+}
+function requiredMoonbit(value) {
+  if (isEmptyMoonbit(value)) return checkText(__ouiCheck({ phase: "msg", code: "required" }));
+  if (typeof value === "object" && !Array.isArray(value) && value !== null) {
+    const vals = Object.values(value);
+    const options = vals.length > 0 && vals.every((v) => typeof v === "boolean") && !vals.some(Boolean);
+    if (options) return checkText(__ouiCheck({ phase: "msg", code: "options" }));
+  }
+}
+function emailMoonbit(value) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string") return checkText(__ouiCheck({ phase: "msg", code: "email" }));
+  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value) ? void 0 : checkText(__ouiCheck({ phase: "msg", code: "email" }));
+}
+function urlMoonbit(value) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string") return checkText(__ouiCheck({ phase: "msg", code: "url" }));
+  try {
+    new URL(value);
+    return;
+  } catch {
+    return checkText(__ouiCheck({ phase: "msg", code: "url" }));
+  }
+}
+function numericMoonbit(value) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value === "number" && !isNaN(value)) return void 0;
+  if (typeof value === "string" && !isNaN(parseFloat(value)) && value.trim() !== "") return void 0;
+  return checkText(__ouiCheck({ phase: "msg", code: "numeric" }));
+}
+function minMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (isNaN(n)) return void 0;
+  const min = Number(arg);
+  return checkText(__ouiCheck({ phase: "bound", kind: "min", ok: n >= min }), min);
+}
+function maxMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (isNaN(n)) return void 0;
+  const max = Number(arg);
+  return checkText(__ouiCheck({ phase: "bound", kind: "max", ok: n <= max }), max);
+}
+function minLengthMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string") return void 0;
+  const min = Number(arg);
+  return checkText(__ouiCheck({ phase: "bound", kind: "minLength", ok: value.length >= min }), min);
+}
+function maxLengthMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string") return void 0;
+  const max = Number(arg);
+  return checkText(__ouiCheck({ phase: "bound", kind: "maxLength", ok: value.length <= max }), max);
+}
+function patternMoonbit(value, arg) {
+  if (isEmptyMoonbit(value)) return void 0;
+  if (typeof value !== "string" || typeof arg !== "string") return void 0;
+  try {
+    if (new RegExp(arg).test(value)) return void 0;
+    return checkText(__ouiCheck({ phase: "msg", code: "format" }));
+  } catch {
+    return;
+  }
+}
+function validateMoonbit(value, rules, customValidators) {
+  for (const rule of rules) {
+    const validator = customValidators?.[rule.type] ?? builtInValidators[rule.type];
+    const known = Boolean(validator);
+    const error = known ? validator(value, rule.arg) : void 0;
+    const step = __ouiCheck({ phase: "rule", known, hit: Boolean(error) });
+    if (step.op === "warn") console.warn('[openui] Unknown validation rule type: "' + rule.type + '"');
+    if (step.op === "stop") return error;
+  }
+}
+function callFunctionMoonbit(name, def, node, context) {
+  const raw = callArgs(node, context, def.params);
+  if (__ouiUserCall({ phase: "args", miss: missesRequired(raw, def.params) }).op === "null") return null;
+  const args = checkValue(raw, def.params, name, "", context);
+  if (__ouiUserCall({ phase: "checked", bad: args === INVALID }).op === "null") return null;
+  let result;
+  try {
+    result = def.fn(args);
+  } catch (e) {
+    if (__ouiUserCall({ phase: "threw" }).op === "null") {
+      context.reportError?.("@" + name + " threw: " + (e instanceof Error ? e.message : String(e)));
+      return null;
+    }
+  }
+  if (__ouiUserCall({ phase: "result", returns: Boolean(def.returns) }).op === "value") return result;
+  const checked = checkValue(result, def.returns, name, "/returns", context);
+  if (__ouiUserCall({ phase: "returns", bad: checked === INVALID, nil: checked == null }).op === "null") return null;
+  return checked;
+}
+function customActionMoonbit(node, context) {
+  const acts = context.actions;
+  const named = Boolean(acts) && Object.prototype.hasOwnProperty.call(acts, node.name);
+  if (__ouiCustom({ phase: "open", named }).op !== "act") return null;
+  const def = acts[node.name];
+  const args = callArgs(node, context, def.params);
+  if (__ouiCustom({ phase: "args", miss: missesRequired(args, def.params) }).op === "empty") return { steps: [] };
+  const params = checkValue(args, def.params, node.name, "", context, true);
+  if (__ouiCustom({ phase: "checked", bad: params === INVALID }).op !== "build") return { steps: [] };
+  const step = {
+    type: "custom_action",
+    name: node.name,
+    params
+  };
+  customSteps.add(step);
+  return { steps: [step] };
+}
+function mappedCompMoonbit(node, context, schemaCtx) {
+  if (__ouiMapped({ phase: "open", mapped: Boolean(node.mappedProps) }).op === "warn") {
+    console.warn("[openui] Unexpected unmapped Comp node: " + node.name);
+    return null;
+  }
+  const def = schemaCtx?.library.components[node.name];
+  const props = {};
+  for (const [key, val] of Object.entries(node.mappedProps)) {
+    const propSchema = def?.props?.shape?.[key];
+    const state = val.k === "StateRef";
+    const reactive = state && propSchema && isReactiveSchema(propSchema);
+    if (__ouiMapped({ phase: "prop", state, reactive: Boolean(reactive) }).op === "assign") {
+      props[key] = {
+        __reactive: "assign",
+        target: val.n,
+        expr: { k: "StateRef", n: "$value" }
+      };
+    } else if (val.k === "StateRef") props[key] = schemaCtx ? context.getState(val.n) : val;
+    else props[key] = evaluate(val, context, schemaCtx);
+  }
+  const result = {
+    type: "element",
+    typeName: node.name,
+    props,
+    partial: false,
+    hasDynamicProps: true
+  };
+  if (__ouiMapped({ phase: "finish", schema: Boolean(schemaCtx) }).op === "walk") {
+    for (const [key, val] of Object.entries(props)) {
+      const element = isElementNode(val);
+      const array = !element && Array.isArray(val);
+      const child = __ouiMapped({ phase: "child", element, array });
+      if (child.op === "inline") props[key] = evaluateElementInline(val, context, schemaCtx);
+      else if (child.op === "list") props[key] = val.map((item) => isElementNode(item) ? evaluateElementInline(item, context, schemaCtx) : item);
+    }
+  }
+  return result;
+}
+function jsTypeMoonbit(value) {
+  if (__ouiLeaf({ phase: "js", array: Array.isArray(value) }).op === "array") return "array";
+  return typeof value;
+}
+function getScalarTypeInfoMoonbit(s) {
+  if (Array.isArray(s["enum"]) && __ouiLeaf({ phase: "scalar", kind: "enum" }).op === "enum") {
+    return { enumValues: s["enum"] };
+  }
+  if ("const" in s && __ouiLeaf({ phase: "scalar", kind: "const" }).op === "const") {
+    return { enumValues: [s["const"]] };
+  }
+  const raw = s["type"];
+  const kind = typeof raw === "string" ? raw : "";
+  const step = __ouiLeaf({ phase: "scalar", kind });
+  if (step.op === "string") return { expectedType: "string" };
+  if (step.op === "number") return { expectedType: "number" };
+  if (step.op === "boolean") return { expectedType: "boolean" };
+  return {};
+}
+function checkTypeMismatchMoonbit(value, info) {
+  const actual = typeof value;
+  if (info.enumValues) {
+    const scalar = SCALAR_TYPEOFS.includes(actual);
+    const hit = scalar && info.enumValues.includes(value);
+    if (__ouiLeaf({ phase: "enum", scalar, hit }).op === "fail") {
+      return {
+        expected: "one of [" + info.enumValues.map((v) => JSON.stringify(v)).join(", ") + "]",
+        actual: JSON.stringify(value),
+      };
+    }
+    return null;
+  }
+  const typed = Boolean(info.expectedType);
+  const match = typed && info.expectedType === actual;
+  if (__ouiLeaf({ phase: "type", typed, match }).op === "fail") {
+    return { expected: info.expectedType, actual: jsType(value) };
+  }
+  return null;
+}
+function validationMessageMoonbit(component, path, issue) {
+  const code = issue.code;
+  const open = __ouiMsg({ phase: "open", code: typeof code === "string" ? code : "" });
+  if (open.op === "type") {
+    return 'field "' + path + '" expects ' + issue.expected + " but got " + issue.actual;
+  }
+  if (open.op === "missing" || open.op === "null") {
+    const head =
+      open.op === "missing"
+        ? 'missing required field "' + path + '"'
+        : 'required field "' + path + '" cannot be null';
+    const marked = Boolean(issue.signature);
+    if (__ouiMsg({ phase: "sign", marked }).op === "with") {
+      return head + " — signature: " + issue.signature;
+    }
+    return head;
+  }
+  if (open.op === "component") {
+    const head = 'Unknown component "' + component + '" — not found in catalog or builtins';
+    const show = Boolean(issue.available?.length);
+    if (__ouiMsg({ phase: "list", show }).op === "join") {
+      return head + ". Available components: " + issue.available.join(", ");
+    }
+    return head;
+  }
+  if (open.op === "inline") {
+    return component + "() must be declared as a top-level statement, not used inline as a value";
+  }
+  if (open.op === "excess") {
+    return (
+      component +
+      " takes " +
+      issue.declared +
+      " arg(s), got " +
+      issue.got +
+      " (" +
+      (issue.got - issue.declared) +
+      " excess dropped)"
+    );
+  }
+  if (open.op === "function") {
+    return (
+      'Unknown function "@' +
+      component +
+      '": not a built-in or action step. The call evaluates to null'
+    );
+  }
+  if (open.op === "root") {
+    const first = issue.reason === "not-component";
+    const fallback = !first && issue.reason === "fallback";
+    const kind = first ? "not-component" : fallback ? "fallback" : "";
+    const root = __ouiMsg({ phase: "root", kind, named: Boolean(component) });
+    if (root.op === "not-component") return "root does not evaluate to a component";
+    if (root.op === "fallback") {
+      return "No root statement. Rendering the first statement that calls the root component " + component;
+    }
+    if (root.op === "named") {
+      return "No root statement, and no statement calls the root component " + component;
+    }
+    return "No root statement";
+  }
+  return undefined;
+}
 `;
 
 function usage() {
@@ -699,11 +1095,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber, rootStep as __ouiEvaluateRoot, eachStep as __ouiEach, propStep as __ouiPropStep, propError as __ouiPropError, storeKeep as __ouiStoreKeep, storeInit as __ouiStoreInit, createQueryManager as __ouiCreateQueryManager, stateField as __ouiStateField, stripAssign as __ouiStripAssign, callArg as __ouiCallArg, listStep as __ouiListStep, inlineStep as __ouiInlineStep, checkValue as __ouiCheck, userCall as __ouiUserCall, customCall as __ouiCustom, mappedComp as __ouiMapped, leafStep as __ouiLeaf, msgStep as __ouiMsg } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber, rootStep: __ouiEvaluateRoot, eachStep: __ouiEach, propStep: __ouiPropStep, propError: __ouiPropError, storeKeep: __ouiStoreKeep, storeInit: __ouiStoreInit, createQueryManager: __ouiCreateQueryManager, stateField: __ouiStateField, stripAssign: __ouiStripAssign, callArg: __ouiCallArg, listStep: __ouiListStep, inlineStep: __ouiInlineStep, checkValue: __ouiCheck, userCall: __ouiUserCall, customCall: __ouiCustom, mappedComp: __ouiMapped, leafStep: __ouiLeaf, msgStep: __ouiMsg } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -716,7 +1112,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 45;
+  const expected = 57;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

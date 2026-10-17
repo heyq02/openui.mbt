@@ -1,0 +1,79 @@
+///|
+test "sort and filter choose the official comparison" {
+  inspect(
+    list_step("{\"phase\":\"open\",\"kind\":\"sort\",\"array\":true}"),
+    content="{\"op\":\"sort\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"open\",\"kind\":\"sort\",\"array\":false}"),
+    content="{\"op\":\"same\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"open\",\"kind\":\"sort\"}"),
+    content="{\"op\":\"same\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"open\",\"kind\":\"filter\",\"array\":true}"),
+    content="{\"op\":\"filter\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"open\",\"kind\":\"filter\",\"array\":false}"),
+    content="{\"op\":\"empty\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"open\",\"kind\":\"later\",\"array\":true}"),
+    content="{\"op\":\"same\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"pair\",\"numeric\":true,\"desc\":true}"),
+    content="{\"op\":\"num\",\"sign\":-1}",
+  )
+  inspect(
+    list_step("{\"phase\":\"pair\",\"numeric\":true,\"desc\":false}"),
+    content="{\"op\":\"num\",\"sign\":1}",
+  )
+  inspect(
+    list_step("{\"phase\":\"pair\",\"numeric\":false,\"desc\":true}"),
+    content="{\"op\":\"text\",\"sign\":-1}",
+  )
+  inspect(
+    list_step("{\"phase\":\"pair\"}"),
+    content="{\"op\":\"text\",\"sign\":1}",
+  )
+  inspect(
+    list_step("{\"phase\":\"cmp\",\"op\":\"==\"}"),
+    content="{\"op\":\"eq\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"cmp\",\"op\":\"!=\"}"),
+    content="{\"op\":\"ne\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"cmp\",\"op\":\">\"}"),
+    content="{\"op\":\"gt\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"cmp\",\"op\":\"<\"}"),
+    content="{\"op\":\"lt\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"cmp\",\"op\":\">=\"}"),
+    content="{\"op\":\"ge\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"cmp\",\"op\":\"<=\"}"),
+    content="{\"op\":\"le\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"cmp\",\"op\":\"contains\"}"),
+    content="{\"op\":\"has\"}",
+  )
+  inspect(
+    list_step("{\"phase\":\"cmp\",\"op\":\"like\"}"),
+    content="{\"op\":\"no\"}",
+  )
+  inspect(list_step("{\"phase\":\"cmp\"}"), content="{\"op\":\"no\"}")
+  inspect(list_step("{\"phase\":1}"), content="{\"op\":\"same\"}")
+  inspect(list_step("[]"), content="{\"op\":\"same\"}")
+  inspect(list_step("{"), content="{\"op\":\"same\"}")
+}

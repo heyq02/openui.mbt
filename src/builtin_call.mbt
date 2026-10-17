@@ -1,5 +1,5 @@
 ///|
-/// Eager built-in calls. `Sort` and `Filter` stay in JavaScript for `localeCompare` and `==`.
+/// Eager built-in calls. `Sort` and `Filter` choose their branch in Wasm; `localeCompare` and `==` stay on the host.
 priv enum Num {
   NNan
   PInf
