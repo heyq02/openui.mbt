@@ -120,6 +120,14 @@ const REPLACEMENTS = [
     'function buildCacheKey(toolName, args, deps) {\n\tconst depsKey = deps != null ? "::" + stableStringify(deps) : "";\n\treturn toolName + "::" + stableStringify(args) + depsKey;\n}\n',
     "function buildCacheKey(toolName, args, deps) {\n\treturn buildCacheKeyMoonbit(toolName, args, deps);\n}\n",
   ],
+  [
+    'function resolveField(obj, path) {\n\tif (!path || obj == null) return void 0;\n\tif (!path.includes(".")) return obj[path];\n\tlet cur = obj;\n\tfor (const p of path.split(".")) {\n\t\tif (cur == null) return void 0;\n\t\tcur = cur[p];\n\t}\n\treturn cur;\n}\n',
+    "function resolveField(obj, path) {\n\treturn resolveFieldMoonbit(obj, path);\n}\n",
+  ],
+  [
+    'function toNumber(val) {\n\tif (typeof val === "number") return val;\n\tif (typeof val === "string") {\n\t\tconst n = Number(val);\n\t\treturn isNaN(n) ? 0 : n;\n\t}\n\tif (typeof val === "boolean") return val ? 1 : 0;\n\treturn 0;\n}\n',
+    "function toNumber(val) {\n\treturn toNumberMoonbit(val);\n}\n",
+  ],
 ];
 
 const SHIM = `function parseMoonbitStatements(text) {
@@ -328,6 +336,12 @@ function stableStringifyMoonbit(value) {
 function buildCacheKeyMoonbit(toolName, args, deps) {
   return __ouiBuildCacheKey(toolName, args, deps);
 }
+function resolveFieldMoonbit(obj, path) {
+  return __ouiResolveField(obj, path);
+}
+function toNumberMoonbit(val) {
+  return __ouiToNumber(val);
+}
 `;
 
 function usage() {
@@ -348,11 +362,11 @@ function findLangCore(start) {
 function preamble(kind) {
   if (kind === "mjs") {
     return `${MARKER}
-import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey } from '@heyq02/openui.mbt/parser';
+import { parseProgram as __ouiParseProgram, parseResult as __ouiParseResult, createStream as __ouiCreateStream, parseMessage as __ouiParseMessage, buildMessage as __ouiBuildMessage, parseRules as __ouiParseRules, parseStructuredRules as __ouiParseStructuredRules, checkBuiltin as __ouiCheckBuiltin, enrichErrors as __ouiEnrichErrors, mergeStatements as __ouiMergeStatements, jsonToOpenUI as __ouiJsonToOpenUI, evaluatePure as __ouiEvaluatePure, walkAST as __ouiWalkAST, isASTNode as __ouiIsASTNode, toLiteralAST as __ouiToLiteralAST, literalValue as __ouiLiteralValue, callBuiltin as __ouiCallBuiltin, lazyStep as __ouiLazyStep, eagerStep as __ouiEagerStep, generatePrompt as __ouiGeneratePrompt, cloudConfig as __ouiCloudConfig, substituteRef as __ouiSubstituteRef, systemPromptKind as __ouiSystemPromptKind, isElementNode as __ouiIsElementNode, isReactiveAssign as __ouiIsReactiveAssign, isRuntimeExpr as __ouiIsRuntimeExpr, isActionPlan as __ouiIsActionPlan, flattenPlans as __ouiFlattenPlans, extractToolResult as __ouiExtractToolResult, stableStringify as __ouiStableStringify, buildCacheKey as __ouiBuildCacheKey, resolveField as __ouiResolveField, toNumber as __ouiToNumber } from '@heyq02/openui.mbt/parser';
 ${SHIM}`;
   }
   return `${MARKER}
-const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey } = require('@heyq02/openui.mbt/parser');
+const { parseProgram: __ouiParseProgram, parseResult: __ouiParseResult, createStream: __ouiCreateStream, parseMessage: __ouiParseMessage, buildMessage: __ouiBuildMessage, parseRules: __ouiParseRules, parseStructuredRules: __ouiParseStructuredRules, checkBuiltin: __ouiCheckBuiltin, enrichErrors: __ouiEnrichErrors, mergeStatements: __ouiMergeStatements, jsonToOpenUI: __ouiJsonToOpenUI, evaluatePure: __ouiEvaluatePure, walkAST: __ouiWalkAST, isASTNode: __ouiIsASTNode, toLiteralAST: __ouiToLiteralAST, literalValue: __ouiLiteralValue, callBuiltin: __ouiCallBuiltin, lazyStep: __ouiLazyStep, eagerStep: __ouiEagerStep, generatePrompt: __ouiGeneratePrompt, cloudConfig: __ouiCloudConfig, substituteRef: __ouiSubstituteRef, systemPromptKind: __ouiSystemPromptKind, isElementNode: __ouiIsElementNode, isReactiveAssign: __ouiIsReactiveAssign, isRuntimeExpr: __ouiIsRuntimeExpr, isActionPlan: __ouiIsActionPlan, flattenPlans: __ouiFlattenPlans, extractToolResult: __ouiExtractToolResult, stableStringify: __ouiStableStringify, buildCacheKey: __ouiBuildCacheKey, resolveField: __ouiResolveField, toNumber: __ouiToNumber } = require('@heyq02/openui.mbt/parser');
 ${SHIM}`;
 }
 
@@ -365,7 +379,7 @@ function transform(source, kind, path) {
     count += parts.length - 1;
     next = parts.join(to);
   }
-  const expected = 35;
+  const expected = 37;
   if (count !== expected) {
     throw new Error(
       `${path} has ${count} parser call sites, expected ${expected}. This build of @openuidev/lang-core is not ${SUPPORTED}.`,

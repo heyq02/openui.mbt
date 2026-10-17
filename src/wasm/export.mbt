@@ -349,3 +349,17 @@ pub fn extract_tool_result(payload_json : String) -> String {
 pub fn stable_stringify(value_json : String) -> String {
   @openui.stable_stringify(value_json)
 }
+
+///|
+/// Dot segments for `resolveField`. The host reads each property.
+#export_name("resolve_field")
+pub fn resolve_field(path_json : String) -> String {
+  @openui.resolve_field(path_json)
+}
+
+///|
+/// `toNumber` for a tagged value. The host keeps an existing number.
+#export_name("to_number")
+pub fn to_number(value_json : String) -> String {
+  @openui.to_number(value_json)
+}

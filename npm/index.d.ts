@@ -137,6 +137,8 @@ export function isReactiveAssign(value: unknown): boolean;
 export function isRuntimeExpr(node: { k?: unknown }): boolean;
 export function isActionPlan(value: unknown): boolean;
 export function flattenPlans(values: unknown): { steps: unknown[] } | unknown;
+export function resolveField(obj: unknown, path: unknown): unknown;
+export function toNumber(value: unknown): number;
 export function stableStringify(value: unknown): string | undefined;
 export function buildCacheKey(toolName: unknown, args: unknown, deps: unknown): string;
 export function extractToolResult(payload: {

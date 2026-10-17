@@ -64,6 +64,8 @@ const {
   flatten_plans: flattenPlansOpenui,
   extract_tool_result: extractToolOpenui,
   stable_stringify: stableStringifyOpenui,
+  resolve_field: resolveFieldOpenui,
+  to_number: toNumberOpenui,
 } = instance.exports;
 
 /** Parse a complete OpenUI Lang program. Statement ASTs use the official `k` field. */
@@ -1230,6 +1232,44 @@ export function stableStringify(value) {
     if (error instanceof ArrayCycle) return stringifyJson(value);
     throw error;
   }
+}
+
+/** Dot-path read. A missing path or null receiver is `undefined`. */
+export function resolveField(obj, path) {
+  if (!path || obj == null) return undefined;
+  if (typeof path !== "string") {
+    if (!path.includes(".")) return obj[path];
+    let cur = obj;
+    for (const part of path.split(".")) {
+      if (cur == null) return undefined;
+      cur = cur[part];
+    }
+    return cur;
+  }
+  const parts = JSON.parse(resolveFieldOpenui(JSON.stringify(path)));
+  let cur = obj;
+  for (const part of parts) {
+    if (cur == null) return undefined;
+    cur = cur[part];
+  }
+  return cur;
+}
+
+/** Official `toNumber`. An existing number is returned as itself. */
+export function toNumber(value) {
+  if (typeof value === "number") return value;
+  const payload =
+    typeof value === "string"
+      ? { t: "s", v: value }
+      : typeof value === "boolean"
+        ? { t: "b", v: value }
+        : { t: "x" };
+  const marked = JSON.parse(toNumberOpenui(JSON.stringify(payload)));
+  if (marked.t === "nan") return NaN;
+  if (marked.t === "pinf") return Infinity;
+  if (marked.t === "ninf") return -Infinity;
+  if (marked.t === "n0") return -0;
+  return marked.v;
 }
 
 /** Query cache key. `deps == null` omits the suffix. */
