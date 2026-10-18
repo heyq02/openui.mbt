@@ -337,6 +337,23 @@ pub fn auto_close(src : String) -> Prepared {
 }
 
 ///|
+/// Official `autoClose` payload. `incomplete` maps to `wasIncomplete` on the host.
+pub fn auto_close_json(src : String) -> String {
+  let closed = auto_close(src)
+  let buf = StringBuilder()
+  buf.write_string("{\"text\":")
+  buf.write_string(Json::string(closed.text).stringify())
+  buf.write_string(",\"incomplete\":")
+  if closed.incomplete {
+    buf.write_string("true")
+  } else {
+    buf.write_string("false")
+  }
+  buf.write_string("}")
+  buf.to_string()
+}
+
+///|
 /// Official front end: blank input is an empty result, and partial input is closed before parsing.
 pub fn normalize_source(src : String) -> Prepared {
   if trim_space(src).length() == 0 {
